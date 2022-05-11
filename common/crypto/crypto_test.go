@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/icon-project/goloop/common/codec"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -88,6 +90,23 @@ func TestPrintSignature(t *testing.T) {
 	if strings.Compare(sig.String(), str) != 0 {
 		t.Errorf("fail to print signaure(no V)")
 	}
+}
+
+func TestSignature_RLPEncodeSelf(t *testing.T) {
+	priv, pub := GenerateKeyPair()
+	sig, err := NewSignature(testHash, priv)
+	assert.NoError(t, err)
+
+	bs := codec.MustMarshalToBytes(&sig)
+	var sig2 Signature
+	codec.MustUnmarshalFromBytes(bs, &sig2)
+	rpub, err := sig.RecoverPublicKey(testHash)
+	assert.NoError(t, err)
+	rpub2, err := sig2.RecoverPublicKey(testHash)
+	assert.NoError(t, err)
+
+	assert.EqualValues(t, pub.SerializeCompressed(), rpub.SerializeCompressed())
+	assert.EqualValues(t, rpub.SerializeCompressed(), rpub2.SerializeCompressed())
 }
 
 func TestRace(t *testing.T) {
