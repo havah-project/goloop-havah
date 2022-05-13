@@ -195,6 +195,8 @@ gochain-image: base-image-all pyrun-pyexec gorun-gochain javarun-javaexec
 	GOBUILD_TAGS="$(GOBUILD_TAGS)" \
 	$(BUILD_ROOT)/docker/gochain/update.sh $(GOCHAIN_IMAGE) $(BUILD_ROOT) $(GOCHAIN_DOCKER_DIR)
 
+include havah/build.mk
+
 .PHONY: test
 
 test :
