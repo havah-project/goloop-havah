@@ -32,7 +32,6 @@ const (
 const (
 	BlockInterval    = 2000 // unit: ms
 	RoundLimitFactor = 3
-	TermPeriod       = DayBlock
 
 	StepPrice          = 12500000000
 	MaxStepLimitInvoke = 2500000000
@@ -55,10 +54,48 @@ const (
 	StepSetBase        = 10000
 )
 
+// PlatformConfig default values
 const (
-	IssueInitialAmount  = 3_920_000_000
-	IssueReductionCycle = MonthPerYear * DayPerMonth // 1 year (360)
-	IssueTotalPeriod    = IssueReductionCycle * 10   // 10 years
+	TermPeriod          = DayBlock
+	InitialIssueAmount  = 5_000_000                  // unit: hvh
+	ReductionCycle      = MonthPerYear * DayPerMonth // 1 year (360) in term
+	PrivateReleaseCycle = DayPerMonth
+	PrivateLockup       = MonthPerYear * DayPerMonth // 1 year (360) in term
+	HooverBudget        = 5_000_000                  // unit: hvh
+)
+
+// Addresses
+const (
+	SystemTreasury  = "hx1000000000000000000000000000000000000000"
+	Governance      = "cx0000000000000000000000000000000000000001"
+	PublicTreasury  = "hx3000000000000000000000000000000000000000"
+	SustainableFund = "cx4000000000000000000000000000000000000000"
+	CompanyTreasury = "cx5000000000000000000000000000000000000000"
+	HooverFund      = "cx6000000000000000000000000000000000000000"
+	EcoSystem       = "cx7000000000000000000000000000000000000000"
+	PlanetNFT       = "cx8000000000000000000000000000000000000000"
+)
+
+// VarDB, DictDB, ArrayDB keys
+const (
+	VarIssueAmount         = "issue_amount"
+	VarIssueStart          = "issue_start"
+	VarTermPeriod          = "term_period"
+	VarInitialIssueAmount  = "initial_issue_amount"
+	VarIssueReductionCycle = "issue_reduction_cycle"
+	VarPrivateReleaseCycle = "private_release_cycle"
+	VarPrivateLockup       = "private_lockup"
+	VarHooverBudget        = "hoover_budget"
+	VarUSDTPrice           = "usdt_price"
+	VarActiveUSDTPrice     = "active_usdt_price"
+	DictPlanet             = "planet"
+	ArrayPlanetManager     = "planet_manager"
+	DictPlanetReward       = "planet_reward"
+	VarAllPlanet           = "all_planet"
+	VarActivePlanet        = "active_planet"
+	VarRewardTotal         = "reward_total"
+	VarRewardRemain        = "reward_remain"
+	VarCompanyReward       = "company_reward"
 )
 
 // The following variables are read-only

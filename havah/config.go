@@ -3,19 +3,15 @@ package havah
 import (
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/havah/hvhmodule"
-	"github.com/icon-project/goloop/service/state"
 )
 
-type ChainConfig struct {
-	BlockInterval    *common.HexInt32  `json:"blockInterval"`
-	EcoSystem        *common.Address   `json:"ecoSystem"`
-	HooverBudget     *common.HexInt64  `json:"hooverBudget"`
-	USDTPrice        *common.HexInt64  `json:"usdtPrice"`
-	Revision         *common.HexInt32  `json:"revision"`
-	RoundLimitFactor *common.HexInt64  `json:"roundLimitFactor"`
+type chainConfig struct {
+	BlockInterval    *common.HexInt32  `json:"blockInterval,omitempty"`
+	Revision         *common.HexInt32  `json:"revision,omitempty"`
+	RoundLimitFactor *common.HexInt32  `json:"roundLimitFactor,omitempty"`
 	ValidatorList    []*common.Address `json:"validators"`
-	Fee              *FeeConfig        `json:"fee"`
-	Issue            *IssueConfig      `json:"issue"`
+	Fee              *FeeConfig        `json:"fee,omitempty"`
+	Platform         *PlatformConfig   `json:"platform"`
 }
 
 type FeeConfig struct {
@@ -24,26 +20,25 @@ type FeeConfig struct {
 	StepCosts map[string]common.HexInt64 `json:"stepCosts,omitempty"`
 }
 
-type IssueConfig struct {
-	TermPeriod         *common.HexInt32 `json:"termPeriod"`         // 43200
-	InitialIssueAmount *common.HexInt64 `json:"initialIssueAmount"` // 3920M
-	ReductionCycle     *common.HexInt32 `json:"reductionCycle"`     // 365
-	TotalPeriod        *common.HexInt32 `json:"totalPeriod"`        // 3650
+type PlatformConfig struct {
+	TermPeriod          *common.HexInt32 `json:"termPeriod"`          // 43200 in block
+	InitialIssueAmount  *common.HexInt   `json:"initialIssueAmount"`  // 5M in hvh
+	IssueReductionCycle *common.HexInt32 `json:"reductionCycle"`      // 360 in term
+	PrivateReleaseCycle *common.HexInt32 `join:"privateReleaseCycle"` // 30 in term (1 month)
+	PrivateLockup       *common.HexInt32 `join:"privateLockup"`       // 360 in term
+	HooverBudget        *common.HexInt   `json:"hooverBudget"`        // unit: hvh
+	USDTPrice           *common.HexInt   `json:"usdtPrice"`           // unit: hvh
 }
 
-func (s *chainScore) loadChainConfig() *ChainConfig {
-	return newChainConfig()
-}
-
-func newChainConfig() *ChainConfig {
-	cfg := &ChainConfig{
-		RoundLimitFactor: &common.HexInt64{Value: hvhmodule.RoundLimitFactor},
-		Fee:              newDefaultFeeConfig(),
-		Issue:            newDefaultIssueConfig(),
+func newChainConfig() *chainConfig {
+	return &chainConfig{
+		BlockInterval:    &common.HexInt32{Value: hvhmodule.BlockInterval},
+		Revision:         &common.HexInt32{Value: hvhmodule.Revision0},
+		RoundLimitFactor: &common.HexInt32{Value: hvhmodule.RoundLimitFactor},
 	}
-	return cfg
 }
 
+/*
 func newDefaultFeeConfig() *FeeConfig {
 	cfg := new(FeeConfig)
 	cfg.StepPrice.SetInt64(hvhmodule.StepPrice)
@@ -71,11 +66,11 @@ func newDefaultFeeConfig() *FeeConfig {
 	return cfg
 }
 
-func newDefaultIssueConfig() *IssueConfig {
-	cfg := new(IssueConfig)
-	cfg.TermPeriod.Value = hvhmodule.TermPeriod
-	cfg.InitialIssueAmount.Value = hvhmodule.IssueInitialAmount
-	cfg.ReductionCycle.Value = hvhmodule.IssueReductionCycle
-	cfg.TotalPeriod.Value = hvhmodule.IssueTotalPeriod
-	return cfg
+func newDefaultPlatformConfig() *PlatformConfig {
+	return &PlatformConfig{
+		TermPeriod:         &common.HexInt32{Value: hvhmodule.TermPeriod},
+		IssueReductionCycle:     &common.HexInt32{Value: hvhmodule.IssueReductionCycle},
+		InitialIssueAmount: &common.HexInt64{Value: hvhmodule.InitialIssueAmount},
+	}
 }
+*/

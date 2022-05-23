@@ -21,7 +21,6 @@ import (
 	"github.com/icon-project/goloop/havah/hvh"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/havah/hvhutils"
-	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/contract"
 	"github.com/icon-project/goloop/service/scoreresult"
 )
@@ -44,20 +43,6 @@ func (s *chainScore) toScoreResultError(code errors.Code, err error) error {
 		logger.Infof(msg)
 	}
 	return code.Wrap(err, msg)
-}
-
-func (s *chainScore) Ex_getScoreOwner(score module.Address) (module.Address, error) {
-	if err := s.tryChargeCall(); err != nil {
-		return nil, err
-	}
-	return s.newCallContext(s.cc).GetScoreOwner(score)
-}
-
-func (s *chainScore) Ex_setScoreOwner(score module.Address, owner module.Address) error {
-	if err := s.tryChargeCall(); err != nil {
-		return err
-	}
-	return s.newCallContext(s.cc).SetScoreOwner(s.from, score, owner)
 }
 
 func (s *chainScore) newCallContext(cc contract.CallContext) hvhmodule.CallContext {

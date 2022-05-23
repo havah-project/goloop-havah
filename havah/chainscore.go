@@ -222,6 +222,21 @@ var chainMethods = []*chainMethod{
 	}, 0, 0},
 }
 
+func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {
+	if cfg != nil {
+		if err := applyStepLimits(cfg, as); err != nil {
+			return err
+		}
+		if err := applyStepCosts(cfg, as); err != nil {
+			return err
+		}
+		if err := applyStepPrice(as, &cfg.StepPrice.Int); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func applyStepLimits(fee *FeeConfig, as state.AccountState) error {
 	stepLimitTypes := scoredb.NewArrayDB(as, state.VarStepLimitTypes)
 	stepLimitDB := scoredb.NewDictDB(as, state.VarStepLimit, 1)
@@ -284,6 +299,54 @@ func applyStepCosts(fee *FeeConfig, as state.AccountState) error {
 
 func applyStepPrice(as state.AccountState, price *big.Int) error {
 	return scoredb.NewVarDB(as, state.VarStepPrice).Set(price)
+}
+
+func initPlatformConfig(cfg *PlatformConfig, as state.AccountState) error {
+	if cfg != nil {
+		if cfg.TermPeriod != nil {
+			if err := scoredb.NewVarDB(as, hvhmodule.VarTermPeriod).Set(cfg.TermPeriod.Value); err != nil {
+				return err
+			}
+		}
+		if cfg.InitialIssueAmount != nil {
+			if err := scoredb.NewVarDB(
+				as, hvhmodule.VarInitialIssueAmount).Set(cfg.InitialIssueAmount.Value); err != nil {
+				return err
+			}
+		}
+		if cfg.IssueReductionCycle != nil {
+			if err := scoredb.NewVarDB(
+				as, hvhmodule.VarIssueReductionCycle).Set(cfg.IssueReductionCycle.Value); err != nil {
+				return err
+			}
+		}
+		if cfg.PrivateReleaseCycle != nil {
+			if err := scoredb.NewVarDB(
+				as, hvhmodule.VarPrivateReleaseCycle).Set(cfg.PrivateReleaseCycle.Value); err != nil {
+				return err
+			}
+		}
+		if cfg.PrivateLockup != nil {
+			if err := scoredb.NewVarDB(
+				as, hvhmodule.VarPrivateLockup).Set(cfg.PrivateLockup.Value); err != nil {
+				return err
+			}
+		}
+		if cfg.HooverBudget != nil {
+			if err := scoredb.NewVarDB(as, hvhmodule.VarHooverBudget).Set(cfg.HooverBudget.Value()); err != nil {
+				return err
+			}
+		}
+		if cfg.USDTPrice != nil {
+			if err := scoredb.NewVarDB(
+				as, hvhmodule.VarUSDTPrice).Set(cfg.InitialIssueAmount.Value); err != nil {
+				return err
+			}
+		} else {
+			return scoreresult.InvalidParameterError.New("USDTPrice not found")
+		}
+	}
+	return nil
 }
 
 func (s *chainScore) Install(param []byte) error {
@@ -351,21 +414,28 @@ func (s *chainScore) Install(param []byte) error {
 		return errors.CriticalUnknownError.Wrap(err, "FailToSetValidators")
 	}
 
-	feeConfig := chainConfig.Fee
 	if err := scoredb.NewVarDB(as, state.VarChainID).Set(s.cc.ChainID()); err != nil {
 		return err
-	}
-
-	if feeConfig != nil {
-		systemConfig |= state.SysConfigFee
-		if err := s.initFeeConfig(as, feeConfig); err != nil {
-			return err
-		}
 	}
 
 	if len(validators) > 0 {
 		if err := s.cc.GetValidatorState().Set(validators); err != nil {
 			return errors.CriticalUnknownError.Wrap(err, "FailToSetValidators")
+		}
+	}
+
+	feeConfig := chainConfig.Fee
+	if feeConfig != nil {
+		systemConfig |= state.SysConfigFee
+		if err := initFeeConfig(feeConfig, as); err != nil {
+			return err
+		}
+	}
+
+	platformConfig := chainConfig.Platform
+	if platformConfig != nil {
+		if err := initPlatformConfig(platformConfig, as); err != nil {
+			return err
 		}
 	}
 
@@ -403,18 +473,21 @@ func (s *chainScore) deployBuiltinGovernance() (*contract.DeployHandler, error) 
 	return handler, nil
 }
 
-func (s *chainScore) initFeeConfig(as state.AccountState, cfg *FeeConfig) error {
-	if cfg != nil {
-		if err := applyStepLimits(cfg, as); err != nil {
-			return err
-		}
-		if err := applyStepCosts(cfg, as); err != nil {
-			return err
-		}
-		if err := applyStepPrice(as, &cfg.StepPrice.Int); err != nil {
-			return err
+func (s *chainScore) handleRevisionChange(as state.AccountState, oldRev, newRev int) error {
+	if oldRev >= newRev {
+		return nil
+	}
+	for rev := oldRev; rev < newRev; rev++ {
+		if fn, ok := s.handleRevFuncs[rev]; ok {
+			if err := fn(s, as, oldRev, newRev); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
+}
+
+func handleRev1(s *chainScore, as state.AccountState, oldRev, newRev int) error {
 	return nil
 }
 

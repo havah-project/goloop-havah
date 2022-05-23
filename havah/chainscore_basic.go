@@ -83,24 +83,6 @@ func (s *chainScore) fromGovernance() bool {
 	return s.cc.Governance().Equal(s.from)
 }
 
-func (s *chainScore) handleRevisionChange(as state.AccountState, r1, r2 int) error {
-	if r1 >= r2 {
-		return nil
-	}
-	for rev := r1; rev < r2; rev++ {
-		if fn, ok := s.handleRevFuncs[rev]; ok {
-			if err := fn(s, as, r1, r2); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func handleRev1(s *chainScore, as state.AccountState, r1, r2 int) error {
-	return nil
-}
-
 // Ex_setRevision sets the system revision to the given number.
 // This can only be called by the governance SCORE.
 func (s *chainScore) Ex_setRevision(code *common.HexInt) error {
@@ -449,4 +431,18 @@ func (s *chainScore) Ex_getFeeSharingConfig() (map[string]interface{}, error) {
 	fsConfig["depositTerm"] = s.cc.DepositTerm()
 	fsConfig["depositIssueRate"] = s.cc.DepositIssueRate()
 	return fsConfig, nil
+}
+
+func (s *chainScore) Ex_getScoreOwner(score module.Address) (module.Address, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	return s.newCallContext(s.cc).GetScoreOwner(score)
+}
+
+func (s *chainScore) Ex_setScoreOwner(score module.Address, owner module.Address) error {
+	if err := s.tryChargeCall(); err != nil {
+		return err
+	}
+	return s.newCallContext(s.cc).SetScoreOwner(s.from, score, owner)
 }
