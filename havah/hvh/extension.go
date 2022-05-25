@@ -28,50 +28,53 @@ import (
 )
 
 type ExtensionSnapshotImpl struct {
-	database db.Database
-	state    *hvhstate.Snapshot
+	dbase db.Database
+	state *hvhstate.Snapshot
 }
 
-func (s *ExtensionSnapshotImpl) Bytes() []byte {
-	return codec.BC.MustMarshalToBytes(s)
+func (ess *ExtensionSnapshotImpl) Bytes() []byte {
+	return codec.BC.MustMarshalToBytes(ess)
 }
 
-func (s *ExtensionSnapshotImpl) RLPEncodeSelf(e codec.Encoder) error {
-	return e.EncodeListOf(
-		s.state.Bytes(),
-	)
+func (ess *ExtensionSnapshotImpl) RLPEncodeSelf(e codec.Encoder) error {
+	return e.Encode(ess.state.Bytes())
 }
 
-func (s *ExtensionSnapshotImpl) RLPDecodeSelf(d codec.Decoder) error {
+func (ess *ExtensionSnapshotImpl) RLPDecodeSelf(d codec.Decoder) error {
+	var stateHash []byte
+	if err := d.Decode(&stateHash); err != nil {
+		return err
+	}
+	ess.state = hvhstate.NewSnapshot(ess.dbase, stateHash)
 	return nil
 }
 
-func (s *ExtensionSnapshotImpl) Flush() error {
-	if err := s.state.Flush(); err != nil {
+func (ess *ExtensionSnapshotImpl) Flush() error {
+	if err := ess.state.Flush(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *ExtensionSnapshotImpl) NewState(readonly bool) state.ExtensionState {
+func (ess *ExtensionSnapshotImpl) NewState(readonly bool) state.ExtensionState {
 	logger := hvhutils.NewLogger(nil)
 
 	return &ExtensionStateImpl{
-		database: s.database,
-		logger:   logger,
-		State:    hvhstate.NewStateFromSnapshot(s.state, readonly, logger),
+		dbase:  ess.dbase,
+		logger: logger,
+		state:  hvhstate.NewStateFromSnapshot(ess.state, readonly, logger),
 	}
 }
 
-func NewExtensionSnapshot(database db.Database, hash []byte) state.ExtensionSnapshot {
+func NewExtensionSnapshot(dbase db.Database, hash []byte) state.ExtensionSnapshot {
 	if hash == nil {
 		return &ExtensionSnapshotImpl{
-			database: database,
-			state:    hvhstate.NewSnapshot(database, nil),
+			dbase: dbase,
+			state: hvhstate.NewSnapshot(dbase, nil),
 		}
 	}
 	s := &ExtensionSnapshotImpl{
-		database: database,
+		dbase: dbase,
 	}
 	if _, err := codec.BC.UnmarshalFromBytes(hash, s); err != nil {
 		return nil
@@ -85,16 +88,18 @@ func NewExtensionSnapshotWithBuilder(builder merkle.Builder, raw []byte) state.E
 		return nil
 	}
 	return &ExtensionSnapshotImpl{
-		database: builder.Database(),
-		state:    hvhstate.NewSnapshotWithBuilder(builder, hashes[0]),
+		dbase: builder.Database(),
+		state: hvhstate.NewSnapshotWithBuilder(builder, hashes[0]),
 	}
 }
 
+// ==================================================================
+
 type ExtensionStateImpl struct {
-	database db.Database
+	dbase db.Database
 
 	logger log.Logger
-	State  *hvhstate.State
+	state  *hvhstate.State
 }
 
 func (es *ExtensionStateImpl) Logger() log.Logger {
@@ -109,22 +114,21 @@ func (es *ExtensionStateImpl) SetLogger(logger log.Logger) {
 
 func (es *ExtensionStateImpl) GetSnapshot() state.ExtensionSnapshot {
 	return &ExtensionSnapshotImpl{
-		database: es.database,
-		state:    es.State.GetSnapshot(),
+		dbase: es.dbase,
+		state: es.state.GetSnapshot(),
 	}
 }
 
-func (es *ExtensionStateImpl) Reset(isnapshot state.ExtensionSnapshot) {
-	//snapshot := isnapshot.(*ExtensionSnapshotImpl)
-	//if err := es.State.Reset(snapshot.state); err != nil {
-	//	panic(err)
-	//}
+func (es *ExtensionStateImpl) Reset(ess state.ExtensionSnapshot) {
+	snapshot := ess.(*ExtensionSnapshotImpl)
+	if err := es.state.Reset(snapshot.state); err != nil {
+		panic(err)
+	}
 }
 
-// ClearCache clear cache. It's called before executing first transaction
-// and also it could be called at the end of base transaction
+// ClearCache is called before executing the first transaction in a block and at the end of base transaction
 func (es *ExtensionStateImpl) ClearCache() {
-	//es.State.ClearCache()
+	//es.state.ClearCache()
 }
 
 func (es *ExtensionStateImpl) OnExecutionBegin(wc hvhmodule.WorldContext) error {
