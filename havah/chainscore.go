@@ -237,12 +237,36 @@ var chainMethods = []*chainMethod{
 		},
 	}, 0, 0},
 	{scoreapi.Method{
+		scoreapi.Function, "setUSDTPrice",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"price", scoreapi.Integer, nil, nil},
+		},
+		nil,
+	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "getUSDTPrice",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 0,
+		nil,
+		[]scoreapi.DataType{
+			scoreapi.Integer,
+		},
+	}, 0, 0},
+	{scoreapi.Method{
 		scoreapi.Function, "getIssueInfo",
 		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 0,
 		nil,
 		[]scoreapi.DataType{
 			scoreapi.Dict,
 		},
+	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "startRewardIssue",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"height", scoreapi.Integer, nil, nil},
+		},
+		nil,
 	}, 0, 0},
 }
 

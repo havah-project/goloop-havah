@@ -59,6 +59,15 @@ func (s *State) GetIssueStart() int64 {
 	return varDB.Int64()
 }
 
+// SetIssueStart writes the issue start height to varDB in ExtensionState
+func (s *State) SetIssueStart(height int64) error {
+	if height < 1 {
+		return scoreresult.RevertedError.New("Invalid height")
+	}
+	varDB := s.getVarDB(hvhmodule.VarIssueStart)
+	return varDB.Set(height)
+}
+
 func (s *State) GetTermPeriod() int64 {
 	varDB := s.getVarDB(hvhmodule.VarTermPeriod)
 	return varDB.Int64()

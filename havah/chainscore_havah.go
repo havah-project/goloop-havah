@@ -59,12 +59,12 @@ func (s *chainScore) Ex_getUSDTPrice() (*big.Int, error) {
 	return es.GetUSDTPrice()
 }
 
-func (s *chainScore) Ex_setUSDTPrice(value *common.HexInt) error {
+func (s *chainScore) Ex_setUSDTPrice(price *common.HexInt) error {
 	es, err := s.getExtensionState()
 	if err != nil {
 		return err
 	}
-	return es.SetUSDTPrice(value.Value())
+	return es.SetUSDTPrice(price.Value())
 }
 
 func (s *chainScore) Ex_getIssueInfo() (map[string]interface{}, error) {
@@ -73,4 +73,16 @@ func (s *chainScore) Ex_getIssueInfo() (map[string]interface{}, error) {
 		return nil, err
 	}
 	return es.GetIssueInfo(s.newCallContext())
+}
+
+func (s *chainScore) Ex_startRewardIssue(height *common.HexInt) error {
+	es, err := s.getExtensionState()
+	if err != nil {
+		return err
+	}
+	startBH := height.Int64()
+	if startBH <= s.cc.BlockHeight() {
+		return scoreresult.RevertedError.New("Invalid height")
+	}
+	return es.StartRewardIssue(startBH)
 }

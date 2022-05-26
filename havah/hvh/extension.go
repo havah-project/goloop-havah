@@ -167,3 +167,7 @@ func (es *ExtensionStateImpl) GetIssueInfo(cc hvhmodule.CallContext) (map[string
 	}
 	return jso, nil
 }
+
+func (es *ExtensionStateImpl) StartRewardIssue(height int64) error {
+	return es.state.SetIssueStart(height)
+}
