@@ -220,6 +220,22 @@ var chainMethods = []*chainMethod{
 		},
 		nil,
 	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "setRoundLimitFactor",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"factor", scoreapi.Integer, nil, nil},
+		},
+		nil,
+	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "getRoundLimitFactor",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 0,
+		nil,
+		[]scoreapi.DataType{
+			scoreapi.Integer,
+		},
+	}, 0, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {

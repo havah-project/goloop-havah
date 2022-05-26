@@ -446,3 +446,23 @@ func (s *chainScore) Ex_setScoreOwner(score module.Address, owner module.Address
 	}
 	return s.newCallContext(s.cc).SetScoreOwner(s.from, score, owner)
 }
+
+func (s *chainScore) Ex_getRoundLimitFactor() (int64, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return 0, err
+	}
+	as := s.cc.GetAccountState(state.SystemID)
+	return scoredb.NewVarDB(as, state.VarRoundLimitFactor).Int64(), nil
+}
+
+func (s *chainScore) Ex_setRoundLimitFactor(f *common.HexInt) error {
+	if err := s.checkGovernance(true); err != nil {
+		return err
+	}
+	if f.Sign() < 0 {
+		return scoreresult.New(StatusIllegalArgument, "IllegalArgument")
+	}
+	as := s.cc.GetAccountState(state.SystemID)
+	factor := scoredb.NewVarDB(as, state.VarRoundLimitFactor)
+	return factor.Set(f)
+}
