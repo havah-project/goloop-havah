@@ -17,6 +17,8 @@
 package hvh
 
 import (
+	"math/big"
+
 	"github.com/icon-project/goloop/common/codec"
 	"github.com/icon-project/goloop/common/db"
 	"github.com/icon-project/goloop/common/log"
@@ -141,4 +143,12 @@ func (es *ExtensionStateImpl) OnExecutionEnd(wc hvhmodule.WorldContext) error {
 
 func (es *ExtensionStateImpl) OnTransactionEnd(blockHeight int64, success bool) error {
 	return nil
+}
+
+func (es *ExtensionStateImpl) GetUSDTPrice() (*big.Int, error) {
+	return es.state.GetUSDTPrice(), nil
+}
+
+func (es *ExtensionStateImpl) SetUSDTPrice(price *big.Int) error {
+	return es.state.SetUSDTPrice(price)
 }

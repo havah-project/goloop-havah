@@ -17,6 +17,9 @@
 package havah
 
 import (
+	"math/big"
+
+	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/havah/hvh"
 	"github.com/icon-project/goloop/havah/hvhmodule"
@@ -47,4 +50,20 @@ func (s *chainScore) toScoreResultError(code errors.Code, err error) error {
 
 func (s *chainScore) newCallContext(cc contract.CallContext) hvhmodule.CallContext {
 	return hvh.NewCallContext(cc, s.from)
+}
+
+func (s *chainScore) Ex_getUSDTPrice() (*big.Int, error) {
+	es, err := s.getExtensionState()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetUSDTPrice()
+}
+
+func (s *chainScore) Ex_setUSDTPrice(value *common.HexInt) error {
+	es, err := s.getExtensionState()
+	if err != nil {
+		return err
+	}
+	return es.SetUSDTPrice(value.Value())
 }
