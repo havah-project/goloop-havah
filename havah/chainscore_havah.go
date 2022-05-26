@@ -24,7 +24,6 @@ import (
 	"github.com/icon-project/goloop/havah/hvh"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/havah/hvhutils"
-	"github.com/icon-project/goloop/service/contract"
 	"github.com/icon-project/goloop/service/scoreresult"
 )
 
@@ -48,8 +47,8 @@ func (s *chainScore) toScoreResultError(code errors.Code, err error) error {
 	return code.Wrap(err, msg)
 }
 
-func (s *chainScore) newCallContext(cc contract.CallContext) hvhmodule.CallContext {
-	return hvh.NewCallContext(cc, s.from)
+func (s *chainScore) newCallContext() hvhmodule.CallContext {
+	return hvh.NewCallContext(s.cc, s.from)
 }
 
 func (s *chainScore) Ex_getUSDTPrice() (*big.Int, error) {
@@ -66,4 +65,12 @@ func (s *chainScore) Ex_setUSDTPrice(value *common.HexInt) error {
 		return err
 	}
 	return es.SetUSDTPrice(value.Value())
+}
+
+func (s *chainScore) Ex_getIssueInfo() (map[string]interface{}, error) {
+	es, err := s.getExtensionState()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetIssueInfo(s.newCallContext())
 }

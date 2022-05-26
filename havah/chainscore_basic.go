@@ -437,14 +437,14 @@ func (s *chainScore) Ex_getScoreOwner(score module.Address) (module.Address, err
 	if err := s.tryChargeCall(); err != nil {
 		return nil, err
 	}
-	return s.newCallContext(s.cc).GetScoreOwner(score)
+	return s.newCallContext().GetScoreOwner(score)
 }
 
 func (s *chainScore) Ex_setScoreOwner(score module.Address, owner module.Address) error {
 	if err := s.tryChargeCall(); err != nil {
 		return err
 	}
-	return s.newCallContext(s.cc).SetScoreOwner(s.from, score, owner)
+	return s.newCallContext().SetScoreOwner(s.from, score, owner)
 }
 
 func (s *chainScore) Ex_getRoundLimitFactor() (int64, error) {

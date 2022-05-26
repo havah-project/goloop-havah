@@ -54,6 +54,16 @@ func (s *State) SetUSDTPrice(price *big.Int) error {
 	return varDB.Set(price)
 }
 
+func (s *State) GetIssueStart() int64 {
+	varDB := s.getVarDB(hvhmodule.VarIssueStart)
+	return varDB.Int64()
+}
+
+func (s *State) GetTermPeriod() int64 {
+	varDB := s.getVarDB(hvhmodule.VarTermPeriod)
+	return varDB.Int64()
+}
+
 func NewStateFromSnapshot(ss *Snapshot, readonly bool, logger log.Logger) *State {
 	store := trie_manager.NewMutableFromImmutable(ss.store)
 	return &State{

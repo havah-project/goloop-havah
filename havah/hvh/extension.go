@@ -152,3 +152,18 @@ func (es *ExtensionStateImpl) GetUSDTPrice() (*big.Int, error) {
 func (es *ExtensionStateImpl) SetUSDTPrice(price *big.Int) error {
 	return es.state.SetUSDTPrice(price)
 }
+
+func (es *ExtensionStateImpl) GetIssueInfo(cc hvhmodule.CallContext) (map[string]interface{}, error) {
+	height := cc.BlockHeight()
+	issueStart := es.state.GetIssueStart() // in height
+	termPeriod := es.state.GetTermPeriod() // in height
+
+	jso := map[string]interface{}{
+		"height": height,
+	}
+	if issueStart > 0 {
+		termSeq := (height - issueStart) / termPeriod
+		jso["termSequence"] = termSeq
+	}
+	return jso, nil
+}

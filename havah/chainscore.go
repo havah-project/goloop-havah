@@ -236,6 +236,14 @@ var chainMethods = []*chainMethod{
 			scoreapi.Integer,
 		},
 	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "getIssueInfo",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 0,
+		nil,
+		[]scoreapi.DataType{
+			scoreapi.Dict,
+		},
+	}, 0, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {
@@ -370,7 +378,7 @@ func (s *chainScore) Install(param []byte) error {
 		return scoreresult.AccessDeniedError.New("AccessDeniedToInstallChainSCORE")
 	}
 
-	chainConfig := newChainConfig()
+	cfg := newChainConfig()
 
 	var systemConfig int
 	var revision int
@@ -382,7 +390,7 @@ func (s *chainScore) Install(param []byte) error {
 	}
 
 	if param != nil {
-		if err := json.Unmarshal(param, chainConfig); err != nil {
+		if err := json.Unmarshal(param, cfg); err != nil {
 			return scoreresult.Errorf(
 				module.StatusIllegalFormat,
 				"Failed to parse parameter for chainScore. err(%+v)\n",
@@ -393,8 +401,8 @@ func (s *chainScore) Install(param []byte) error {
 
 	as := s.cc.GetAccountState(state.SystemID)
 
-	if chainConfig.Revision.Value != 0 {
-		revision = int(chainConfig.Revision.Value)
+	if cfg.Revision.Value != 0 {
+		revision = int(cfg.Revision.Value)
 		if revision > hvhmodule.MaxRevision {
 			return scoreresult.IllegalFormatError.Errorf(
 				"RevisionIsHigherMax(%d > %d)", revision, hvhmodule.MaxRevision)
@@ -407,22 +415,22 @@ func (s *chainScore) Install(param []byte) error {
 		return err
 	}
 
-	if chainConfig.RoundLimitFactor != nil {
-		factor := chainConfig.RoundLimitFactor.Value
+	if cfg.RoundLimitFactor != nil {
+		factor := cfg.RoundLimitFactor.Value
 		if err := scoredb.NewVarDB(as, state.VarRoundLimitFactor).Set(factor); err != nil {
 			return err
 		}
 	}
 
-	if chainConfig.BlockInterval != nil {
-		blockInterval := chainConfig.BlockInterval.Value
+	if cfg.BlockInterval != nil {
+		blockInterval := cfg.BlockInterval.Value
 		if err := scoredb.NewVarDB(as, state.VarBlockInterval).Set(blockInterval); err != nil {
 			return err
 		}
 	}
 
-	validators := make([]module.Validator, len(chainConfig.ValidatorList))
-	for i, validator := range chainConfig.ValidatorList {
+	validators := make([]module.Validator, len(cfg.ValidatorList))
+	for i, validator := range cfg.ValidatorList {
 		validators[i], _ = state.ValidatorFromAddress(validator)
 		s.log.Debugf("add validator %d: %v", i, validator)
 	}
@@ -440,7 +448,7 @@ func (s *chainScore) Install(param []byte) error {
 		}
 	}
 
-	feeConfig := chainConfig.Fee
+	feeConfig := cfg.Fee
 	if feeConfig != nil {
 		systemConfig |= state.SysConfigFee
 		if err := initFeeConfig(feeConfig, as); err != nil {
@@ -448,7 +456,7 @@ func (s *chainScore) Install(param []byte) error {
 		}
 	}
 
-	platformConfig := chainConfig.Platform
+	platformConfig := cfg.Platform
 	if platformConfig != nil {
 		if err := initPlatformConfig(platformConfig, as); err != nil {
 			return err
