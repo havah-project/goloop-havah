@@ -26,6 +26,7 @@ import (
 	"github.com/icon-project/goloop/havah/hvh/hvhstate"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/havah/hvhutils"
+	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/state"
 )
 
@@ -170,4 +171,16 @@ func (es *ExtensionStateImpl) GetIssueInfo(cc hvhmodule.CallContext) (map[string
 
 func (es *ExtensionStateImpl) StartRewardIssue(height int64) error {
 	return es.state.SetIssueStart(height)
+}
+
+func (es *ExtensionStateImpl) AddPlanetManager(address module.Address) error {
+	return es.state.AddPlanetManager(address)
+}
+
+func (es *ExtensionStateImpl) RemovePlanetManager(address module.Address) error {
+	return es.state.RemovePlanetManager(address)
+}
+
+func (es *ExtensionStateImpl) IsPlanetManager(address module.Address) (bool, error) {
+	return es.state.IsPlanetManager(address)
 }

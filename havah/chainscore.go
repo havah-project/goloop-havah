@@ -268,6 +268,32 @@ var chainMethods = []*chainMethod{
 		},
 		nil,
 	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "addPlanetManager",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"address", scoreapi.Address, nil, nil},
+		},
+		nil,
+	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "removePlanetManager",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"address", scoreapi.Address, nil, nil},
+		},
+		nil,
+	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "isPlanetManager",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"address", scoreapi.Address, nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.Bool,
+		},
+	}, 0, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {

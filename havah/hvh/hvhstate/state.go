@@ -8,6 +8,7 @@ import (
 	"github.com/icon-project/goloop/common/trie"
 	"github.com/icon-project/goloop/common/trie/trie_manager"
 	"github.com/icon-project/goloop/havah/hvhmodule"
+	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/scoreresult"
 )
 
@@ -71,6 +72,50 @@ func (s *State) SetIssueStart(height int64) error {
 func (s *State) GetTermPeriod() int64 {
 	varDB := s.getVarDB(hvhmodule.VarTermPeriod)
 	return varDB.Int64()
+}
+
+func (s *State) AddPlanetManager(address module.Address) error {
+	if ok, err := s.IsPlanetManager(address); err != nil {
+		return err
+	} else if ok {
+		return scoreresult.RevertedError.New("Duplicate address")
+	}
+	arrayDB := s.getArrayDB(hvhmodule.ArrayPlanetManager)
+	return arrayDB.Put(address)
+}
+
+func (s *State) RemovePlanetManager(address module.Address) error {
+	if address == nil {
+		return scoreresult.RevertedError.New("Invalid address")
+	}
+	arrayDB := s.getArrayDB(hvhmodule.ArrayPlanetManager)
+	size := arrayDB.Size()
+	for i := 0; i < size; i++ {
+		if address.Equal(arrayDB.Get(i).Address()) {
+			pmAddress := arrayDB.Pop().Address()
+			if i < size-1 {
+				if err := arrayDB.Set(i, pmAddress); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}
+	return scoreresult.RevertedError.New("Address not found")
+}
+
+func (s *State) IsPlanetManager(address module.Address) (bool, error) {
+	if address == nil {
+		return false, scoreresult.RevertedError.New("Invalid address")
+	}
+	arrayDB := s.getArrayDB(hvhmodule.ArrayPlanetManager)
+	size := arrayDB.Size()
+	for i := 0; i < size; i++ {
+		if address.Equal(arrayDB.Get(i).Address()) {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func NewStateFromSnapshot(ss *Snapshot, readonly bool, logger log.Logger) *State {

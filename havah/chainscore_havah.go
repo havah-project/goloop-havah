@@ -24,6 +24,7 @@ import (
 	"github.com/icon-project/goloop/havah/hvh"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/havah/hvhutils"
+	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/scoreresult"
 )
 
@@ -85,4 +86,28 @@ func (s *chainScore) Ex_startRewardIssue(height *common.HexInt) error {
 		return scoreresult.RevertedError.New("Invalid height")
 	}
 	return es.StartRewardIssue(startBH)
+}
+
+func (s *chainScore) Ex_addPlanetManager(address module.Address) error {
+	es, err := s.getExtensionState()
+	if err != nil {
+		return err
+	}
+	return es.AddPlanetManager(address)
+}
+
+func (s *chainScore) Ex_removePlanetManager(address module.Address) error {
+	es, err := s.getExtensionState()
+	if err != nil {
+		return err
+	}
+	return es.RemovePlanetManager(address)
+}
+
+func (s *chainScore) Ex_isPlanetManager(address module.Address) (bool, error) {
+	es, err := s.getExtensionState()
+	if err != nil {
+		return false, err
+	}
+	return es.IsPlanetManager(address)
 }
