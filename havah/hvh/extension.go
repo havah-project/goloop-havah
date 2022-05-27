@@ -116,6 +116,10 @@ func (es *ExtensionStateImpl) SetLogger(logger log.Logger) {
 	}
 }
 
+func (es *ExtensionStateImpl) State() *hvhstate.State {
+	return es.state
+}
+
 func (es *ExtensionStateImpl) GetSnapshot() state.ExtensionSnapshot {
 	return &ExtensionSnapshotImpl{
 		dbase: es.dbase,
@@ -174,8 +178,8 @@ func (es *ExtensionStateImpl) GetIssueInfo(cc hvhmodule.CallContext) (map[string
 	return jso, nil
 }
 
-func (es *ExtensionStateImpl) StartRewardIssue(height int64) error {
-	return es.state.SetIssueStart(height)
+func (es *ExtensionStateImpl) StartRewardIssue(cc hvhmodule.CallContext, startBH int64) error {
+	return es.state.SetIssueStart(cc.BlockHeight(), startBH)
 }
 
 func (es *ExtensionStateImpl) AddPlanetManager(address module.Address) error {

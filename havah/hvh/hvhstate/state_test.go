@@ -6,6 +6,7 @@ import (
 
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/db"
+	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
 )
 
@@ -116,5 +117,33 @@ func TestState_AddPlanetManager(t *testing.T) {
 	ok, err := state.IsPlanetManager(nil)
 	if ok || err == nil {
 		t.Errorf("IsPlanetManager() accpets nil")
+	}
+}
+
+func TestState_SetIssueStart(t *testing.T) {
+	var startBH, curBH, height int64
+	state := newDummyState()
+
+	// Success case: startBH > 0 && startBH > curBH
+	startBH, curBH = 2000, 1000
+	if err := state.SetIssueStart(curBH, startBH); err != nil {
+		t.Errorf("SetIssueStart() is failed: startBH=%d curBH=%d", startBH, curBH)
+	}
+	height = state.getVarDB(hvhmodule.VarIssueStart).Int64()
+	if height != startBH {
+		t.Errorf("SetIssueStart() is failed")
+	}
+
+	// Failure case: startBH <= 0 || startBH <= curBH
+	curBH = 1000
+	height = state.getVarDB(hvhmodule.VarIssueStart).Int64()
+	for _, startBH = range []int64{-100, 0, 100, 500, curBH} {
+		if err := state.SetIssueStart(curBH, startBH); err == nil {
+			t.Errorf("Invalid argument is accepted in SetIssueStart(): %d", startBH)
+		}
+		startBH = state.getVarDB(hvhmodule.VarIssueStart).Int64()
+		if startBH != height {
+			t.Errorf("SetIssueStart() is failed")
+		}
 	}
 }

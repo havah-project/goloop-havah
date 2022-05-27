@@ -85,7 +85,7 @@ func (s *chainScore) Ex_startRewardIssue(height *common.HexInt) error {
 	if startBH <= s.cc.BlockHeight() {
 		return scoreresult.RevertedError.New("Invalid height")
 	}
-	return es.StartRewardIssue(startBH)
+	return es.StartRewardIssue(s.newCallContext(), startBH)
 }
 
 func (s *chainScore) Ex_addPlanetManager(address module.Address) error {
