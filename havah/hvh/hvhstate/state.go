@@ -68,7 +68,7 @@ func (s *State) GetUSDTPrice() *big.Int {
 }
 
 func (s *State) SetUSDTPrice(price *big.Int) error {
-	if price.Sign() < 0 {
+	if price == nil || price.Sign() < 0 {
 		return scoreresult.RevertedError.New("Invalid USDTPrice")
 	}
 	varDB := s.getVarDB(hvhmodule.VarUSDTPrice)
