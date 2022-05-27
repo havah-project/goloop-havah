@@ -138,6 +138,35 @@ func (s *State) IsPlanetManager(address module.Address) (bool, error) {
 	return false, nil
 }
 
+func (s *State) RegisterPlanet(
+	isPrivate, isCompany bool, owner module.Address, usdt, price *big.Int, height int64,
+) error {
+	allPlanetVarDB := s.getVarDB(hvhmodule.VarAllPlanet)
+	planetCount := allPlanetVarDB.Int64()
+	if planetCount >= hvhmodule.MaxPlanetCount {
+		return scoreresult.RevertedError.New("Too many planets")
+	}
+
+	flags := None
+	if isPrivate {
+		flags |= Private
+	}
+	if isCompany {
+		flags |= Company
+	}
+	ps := NewPlanetState(flags, owner, usdt, price, height)
+
+	newId := planetCount
+	dictDB := s.getDictDB(hvhmodule.DictPlanet, 1)
+	if err := dictDB.Set(newId, ps); err != nil {
+		return scoreresult.RevertedError.Wrap(err, "Failed to write to PlanetDictDB")
+	}
+	if err := allPlanetVarDB.Set(planetCount + 1); err != nil {
+		return scoreresult.RevertedError.Wrap(err, "Failed to write to allPlanetVarDB")
+	}
+	return nil
+}
+
 func NewStateFromSnapshot(ss *Snapshot, readonly bool, logger log.Logger) *State {
 	store := trie_manager.NewMutableFromImmutable(ss.store)
 	return &State{

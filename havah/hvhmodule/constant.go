@@ -32,6 +32,7 @@ const (
 const (
 	BlockInterval    = 2000 // unit: ms
 	RoundLimitFactor = 3
+	MaxPlanetCount   = 50000
 
 	StepPrice          = 12500000000
 	MaxStepLimitInvoke = 2500000000

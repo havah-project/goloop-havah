@@ -111,3 +111,12 @@ func (s *chainScore) Ex_isPlanetManager(address module.Address) (bool, error) {
 	}
 	return es.IsPlanetManager(address)
 }
+
+func (s *chainScore) Ex_registerPlanet(
+	isPrivate, isCompany bool, owner module.Address, usdt, price *big.Int) error {
+	es, err := s.getExtensionState()
+	if err != nil {
+		return err
+	}
+	return es.RegisterPlanet(s.newCallContext(), isPrivate, isCompany, owner, usdt, price)
+}

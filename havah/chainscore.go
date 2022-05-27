@@ -294,6 +294,20 @@ var chainMethods = []*chainMethod{
 			scoreapi.Bool,
 		},
 	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "registerPlanet",
+		scoreapi.FlagExternal, 5,
+		[]scoreapi.Parameter{
+			{"owner", scoreapi.Address, nil, nil},
+			{"isPrivate", scoreapi.Bool, nil, nil},
+			{"isCompany", scoreapi.Bool, nil, nil},
+			{"usdt", scoreapi.Integer, nil, nil},
+			{"price", scoreapi.Integer, nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.Bool,
+		},
+	}, 0, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {

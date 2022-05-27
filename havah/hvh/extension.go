@@ -193,3 +193,12 @@ func (es *ExtensionStateImpl) RemovePlanetManager(address module.Address) error 
 func (es *ExtensionStateImpl) IsPlanetManager(address module.Address) (bool, error) {
 	return es.state.IsPlanetManager(address)
 }
+
+func (es *ExtensionStateImpl) RegisterPlanet(
+	cc hvhmodule.CallContext,
+	isPrivate bool, isCompany bool,
+	owner module.Address,
+	usdt *big.Int, price *big.Int,
+) error {
+	return es.state.RegisterPlanet(isPrivate, isCompany, owner, usdt, price, cc.BlockHeight())
+}
