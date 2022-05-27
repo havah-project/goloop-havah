@@ -18,6 +18,18 @@ type State struct {
 	logger   log.Logger
 }
 
+func (s *State) GetValue(key []byte) ([]byte, error) {
+	return s.store.Get(key)
+}
+
+func (s *State) SetValue(key []byte, value []byte) ([]byte, error) {
+	return s.store.Set(key, value)
+}
+
+func (s *State) DeleteValue(key []byte) ([]byte, error) {
+	return s.store.Delete(key)
+}
+
 func (s *State) GetSnapshot() *Snapshot {
 	s.store.GetSnapshot()
 	return newSnapshotFromImmutable(s.store.GetSnapshot())
@@ -28,23 +40,31 @@ func (s *State) Reset(ss *Snapshot) error {
 }
 
 func (s *State) getVarDB(key string) *containerdb.VarDB {
-	keyBuilder := containerdb.ToKey(containerdb.HashBuilder, key)
-	return containerdb.NewVarDB(s.store, keyBuilder)
+	keyBuilder := s.getKeyBuilder(key)
+	return containerdb.NewVarDB(s, keyBuilder)
 }
 
 func (s *State) getDictDB(key string, depth int) *containerdb.DictDB {
-	keyBuilder := containerdb.ToKey(containerdb.HashBuilder, key)
-	return containerdb.NewDictDB(s.store, depth, keyBuilder)
+	keyBuilder := s.getKeyBuilder(key)
+	return containerdb.NewDictDB(s, depth, keyBuilder)
 }
 
 func (s *State) getArrayDB(key string) *containerdb.ArrayDB {
-	keyBuilder := containerdb.ToKey(containerdb.HashBuilder, key)
-	return containerdb.NewArrayDB(s.store, keyBuilder)
+	keyBuilder := s.getKeyBuilder(key)
+	return containerdb.NewArrayDB(s, keyBuilder)
+}
+
+func (s *State) getKeyBuilder(key string) containerdb.KeyBuilder {
+	return containerdb.ToKey(containerdb.HashBuilder, key)
 }
 
 func (s *State) GetUSDTPrice() *big.Int {
 	varDB := s.getVarDB(hvhmodule.VarUSDTPrice)
-	return varDB.BigInt()
+	price := varDB.BigInt()
+	if price == nil {
+		price = hvhmodule.BigIntZero
+	}
+	return price
 }
 
 func (s *State) SetUSDTPrice(price *big.Int) error {

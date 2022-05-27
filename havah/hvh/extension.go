@@ -27,6 +27,7 @@ import (
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/havah/hvhutils"
 	"github.com/icon-project/goloop/module"
+	"github.com/icon-project/goloop/service/scoreresult"
 	"github.com/icon-project/goloop/service/state"
 )
 
@@ -147,7 +148,11 @@ func (es *ExtensionStateImpl) OnTransactionEnd(blockHeight int64, success bool) 
 }
 
 func (es *ExtensionStateImpl) GetUSDTPrice() (*big.Int, error) {
-	return es.state.GetUSDTPrice(), nil
+	price := es.state.GetUSDTPrice()
+	if price == nil || price.Sign() < 0 {
+		return nil, scoreresult.RevertedError.New("Invalid USDTPrice")
+	}
+	return price, nil
 }
 
 func (es *ExtensionStateImpl) SetUSDTPrice(price *big.Int) error {
