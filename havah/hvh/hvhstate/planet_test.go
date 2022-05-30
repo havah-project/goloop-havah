@@ -82,7 +82,7 @@ func TestPlanet_EncodeAndDecode(t *testing.T) {
 	height := int64(123)
 	p := newPlanet(flags, owner, usdt, price, height)
 
-	buf := make([]byte, 0, 1000)
+	var buf []byte
 	e := codec.BC.NewEncoderBytes(&buf)
 	if err := e.Encode(p); err != nil {
 		t.Errorf("Failed to encode a planet")

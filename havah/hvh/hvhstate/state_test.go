@@ -16,6 +16,13 @@ func newDummyState() *State {
 	return NewStateFromSnapshot(snapshot, false, nil)
 }
 
+func checkAllPlanet(t *testing.T, state *State, expected int64) {
+	cur := state.getVarDB(hvhmodule.VarAllPlanet).Int64()
+	if cur != expected {
+		t.Errorf("Incorrect all_planet count: cur(%d) != expected(%d)", cur, expected)
+	}
+}
+
 func TestState_SetUSDTPrice(t *testing.T) {
 	var price *big.Int
 	state := newDummyState()
@@ -146,4 +153,57 @@ func TestState_SetIssueStart(t *testing.T) {
 			t.Errorf("SetIssueStart() is failed")
 		}
 	}
+}
+
+func TestState_RegisterPlanet(t *testing.T) {
+	state := newDummyState()
+	owner := common.MustNewAddressFromString("hx1234")
+	isCompany := true
+	isPrivate := true
+	usdt := big.NewInt(1000)
+	price := new(big.Int).Mul(usdt, big.NewInt(10))
+	height := int64(200)
+	var planetCount int64
+
+	checkAllPlanet(t, state, 0)
+	expectedCount := int64(0)
+	for i := 0; i < 3; i++ {
+		if err := state.RegisterPlanet(int64(i), isPrivate, isCompany, owner, usdt, price, height); err != nil {
+			t.Errorf(err.Error())
+		}
+		expectedCount++
+		planetCount = state.getVarDB(hvhmodule.VarAllPlanet).Int64()
+		if planetCount != expectedCount {
+			t.Errorf(
+				"planetCount is not increased: cur(%d) != expected(%d)",
+				planetCount, expectedCount,
+			)
+		}
+	}
+
+	for i := 0; i < 2; i++ {
+		if err := state.UnregisterPlanet(int64(i)); err != nil {
+			t.Errorf(err.Error())
+		}
+		expectedCount--
+		checkAllPlanet(t, state, expectedCount)
+	}
+
+	planetCount = state.getVarDB(hvhmodule.VarAllPlanet).Int64()
+	if err := state.UnregisterPlanet(int64(100)); err == nil {
+		t.Errorf("No error while unregistering a non-existent planet")
+	}
+	checkAllPlanet(t, state, planetCount)
+}
+
+func TestState_UnregisterPlanet_InAbnormalCase(t *testing.T) {
+	state := newDummyState()
+	checkAllPlanet(t, state, int64(0))
+	if err := state.UnregisterPlanet(int64(-1)); err == nil {
+		t.Errorf("Invalid id is allowed by UnregisterPlanet()")
+	}
+	if err := state.UnregisterPlanet(int64(100)); err == nil {
+		t.Errorf("No error while unregistering a non-existent planet")
+	}
+	checkAllPlanet(t, state, int64(0))
 }

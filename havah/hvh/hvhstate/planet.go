@@ -82,6 +82,15 @@ func (p *planet) RLPEncodeSelf(e codec.Encoder) error {
 	return e.EncodeListOf(p.flags, p.owner, p.usdt, p.price, p.height)
 }
 
+func (p *planet) Bytes() []byte {
+	var buf []byte
+	e := codec.BC.NewEncoderBytes(&buf)
+	if err := e.Encode(p); err != nil {
+		panic("planet.Bytes() error")
+	}
+	return buf
+}
+
 // ====================================================================
 
 type PlanetSnapshot struct {

@@ -147,7 +147,7 @@ func (s *State) RegisterPlanet(
 
 	// Check if id is available
 	planetDictDB := s.getDictDB(hvhmodule.DictPlanet, 1)
-	if planetDictDB.Get(id).Bytes() != nil {
+	if planetDictDB.Get(id) != nil {
 		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Already in use: id=%d", id)
 	}
 
@@ -168,7 +168,7 @@ func (s *State) RegisterPlanet(
 	}
 	ps := NewPlanetState(flags, owner, usdt, price, height)
 
-	if err := planetDictDB.Set(id, ps); err != nil {
+	if err := planetDictDB.Set(id, ps.Bytes()); err != nil {
 		return scoreresult.UnknownFailureError.Wrap(err, "Failed to write to planetDictDB")
 	}
 	if err := allPlanetVarDB.Set(planetCount + 1); err != nil {
@@ -184,7 +184,7 @@ func (s *State) UnregisterPlanet(id int64) error {
 
 	// Check if id exists
 	planetDictDB := s.getDictDB(hvhmodule.DictPlanet, 1)
-	if planetDictDB.Get(id).Bytes() == nil {
+	if planetDictDB.Get(id) == nil {
 		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Id not found: %d", id)
 	}
 
