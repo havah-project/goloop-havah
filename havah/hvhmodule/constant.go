@@ -18,6 +18,8 @@ package hvhmodule
 
 import (
 	"math/big"
+
+	"github.com/icon-project/goloop/module"
 )
 
 // From iiss.calculator.go
@@ -97,6 +99,11 @@ const (
 	VarRewardTotal         = "reward_total"
 	VarRewardRemain        = "reward_remain"
 	VarCompanyReward       = "company_reward"
+)
+
+// ErrorCodes for havah chainscore
+const (
+	StatusIllegalArgument = module.StatusReverted + iota
 )
 
 // The following variables are read-only

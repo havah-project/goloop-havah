@@ -43,7 +43,7 @@ func (s *chainScore) toScoreResultError(code errors.Code, err error) error {
 	msg := err.Error()
 	if logger := s.cc.Logger(); logger != nil {
 		logger = hvhutils.NewLogger(logger)
-		logger.Infof(msg)
+		logger.Errorf(msg)
 	}
 	return code.Wrap(err, msg)
 }

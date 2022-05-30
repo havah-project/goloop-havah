@@ -296,7 +296,7 @@ var chainMethods = []*chainMethod{
 	}, 0, 0},
 	{scoreapi.Method{
 		scoreapi.Function, "registerPlanet",
-		scoreapi.FlagExternal, 5,
+		scoreapi.FlagExternal, 6,
 		[]scoreapi.Parameter{
 			{"id", scoreapi.Integer, nil, nil},
 			{"owner", scoreapi.Address, nil, nil},
@@ -305,9 +305,7 @@ var chainMethods = []*chainMethod{
 			{"usdt", scoreapi.Integer, nil, nil},
 			{"price", scoreapi.Integer, nil, nil},
 		},
-		[]scoreapi.DataType{
-			scoreapi.Bool,
-		},
+		nil,
 	}, 0, 0},
 }
 
