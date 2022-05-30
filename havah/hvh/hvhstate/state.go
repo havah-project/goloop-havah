@@ -139,14 +139,22 @@ func (s *State) IsPlanetManager(address module.Address) (bool, error) {
 }
 
 func (s *State) RegisterPlanet(
-	isPrivate, isCompany bool, owner module.Address, usdt, price *big.Int, height int64,
+	id int64, isPrivate, isCompany bool, owner module.Address, usdt, price *big.Int, height int64,
 ) error {
+	// Check if id is available
+	planetDictDB := s.getDictDB(hvhmodule.DictPlanet, 1)
+	if planetDictDB.Get(id).Bytes() != nil {
+		return scoreresult.RevertedError.Errorf("Already in use: id=%d", id)
+	}
+
+	// Check if too many planets have been registered
 	allPlanetVarDB := s.getVarDB(hvhmodule.VarAllPlanet)
 	planetCount := allPlanetVarDB.Int64()
 	if planetCount >= hvhmodule.MaxPlanetCount {
 		return scoreresult.RevertedError.New("Too many planets")
 	}
 
+	// Convert bool values to flags
 	flags := None
 	if isPrivate {
 		flags |= Private
@@ -156,10 +164,8 @@ func (s *State) RegisterPlanet(
 	}
 	ps := NewPlanetState(flags, owner, usdt, price, height)
 
-	newId := planetCount
-	dictDB := s.getDictDB(hvhmodule.DictPlanet, 1)
-	if err := dictDB.Set(newId, ps); err != nil {
-		return scoreresult.RevertedError.Wrap(err, "Failed to write to PlanetDictDB")
+	if err := planetDictDB.Set(id, ps); err != nil {
+		return scoreresult.RevertedError.Wrap(err, "Failed to write to planetDictDB")
 	}
 	if err := allPlanetVarDB.Set(planetCount + 1); err != nil {
 		return scoreresult.RevertedError.Wrap(err, "Failed to write to allPlanetVarDB")

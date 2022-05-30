@@ -298,6 +298,7 @@ var chainMethods = []*chainMethod{
 		scoreapi.Function, "registerPlanet",
 		scoreapi.FlagExternal, 5,
 		[]scoreapi.Parameter{
+			{"id", scoreapi.Integer, nil, nil},
 			{"owner", scoreapi.Address, nil, nil},
 			{"isPrivate", scoreapi.Bool, nil, nil},
 			{"isCompany", scoreapi.Bool, nil, nil},
