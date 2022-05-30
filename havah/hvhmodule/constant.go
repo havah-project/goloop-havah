@@ -104,6 +104,7 @@ const (
 // ErrorCodes for havah chainscore
 const (
 	StatusIllegalArgument = module.StatusReverted + iota
+	StatusCriticalError
 )
 
 // The following variables are read-only

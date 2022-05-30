@@ -203,3 +203,7 @@ func (es *ExtensionStateImpl) RegisterPlanet(
 ) error {
 	return es.state.RegisterPlanet(id, isPrivate, isCompany, owner, usdt, price, cc.BlockHeight())
 }
+
+func (es *ExtensionStateImpl) UnregisterPlanet(cc hvhmodule.CallContext, id int64) error {
+	return es.state.UnregisterPlanet(id)
+}

@@ -177,6 +177,34 @@ func (s *State) RegisterPlanet(
 	return nil
 }
 
+func (s *State) UnregisterPlanet(id int64) error {
+	if id < 0 {
+		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid id: %d", id)
+	}
+
+	// Check if id exists
+	planetDictDB := s.getDictDB(hvhmodule.DictPlanet, 1)
+	if planetDictDB.Get(id).Bytes() == nil {
+		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Id not found: %d", id)
+	}
+
+	allPlanetVarDB := s.getVarDB(hvhmodule.VarAllPlanet)
+	planetCount := allPlanetVarDB.Int64()
+	if planetCount < 1 {
+		return scoreresult.Errorf(hvhmodule.StatusCriticalError, "Planet state mismatch")
+	}
+
+	if err := planetDictDB.Delete(id); err != nil {
+		return scoreresult.UnknownFailureError.Wrap(err, "Failed to delete data from planetVarDB")
+	}
+	if err := allPlanetVarDB.Set(planetCount - 1); err != nil {
+		return scoreresult.UnknownFailureError.Wrap(err, "Failed to write to allPlanetVarDB")
+	}
+
+	// TODO: Remaining reward and active planet state handling
+	return nil
+}
+
 func NewStateFromSnapshot(ss *Snapshot, readonly bool, logger log.Logger) *State {
 	store := trie_manager.NewMutableFromImmutable(ss.store)
 	return &State{

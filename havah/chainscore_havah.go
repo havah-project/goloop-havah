@@ -121,3 +121,11 @@ func (s *chainScore) Ex_registerPlanet(
 	}
 	return es.RegisterPlanet(s.newCallContext(), id, isPrivate, isCompany, owner, usdt.Value(), price.Value())
 }
+
+func (s *chainScore) Ex_unregisterPlanet(id int64) error {
+	es, err := s.getExtensionState()
+	if err != nil {
+		return err
+	}
+	return es.UnregisterPlanet(s.newCallContext(), id)
+}
