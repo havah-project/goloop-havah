@@ -211,3 +211,11 @@ func (es *ExtensionStateImpl) UnregisterPlanet(cc hvhmodule.CallContext, id int6
 func (es *ExtensionStateImpl) SetPlanetOwner(cc hvhmodule.CallContext, id int64, owner module.Address) error {
 	return es.state.SetPlanetOwner(id, owner)
 }
+
+func (es *ExtensionStateImpl) GetPlanetInfo(cc hvhmodule.CallContext, id int64) (map[string]interface{}, error) {
+	p, err := es.state.GetPlanet(id)
+	if err != nil {
+		return nil, err
+	}
+	return p.ToJSON(), nil
+}

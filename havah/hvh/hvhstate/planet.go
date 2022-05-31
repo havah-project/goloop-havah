@@ -126,6 +126,17 @@ func (p *planet) Bytes() []byte {
 	return codec.BC.MustMarshalToBytes(p)
 }
 
+func (p *planet) ToJSON() map[string]interface{} {
+	return map[string]interface{}{
+		"isPrivate":  p.IsPrivate(),
+		"isCompany":  p.IsCompany(),
+		"owner":      p.owner,
+		"usdtPrice":  p.usdt,
+		"havahPrice": p.price,
+		"height":     p.height,
+	}
+}
+
 // ====================================================================
 
 /*

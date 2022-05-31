@@ -135,3 +135,37 @@ func TestPlanet_setOwner(t *testing.T) {
 		t.Errorf("dirty should be set to true after owner is changed")
 	}
 }
+
+func TestPlanet_ToJSON(t *testing.T) {
+	isPrivate := true
+	isCompany := true
+	owner := common.MustNewAddressFromString("hx1234")
+	usdt := big.NewInt(1000)
+	price := new(big.Int).Mul(usdt, big.NewInt(10))
+	height := int64(123)
+
+	p := newPlanet(isPrivate, isCompany, owner, usdt, price, height)
+	jso := p.ToJSON()
+	if jso == nil || len(jso) != 6 {
+		t.Errorf("ToJSON() failure")
+	}
+
+	if v, ok := jso["isPrivate"].(bool); !ok || v != isPrivate {
+		t.Errorf("Incorrect isPrivate in ToJSON()")
+	}
+	if v, ok := jso["isCompany"].(bool); !ok || v != isCompany {
+		t.Errorf("Incorrect isPrivate in ToJSON()")
+	}
+	if v, ok := jso["owner"].(*common.Address); !ok || !v.Equal(owner) {
+		t.Errorf("Incorrect owner in ToJSON()")
+	}
+	if v, ok := jso["usdtPrice"].(*big.Int); !ok || v.Cmp(usdt) != 0 {
+		t.Errorf("Incorrect usdtPrice in ToJSON()")
+	}
+	if v, ok := jso["havahPrice"].(*big.Int); !ok || v.Cmp(price) != 0 {
+		t.Errorf("Incorrect havahPrice in ToJSON()")
+	}
+	if v, ok := jso["height"].(int64); !ok || v != height {
+		t.Errorf("Incorrect height in ToJSON()")
+	}
+}

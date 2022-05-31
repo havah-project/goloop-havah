@@ -324,6 +324,16 @@ var chainMethods = []*chainMethod{
 		},
 		nil,
 	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "getPlanetInfo",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"id", scoreapi.Integer, nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.Dict,
+		},
+	}, 0, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {

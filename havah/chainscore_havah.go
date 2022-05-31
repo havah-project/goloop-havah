@@ -137,3 +137,11 @@ func (s *chainScore) Ex_setPlanetOwner(id int64, owner module.Address) error {
 	}
 	return es.SetPlanetOwner(s.newCallContext(), id, owner)
 }
+
+func (s *chainScore) Ex_getPlanetInfo(id int64) (map[string]interface{}, error) {
+	es, err := s.getExtensionState()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetPlanetInfo(s.newCallContext(), id)
+}

@@ -198,15 +198,8 @@ func (s *State) UnregisterPlanet(id int64) error {
 }
 
 func (s *State) SetPlanetOwner(id int64, owner module.Address) error {
-	if err := validatePlanetId(id); err != nil {
-		return err
-	}
 	planetDictDB := s.getDictDB(hvhmodule.DictPlanet, 1)
-	value := planetDictDB.Get(id)
-	if value == nil {
-		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Planet not found: id=%d", id)
-	}
-	p, err := newPlanetFromBytes(value.Bytes())
+	p, err := s.getPlanet(planetDictDB, id)
 	if err != nil {
 		return err
 	}
@@ -218,6 +211,26 @@ func (s *State) SetPlanetOwner(id int64, owner module.Address) error {
 		return planetDictDB.Set(id, p.Bytes())
 	}
 	return nil
+}
+
+func (s *State) GetPlanet(id int64) (*planet, error) {
+	dictDB := s.getDictDB(hvhmodule.DictPlanet, 1)
+	return s.getPlanet(dictDB, id)
+}
+
+func (s *State) getPlanet(dictDB *containerdb.DictDB, id int64) (*planet, error) {
+	if err := validatePlanetId(id); err != nil {
+		return nil, err
+	}
+	value := dictDB.Get(id)
+	if value == nil {
+		return nil, scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Planet not found: id=%d", id)
+	}
+	p, err := newPlanetFromBytes(value.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
 func validatePlanetId(id int64) error {
