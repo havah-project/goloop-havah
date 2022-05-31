@@ -158,17 +158,9 @@ func (s *State) RegisterPlanet(
 		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Too many planets: %d", planetCount)
 	}
 
-	// Convert bool values to flags
-	flags := None
-	if isPrivate {
-		flags |= Private
-	}
-	if isCompany {
-		flags |= Company
-	}
-	ps := NewPlanetState(flags, owner, usdt, price, height)
+	p := newPlanet(isPrivate, isCompany, owner, usdt, price, height)
 
-	if err := planetDictDB.Set(id, ps.Bytes()); err != nil {
+	if err := planetDictDB.Set(id, p.Bytes()); err != nil {
 		return scoreresult.UnknownFailureError.Wrap(err, "Failed to write to planetDictDB")
 	}
 	if err := allPlanetVarDB.Set(planetCount + 1); err != nil {
@@ -185,7 +177,7 @@ func (s *State) UnregisterPlanet(id int64) error {
 	// Check if id exists
 	planetDictDB := s.getDictDB(hvhmodule.DictPlanet, 1)
 	if planetDictDB.Get(id) == nil {
-		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Id not found: %d", id)
+		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Planet not found: id=%d", id)
 	}
 
 	allPlanetVarDB := s.getVarDB(hvhmodule.VarAllPlanet)
@@ -202,6 +194,36 @@ func (s *State) UnregisterPlanet(id int64) error {
 	}
 
 	// TODO: Remaining reward and active planet state handling
+	return nil
+}
+
+func (s *State) SetPlanetOwner(id int64, owner module.Address) error {
+	if err := validatePlanetId(id); err != nil {
+		return err
+	}
+	planetDictDB := s.getDictDB(hvhmodule.DictPlanet, 1)
+	value := planetDictDB.Get(id)
+	if value == nil {
+		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Planet not found: id=%d", id)
+	}
+	p, err := newPlanetFromBytes(value.Bytes())
+	if err != nil {
+		return err
+	}
+	err = p.setOwner(owner)
+	if err != nil {
+		return err
+	}
+	if p.isDirty() {
+		return planetDictDB.Set(id, p.Bytes())
+	}
+	return nil
+}
+
+func validatePlanetId(id int64) error {
+	if id < 0 {
+		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid id: %d", id)
+	}
 	return nil
 }
 

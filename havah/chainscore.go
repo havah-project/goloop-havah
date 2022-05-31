@@ -315,6 +315,15 @@ var chainMethods = []*chainMethod{
 		},
 		nil,
 	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "setPlanetOwner",
+		scoreapi.FlagExternal, 2,
+		[]scoreapi.Parameter{
+			{"id", scoreapi.Integer, nil, nil},
+			{"owner", scoreapi.Address, nil, nil},
+		},
+		nil,
+	}, 0, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {

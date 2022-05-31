@@ -207,3 +207,7 @@ func (es *ExtensionStateImpl) RegisterPlanet(
 func (es *ExtensionStateImpl) UnregisterPlanet(cc hvhmodule.CallContext, id int64) error {
 	return es.state.UnregisterPlanet(id)
 }
+
+func (es *ExtensionStateImpl) SetPlanetOwner(cc hvhmodule.CallContext, id int64, owner module.Address) error {
+	return es.state.SetPlanetOwner(id, owner)
+}

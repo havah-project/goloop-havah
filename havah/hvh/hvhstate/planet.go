@@ -5,18 +5,21 @@ import (
 
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/codec"
+	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
+	"github.com/icon-project/goloop/service/scoreresult"
 )
 
 type PlanetFlag int
 
 const (
-	None    = PlanetFlag(0)
 	Company = PlanetFlag(1 << iota)
 	Private
 )
 
 type planet struct {
+	dirty bool
+
 	flags  PlanetFlag
 	owner  *common.Address
 	usdt   *big.Int // priceInUSDT
@@ -24,14 +27,29 @@ type planet struct {
 	height int64
 }
 
-func newPlanet(flags PlanetFlag, owner *common.Address, usdt, price *big.Int, height int64) *planet {
-	return &planet{
-		flags,
-		owner,
-		usdt,
-		price,
-		height,
+func newPlanet(isPrivate, isCompany bool, owner module.Address, usdt, price *big.Int, height int64) *planet {
+	var flags PlanetFlag
+	if isPrivate {
+		flags |= Private
 	}
+	if isCompany {
+		flags |= Company
+	}
+	return &planet{
+		flags:  flags,
+		owner:  common.AddressToPtr(owner),
+		usdt:   usdt,
+		price:  price,
+		height: height,
+	}
+}
+
+func newPlanetFromBytes(b []byte) (*planet, error) {
+	p := &planet{}
+	if _, err := codec.BC.UnmarshalFromBytes(b, p); err != nil {
+		return nil, scoreresult.UnknownFailureError.Wrap(err, "Failed to create a planet from bytes")
+	}
+	return p, nil
 }
 
 func (p *planet) IsPrivate() bool {
@@ -74,6 +92,28 @@ func (p *planet) equal(p2 *planet) bool {
 		p.height == p2.height
 }
 
+func (p *planet) setOwner(owner module.Address) error {
+	if owner == nil {
+		return scoreresult.New(hvhmodule.StatusIllegalArgument, "Invalid owner")
+	}
+	if !p.owner.Equal(owner) {
+		p.owner = common.AddressToPtr(owner)
+		if p.owner == nil {
+			return scoreresult.New(hvhmodule.StatusIllegalArgument, "Invalid owner")
+		}
+		p.setDirty()
+	}
+	return nil
+}
+
+func (p *planet) isDirty() bool {
+	return p.dirty
+}
+
+func (p *planet) setDirty() {
+	p.dirty = true
+}
+
 func (p *planet) RLPDecodeSelf(d codec.Decoder) error {
 	return d.DecodeListOf(&p.flags, &p.owner, &p.usdt, &p.price, &p.height)
 }
@@ -83,16 +123,12 @@ func (p *planet) RLPEncodeSelf(e codec.Encoder) error {
 }
 
 func (p *planet) Bytes() []byte {
-	var buf []byte
-	e := codec.BC.NewEncoderBytes(&buf)
-	if err := e.Encode(p); err != nil {
-		panic("planet.Bytes() error")
-	}
-	return buf
+	return codec.BC.MustMarshalToBytes(p)
 }
 
 // ====================================================================
 
+/*
 type PlanetSnapshot struct {
 	planet
 }
@@ -120,6 +156,14 @@ func NewPlanetStateFromSnapshot(pss *PlanetSnapshot) *PlanetState {
 	}
 }
 
+func NewPlanetStateFromBytes(b []byte) *PlanetState {
+	p, err := newPlanetFromBytes(b)
+	if err != nil {
+		return nil
+	}
+	return &PlanetState{nil, *p}
+}
+
 func (ps *PlanetState) IsDirty() bool {
 	return ps.snapshot == nil
 }
@@ -134,3 +178,4 @@ func (ps *PlanetState) SetOwner(address module.Address) {
 		ps.setDirty()
 	}
 }
+*/

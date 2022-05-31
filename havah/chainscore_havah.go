@@ -129,3 +129,11 @@ func (s *chainScore) Ex_unregisterPlanet(id int64) error {
 	}
 	return es.UnregisterPlanet(s.newCallContext(), id)
 }
+
+func (s *chainScore) Ex_setPlanetOwner(id int64, owner module.Address) error {
+	es, err := s.getExtensionState()
+	if err != nil {
+		return err
+	}
+	return es.SetPlanetOwner(s.newCallContext(), id, owner)
+}
