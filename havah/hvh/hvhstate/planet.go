@@ -65,11 +65,11 @@ func (p *planet) Owner() module.Address {
 }
 
 func (p *planet) USDT() *big.Int {
-	return p.usdt
+	return new(big.Int).Set(p.usdt)
 }
 
 func (p *planet) Price() *big.Int {
-	return p.price
+	return new(big.Int).Set(p.price)
 }
 
 func (p *planet) Height() int64 {

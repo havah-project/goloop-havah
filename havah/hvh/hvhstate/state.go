@@ -94,6 +94,19 @@ func (s *State) GetTermPeriod() int64 {
 	return varDB.Int64()
 }
 
+func (s *State) GetTermSequence(height int64) int64 {
+	issueStart := s.GetIssueStart()
+	if issueStart == 0 {
+		return -1
+	}
+	termPeriod := s.GetTermPeriod()
+	return (height - issueStart) / termPeriod
+}
+
+func (s *State) GetTermNumber(height int64) int64 {
+	return s.GetTermSequence(height) + 1
+}
+
 func (s *State) AddPlanetManager(address module.Address) error {
 	if ok, err := s.IsPlanetManager(address); err != nil {
 		return err
@@ -231,6 +244,106 @@ func (s *State) getPlanet(dictDB *containerdb.DictDB, id int64) (*planet, error)
 		return nil, err
 	}
 	return p, nil
+}
+
+func (s *State) ReportPlanetWork(id, height int64) error {
+	p, err := s.GetPlanet(id)
+	if err != nil {
+		return err
+	}
+
+	issueStart := s.GetIssueStart()
+	termPeriod := s.GetTermPeriod()
+	termSequence := (height - issueStart) / termPeriod
+	termStart := termSequence*termPeriod + issueStart
+
+	if p.height >= termStart {
+		// If a planet is registered in this term, ignore its work report
+		return nil
+	}
+
+	reward := new(big.Int).Div(
+		s.getBigInt(hvhmodule.VarRewardTotal),
+		s.getBigInt(hvhmodule.VarActivePlanet))
+	rewardWithHoover := reward
+	if err = s.decreaseRewardRemain(reward); err != nil {
+		return err
+	}
+
+	pr, err := s.getPlanetReward(id)
+	if err != nil {
+		return err
+	}
+
+	// hooverLimit = planetReward.total + reward - planet.price
+	hooverLimit := pr.Total()
+	hooverLimit.Add(hooverLimit, reward)
+	hooverLimit.Sub(hooverLimit, p.Price())
+	if hooverLimit.Sign() > 0 {
+		hooverGuide := s.calcHooverGuide(p)
+
+		// if reward < hooverGuide
+		if reward.Cmp(hooverGuide) < 0 {
+			hooverRequest := new(big.Int).Sub(hooverGuide, reward)
+			// if hooverRequest > hooverLimit
+			if hooverRequest.Cmp(hooverLimit) > 0 {
+				hooverRequest = hooverLimit
+			}
+			rewardWithHoover = new(big.Int).Add(reward, hooverRequest)
+		}
+	}
+	return s.offerReward(termSequence+1, id, rewardWithHoover)
+}
+
+func (s *State) getBigInt(key string) *big.Int {
+	return s.getVarDB(key).BigInt()
+}
+
+func (s *State) getInt64(key string) int64 {
+	return s.getVarDB(key).Int64()
+}
+
+func (s *State) calcHooverGuide(p *planet) *big.Int {
+	hooverGuide := p.USDT()
+	hooverGuide.Mul(hooverGuide, s.getBigInt(hvhmodule.VarActiveUSDTPrice))
+	hooverGuide.Div(hooverGuide, hvhmodule.BigIntUSDTDecimal)
+	hooverGuide.Div(hooverGuide, big.NewInt(10))
+	hooverGuide.Div(hooverGuide, s.getBigInt(hvhmodule.VarIssueReductionCycle))
+	return hooverGuide
+}
+
+func (s *State) decreaseRewardRemain(amount *big.Int) error {
+	if amount == nil || amount.Sign() < 0 {
+		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid amount: %v", amount)
+	}
+	if amount.Sign() == 0 {
+		// Nothing to do
+		return nil
+	}
+	varDB := s.getVarDB(hvhmodule.VarRewardRemain)
+	rewardRemain := varDB.BigInt()
+	rewardRemain.Sub(rewardRemain, amount)
+	if rewardRemain.Sign() < 0 {
+		return scoreresult.Errorf(
+			hvhmodule.StatusRewardError,
+			"Not enough rewardRemain: rewardRemain=%v reward=%v",
+			rewardRemain, amount)
+	}
+	return varDB.Set(rewardRemain)
+}
+
+func (s *State) offerReward(tn, id int64, amount *big.Int) error {
+	pr, err := s.getPlanetReward(id)
+	if err != nil {
+		return err
+	}
+	return pr.increment(tn, amount)
+}
+
+func (s *State) getPlanetReward(id int64) (*planetReward, error) {
+	planetRewardDictDB := s.getDictDB(hvhmodule.DictPlanetReward, 1)
+	b := planetRewardDictDB.Get(id).Bytes()
+	return newPlanetRewardFromBytes(b)
 }
 
 func validatePlanetId(id int64) error {

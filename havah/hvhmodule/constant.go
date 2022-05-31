@@ -105,11 +105,13 @@ const (
 const (
 	StatusIllegalArgument = module.StatusReverted + iota
 	StatusCriticalError
+	StatusRewardError
 )
 
 // The following variables are read-only
 var (
-	BigIntZero      = new(big.Int)
-	BigIntDecimal   = big.NewInt(1_000_000_000_000_000_000)
-	BigIntDayBlocks = big.NewInt(DayBlock)
+	BigIntZero        = new(big.Int)
+	BigIntCoinDecimal = big.NewInt(1_000_000_000_000_000_000)
+	BigIntUSDTDecimal = big.NewInt(1_000_000)
+	BigIntDayBlocks   = big.NewInt(DayBlock)
 )

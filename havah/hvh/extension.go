@@ -219,3 +219,21 @@ func (es *ExtensionStateImpl) GetPlanetInfo(cc hvhmodule.CallContext, id int64) 
 	}
 	return p.ToJSON(), nil
 }
+
+func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int64) error {
+	from := cc.From()
+	if ok, err := es.state.IsPlanetManager(from); err != nil {
+		return err
+	} else {
+		if !ok {
+			return scoreresult.AccessDeniedError.Errorf(
+				"Only planetManager can report planet work: %s", from)
+		}
+	}
+
+	if err := es.state.ReportPlanetWork(id, cc.BlockHeight()); err != nil {
+		return err
+	}
+	// TODO: RewardGiven(termSequence, id, reward, hoover) eventlog
+	return nil
+}
