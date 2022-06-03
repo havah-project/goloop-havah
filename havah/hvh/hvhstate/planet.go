@@ -17,7 +17,7 @@ const (
 	Private
 )
 
-type planet struct {
+type Planet struct {
 	dirty bool
 
 	flags  PlanetFlag
@@ -27,7 +27,7 @@ type planet struct {
 	height int64
 }
 
-func newPlanet(isPrivate, isCompany bool, owner module.Address, usdt, price *big.Int, height int64) *planet {
+func newPlanet(isPrivate, isCompany bool, owner module.Address, usdt, price *big.Int, height int64) *Planet {
 	var flags PlanetFlag
 	if isPrivate {
 		flags |= Private
@@ -35,7 +35,7 @@ func newPlanet(isPrivate, isCompany bool, owner module.Address, usdt, price *big
 	if isCompany {
 		flags |= Company
 	}
-	return &planet{
+	return &Planet{
 		flags:  flags,
 		owner:  common.AddressToPtr(owner),
 		usdt:   usdt,
@@ -44,39 +44,39 @@ func newPlanet(isPrivate, isCompany bool, owner module.Address, usdt, price *big
 	}
 }
 
-func newPlanetFromBytes(b []byte) (*planet, error) {
-	p := &planet{}
+func newPlanetFromBytes(b []byte) (*Planet, error) {
+	p := &Planet{}
 	if _, err := codec.BC.UnmarshalFromBytes(b, p); err != nil {
-		return nil, scoreresult.UnknownFailureError.Wrap(err, "Failed to create a planet from bytes")
+		return nil, scoreresult.UnknownFailureError.Wrap(err, "Failed to create a Planet from bytes")
 	}
 	return p, nil
 }
 
-func (p *planet) IsPrivate() bool {
+func (p *Planet) IsPrivate() bool {
 	return p.flags&Private != 0
 }
 
-func (p *planet) IsCompany() bool {
+func (p *Planet) IsCompany() bool {
 	return p.flags&Company != 0
 }
 
-func (p *planet) Owner() module.Address {
+func (p *Planet) Owner() module.Address {
 	return p.owner
 }
 
-func (p *planet) USDT() *big.Int {
+func (p *Planet) USDT() *big.Int {
 	return new(big.Int).Set(p.usdt)
 }
 
-func (p *planet) Price() *big.Int {
+func (p *Planet) Price() *big.Int {
 	return new(big.Int).Set(p.price)
 }
 
-func (p *planet) Height() int64 {
+func (p *Planet) Height() int64 {
 	return p.height
 }
 
-func (p *planet) turnFlags(flags PlanetFlag, on bool) {
+func (p *Planet) turnFlags(flags PlanetFlag, on bool) {
 	if on {
 		p.flags |= flags
 	} else {
@@ -84,7 +84,7 @@ func (p *planet) turnFlags(flags PlanetFlag, on bool) {
 	}
 }
 
-func (p *planet) equal(p2 *planet) bool {
+func (p *Planet) equal(p2 *Planet) bool {
 	return p.flags == p2.flags &&
 		p.owner.Equal(p2.owner) &&
 		p.usdt.Cmp(p2.usdt) == 0 &&
@@ -92,7 +92,7 @@ func (p *planet) equal(p2 *planet) bool {
 		p.height == p2.height
 }
 
-func (p *planet) setOwner(owner module.Address) error {
+func (p *Planet) setOwner(owner module.Address) error {
 	if owner == nil {
 		return scoreresult.New(hvhmodule.StatusIllegalArgument, "Invalid owner")
 	}
@@ -106,27 +106,27 @@ func (p *planet) setOwner(owner module.Address) error {
 	return nil
 }
 
-func (p *planet) isDirty() bool {
+func (p *Planet) isDirty() bool {
 	return p.dirty
 }
 
-func (p *planet) setDirty() {
+func (p *Planet) setDirty() {
 	p.dirty = true
 }
 
-func (p *planet) RLPDecodeSelf(d codec.Decoder) error {
+func (p *Planet) RLPDecodeSelf(d codec.Decoder) error {
 	return d.DecodeListOf(&p.flags, &p.owner, &p.usdt, &p.price, &p.height)
 }
 
-func (p *planet) RLPEncodeSelf(e codec.Encoder) error {
+func (p *Planet) RLPEncodeSelf(e codec.Encoder) error {
 	return e.EncodeListOf(p.flags, p.owner, p.usdt, p.price, p.height)
 }
 
-func (p *planet) Bytes() []byte {
+func (p *Planet) Bytes() []byte {
 	return codec.BC.MustMarshalToBytes(p)
 }
 
-func (p *planet) ToJSON() map[string]interface{} {
+func (p *Planet) ToJSON() map[string]interface{} {
 	return map[string]interface{}{
 		"isPrivate":  p.IsPrivate(),
 		"isCompany":  p.IsCompany(),
@@ -141,12 +141,12 @@ func (p *planet) ToJSON() map[string]interface{} {
 
 /*
 type PlanetSnapshot struct {
-	planet
+	Planet
 }
 
 type PlanetState struct {
 	snapshot *PlanetSnapshot
-	planet
+	Planet
 }
 
 func NewPlanetState(flags PlanetFlag, owner module.Address, usdt, price *big.Int, height int64) *PlanetState {
@@ -163,7 +163,7 @@ func NewPlanetState(flags PlanetFlag, owner module.Address, usdt, price *big.Int
 func NewPlanetStateFromSnapshot(pss *PlanetSnapshot) *PlanetState {
 	return &PlanetState{
 		snapshot: pss,
-		planet:   pss.planet,
+		Planet:   pss.Planet,
 	}
 }
 

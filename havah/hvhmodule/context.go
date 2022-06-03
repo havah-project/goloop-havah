@@ -29,6 +29,7 @@ type WorldContext interface {
 type CallContext interface {
 	WorldContext
 	From() module.Address
+	SystemAddress(name SystemAddressName) module.Address
 	HandleBurn(address module.Address, amount *big.Int) error
 	SumOfStepUsed() *big.Int
 	OnEvent(addr module.Address, indexed, data [][]byte)

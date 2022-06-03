@@ -19,6 +19,7 @@ package hvhmodule
 import (
 	"math/big"
 
+	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/module"
 )
 
@@ -32,9 +33,11 @@ const (
 )
 
 const (
-	BlockInterval    = 2000 // unit: ms
-	RoundLimitFactor = 3
-	MaxPlanetCount   = 50000
+	BlockInterval          = 2000 // unit: ms
+	RoundLimitFactor       = 3
+	MaxPlanetCount         = 50000
+	MaxCountToClaim        = 50
+	MaxPrivateReleaseCycle = MonthPerYear * 2
 
 	StepPrice          = 12500000000
 	MaxStepLimitInvoke = 2500000000
@@ -65,18 +68,6 @@ const (
 	PrivateReleaseCycle = DayPerMonth
 	PrivateLockup       = MonthPerYear * DayPerMonth // 1 year (360) in term
 	HooverBudget        = 5_000_000                  // unit: hvh
-)
-
-// Addresses
-const (
-	SystemTreasury  = "hx1000000000000000000000000000000000000000"
-	Governance      = "cx0000000000000000000000000000000000000001"
-	PublicTreasury  = "hx3000000000000000000000000000000000000000"
-	SustainableFund = "cx4000000000000000000000000000000000000000"
-	CompanyTreasury = "cx5000000000000000000000000000000000000000"
-	HooverFund      = "cx6000000000000000000000000000000000000000"
-	EcoSystem       = "cx7000000000000000000000000000000000000000"
-	PlanetNFT       = "cx8000000000000000000000000000000000000000"
 )
 
 // VarDB, DictDB, ArrayDB keys
@@ -115,3 +106,27 @@ var (
 	BigIntUSDTDecimal = big.NewInt(1_000_000)
 	BigIntDayBlocks   = big.NewInt(DayBlock)
 )
+
+type SystemAddressName string
+
+const (
+	SystemTreasury  = SystemAddressName("SystemTreasury")
+	Governance      = SystemAddressName("Governance")
+	PublicTreasury  = SystemAddressName("PublicTreasury")
+	SustainableFund = SystemAddressName("SustainableFund")
+	CompanyTreasury = SystemAddressName("CompanyTreasury")
+	HooverFund      = SystemAddressName("HooverFund")
+	EcoSystem       = SystemAddressName("EcoSystem")
+	PlanetNFT       = SystemAddressName("PlanetNFT")
+)
+
+var SystemAddresses = map[SystemAddressName]module.Address{
+	SystemTreasury:  common.MustNewAddressFromString("hx1000000000000000000000000000000000000000"),
+	Governance:      common.MustNewAddressFromString("cx0000000000000000000000000000000000000001"),
+	PublicTreasury:  common.MustNewAddressFromString("hx3000000000000000000000000000000000000000"),
+	SustainableFund: common.MustNewAddressFromString("cx4000000000000000000000000000000000000000"),
+	CompanyTreasury: common.MustNewAddressFromString("cx5000000000000000000000000000000000000000"),
+	HooverFund:      common.MustNewAddressFromString("cx6000000000000000000000000000000000000000"),
+	EcoSystem:       common.MustNewAddressFromString("cx7000000000000000000000000000000000000000"),
+	PlanetNFT:       common.MustNewAddressFromString("cx8000000000000000000000000000000000000000"),
+}

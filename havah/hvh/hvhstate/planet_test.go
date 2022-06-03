@@ -10,7 +10,7 @@ import (
 )
 
 func checkPlanetProperties(
-	t *testing.T, p *planet,
+	t *testing.T, p *Planet,
 	isPrivate, isCompany bool, owner module.Address, usdt, price *big.Int,
 	height int64,
 ) {
@@ -43,7 +43,7 @@ func checkPlanetProperties(
 //	if ps == nil {
 //		t.Errorf("Failed to create a PlanetState")
 //	}
-//	checkPlanetProperties(t, &ps.planet, true, true, owner, usdt, price, height)
+//	checkPlanetProperties(t, &ps.Planet, true, true, owner, usdt, price, height)
 //	if !ps.IsDirty() {
 //		t.Errorf("NewPlanetState() error")
 //	}
@@ -56,12 +56,12 @@ func checkPlanetProperties(
 //	price := new(big.Int).Mul(usdt, big.NewInt(10))
 //	height := int64(2345)
 //
-//	pss := &PlanetSnapshot{planet{false, flags, owner, usdt, price, height}}
+//	pss := &PlanetSnapshot{Planet{false, flags, owner, usdt, price, height}}
 //	ps := NewPlanetStateFromSnapshot(pss)
 //	if ps.IsDirty() {
 //		t.Errorf("PlanetState.IsDirty() error")
 //	}
-//	checkPlanetProperties(t, &ps.planet, true, false, owner, usdt, price, height)
+//	checkPlanetProperties(t, &ps.Planet, true, false, owner, usdt, price, height)
 //
 //	newOwner := common.MustNewAddressFromString("hx5678")
 //	ps.SetOwner(newOwner)
@@ -94,7 +94,7 @@ func TestPlanet_Bytes(t *testing.T) {
 	checkPlanetProperties(t, p, isPrivate, isCompany, owner, usdt, price, height)
 
 	if !p.equal(p2) {
-		t.Errorf("Failed to decode a planet")
+		t.Errorf("Failed to decode a Planet")
 	}
 	if bytes.Compare(p.Bytes(), p2.Bytes()) != 0 {
 		t.Errorf("plant.Bytes() error")
@@ -116,12 +116,12 @@ func TestPlanet_setOwner(t *testing.T) {
 
 	var newOwner module.Address
 	if err := p.setOwner(newOwner); err == nil {
-		t.Errorf("Nil owner is accepted by planet.setOwner()")
+		t.Errorf("Nil owner is accepted by Planet.setOwner()")
 	}
 
 	newOwner = owner
 	if err := p.setOwner(newOwner); err != nil {
-		t.Errorf("The same owner is not allowed in planet.setOwner()")
+		t.Errorf("The same owner is not allowed in Planet.setOwner()")
 	}
 	if p.isDirty() {
 		t.Errorf("dirty is set to true even though the owner is not changed")

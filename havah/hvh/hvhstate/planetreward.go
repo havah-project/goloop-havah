@@ -14,7 +14,7 @@ type planetReward struct {
 	// The last term number when the reward is claimed
 	lastTN int64
 	// Reward to claim at this moment
-	// If the planet is owned by company, this value should always be 0
+	// If the Planet is owned by company, this value should always be 0
 	current *big.Int
 }
 
@@ -77,8 +77,16 @@ func (pr *planetReward) increment(tn int64, amount *big.Int) error {
 	return nil
 }
 
-func (pr *planetReward) claim() {
-	if pr.current.Sign() > 0 {
-		pr.current = new(big.Int)
+func (pr *planetReward) claim(amount *big.Int) error {
+	if amount == nil || amount.Sign() < 0 {
+		return scoreresult.Errorf(
+			hvhmodule.StatusIllegalArgument, "Invalid amount: %s", amount)
 	}
+	if pr.current.Cmp(amount) < 0 {
+		return scoreresult.Errorf(
+			hvhmodule.StatusIllegalArgument,
+			"Not enough reward to claim: cur=%s amount=%s", pr.current, amount)
+	}
+	pr.current.Sub(pr.current, amount)
+	return nil
 }

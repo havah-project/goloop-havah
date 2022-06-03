@@ -231,9 +231,112 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 		}
 	}
 
-	if err := es.state.ReportPlanetWork(id, cc.BlockHeight()); err != nil {
+	// Check if a planet exists
+	p, err := es.state.GetPlanet(id)
+	if err != nil {
 		return err
 	}
-	// TODO: RewardGiven(termSequence, id, reward, hoover) eventlog
+
+	height := cc.BlockHeight()
+	issueStart := es.state.GetIssueStart()
+	termPeriod := es.state.GetTermPeriod()
+	termSequence := (height - issueStart) / termPeriod
+	termStart := termSequence*termPeriod + issueStart
+
+	if p.Height() >= termStart {
+		// If a planet is registered in this term, ignore its work report
+		return nil
+	}
+
+	reward := new(big.Int).Div(
+		es.state.GetBigInt(hvhmodule.VarRewardTotal),
+		es.state.GetBigInt(hvhmodule.VarActivePlanet))
+	rewardWithHoover := reward
+
+	if err = es.state.DecreaseRewardRemain(reward); err != nil {
+		return err
+	}
+
+	// All planets have their own planetReward info
+	pr, err := es.state.GetPlanetReward(id)
+	if err != nil {
+		return err
+	}
+
+	// hooverLimit = planetReward.total + reward - planet.price
+	hooverLimit := pr.Total()
+	hooverLimit.Add(hooverLimit, reward)
+	hooverLimit.Sub(hooverLimit, p.Price())
+	hooverRequest := new(big.Int)
+
+	if hooverLimit.Sign() > 0 {
+		hooverGuide := es.calcHooverGuide(p)
+
+		// if reward < hooverGuide
+		if reward.Cmp(hooverGuide) < 0 {
+			hooverRequest.Sub(hooverGuide, reward)
+			// if hooverRequest > hooverLimit
+			if hooverRequest.Cmp(hooverLimit) > 0 {
+				hooverRequest = hooverLimit
+			}
+			rewardWithHoover = new(big.Int).Add(reward, hooverRequest)
+		}
+	}
+	// HooverFund provides the subsidy for reward to PublicTreasury
+	if err = es.transferHooverFundSubsidy(cc, hooverRequest); err != nil {
+		return err
+	}
+	if err = es.state.OfferReward(termSequence+1, id, rewardWithHoover); err != nil {
+		return err
+	}
+	onRewardOffered(cc, termSequence, id, rewardWithHoover, hooverRequest)
+	return nil
+}
+
+func (es *ExtensionStateImpl) calcHooverGuide(p *hvhstate.Planet) *big.Int {
+	hooverGuide := new(big.Int).Mul(p.USDT(), es.state.GetBigInt(hvhmodule.VarActiveUSDTPrice))
+	hooverGuide.Div(hooverGuide, hvhmodule.BigIntUSDTDecimal)
+	hooverGuide.Div(hooverGuide, big.NewInt(10))
+	hooverGuide.Div(hooverGuide, es.state.GetBigInt(hvhmodule.VarIssueReductionCycle))
+	return hooverGuide
+}
+
+func (es *ExtensionStateImpl) transferHooverFundSubsidy(
+	cc hvhmodule.CallContext, amount *big.Int) error {
+	if amount.Sign() > 0 {
+		// HooverFund provides the subsidy for reward to PublicTreasury
+		from := cc.SystemAddress(hvhmodule.HooverFund)
+		to := cc.SystemAddress(hvhmodule.PublicTreasury)
+		if err := cc.Transfer(from, to, amount); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ClaimPlanetReward is used by a planet owner
+// who wants to transfer a reward from system treasury to owner account
+func (es *ExtensionStateImpl) ClaimPlanetReward(cc hvhmodule.CallContext, ids []int64) error {
+	if len(ids) > hvhmodule.MaxCountToClaim {
+		return scoreresult.Errorf(
+			hvhmodule.StatusIllegalArgument,
+			"Too many ids to claim: %d > max(%d)", len(ids), hvhmodule.MaxCountToClaim)
+	}
+
+	owner := cc.From()
+	height := cc.BlockHeight()
+	for _, id := range ids {
+		reward, err := es.state.ClaimPlanetReward(id, height, owner)
+		if err != nil {
+			es.Logger().Warnf("Failed to claim a reward for %d", id)
+		}
+		if reward != nil && reward.Sign() > 0 {
+			from := cc.SystemAddress(hvhmodule.PublicTreasury)
+			if err = cc.Transfer(from, owner, reward); err != nil {
+				return nil
+			}
+			onRewardClaimedEvent(cc, id, owner, reward)
+		}
+	}
 	return nil
 }

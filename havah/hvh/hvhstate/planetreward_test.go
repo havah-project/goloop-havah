@@ -27,7 +27,10 @@ func TestPlanetReward_RLPEncodeSelf(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	pr.claim()
+	err := pr.claim(reward)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 	if pr.Total().Cmp(reward) != 0 {
 		t.Errorf("Incorrect total")
 	}

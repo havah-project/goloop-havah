@@ -180,6 +180,10 @@ func (ctx *callContextImpl) From() module.Address {
 	return ctx.from
 }
 
+func (ctx *callContextImpl) SystemAddress(name hvhmodule.SystemAddressName) module.Address {
+	return hvhmodule.SystemAddresses[name]
+}
+
 func (ctx *callContextImpl) HandleBurn(from module.Address, amount *big.Int) error {
 	sign := amount.Sign()
 	if sign < 0 {

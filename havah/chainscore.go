@@ -342,6 +342,14 @@ var chainMethods = []*chainMethod{
 		},
 		nil,
 	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "claimPlanetReward",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"ids", scoreapi.List, nil, nil},
+		},
+		nil,
+	}, 0, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {

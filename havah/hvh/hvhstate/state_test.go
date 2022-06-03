@@ -191,7 +191,7 @@ func TestState_RegisterPlanet(t *testing.T) {
 
 	planetCount = state.getVarDB(hvhmodule.VarAllPlanet).Int64()
 	if err := state.UnregisterPlanet(int64(100)); err == nil {
-		t.Errorf("No error while unregistering a non-existent planet")
+		t.Errorf("No error while unregistering a non-existent Planet")
 	}
 	checkAllPlanet(t, state, planetCount)
 }
@@ -203,7 +203,7 @@ func TestState_UnregisterPlanet_InAbnormalCase(t *testing.T) {
 		t.Errorf("Invalid id is allowed by UnregisterPlanet()")
 	}
 	if err := state.UnregisterPlanet(int64(100)); err == nil {
-		t.Errorf("No error while unregistering a non-existent planet")
+		t.Errorf("No error while unregistering a non-existent Planet")
 	}
 	checkAllPlanet(t, state, int64(0))
 }

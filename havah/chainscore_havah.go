@@ -153,3 +153,11 @@ func (s *chainScore) Ex_reportPlanetWork(id int64) error {
 	}
 	return es.ReportPlanetWork(s.newCallContext(), id)
 }
+
+func (s *chainScore) Ex_claimPlanetReward(ids []int64) error {
+	es, err := s.getExtensionState()
+	if err != nil {
+		return err
+	}
+	return es.ClaimPlanetReward(s.newCallContext(), ids)
+}

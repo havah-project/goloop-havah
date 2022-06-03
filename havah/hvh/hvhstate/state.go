@@ -173,11 +173,11 @@ func (s *State) RegisterPlanet(
 
 	p := newPlanet(isPrivate, isCompany, owner, usdt, price, height)
 
-	if err := planetDictDB.Set(id, p.Bytes()); err != nil {
-		return scoreresult.UnknownFailureError.Wrap(err, "Failed to write to planetDictDB")
+	if err := s.setPlanet(planetDictDB, id, p); err != nil {
+		return err
 	}
 	if err := allPlanetVarDB.Set(planetCount + 1); err != nil {
-		return scoreresult.UnknownFailureError.Wrap(err, "Failed to write to allPlanetVarDB")
+		return err
 	}
 	return nil
 }
@@ -200,13 +200,13 @@ func (s *State) UnregisterPlanet(id int64) error {
 	}
 
 	if err := planetDictDB.Delete(id); err != nil {
-		return scoreresult.UnknownFailureError.Wrap(err, "Failed to delete data from planetVarDB")
+		return err
 	}
 	if err := allPlanetVarDB.Set(planetCount - 1); err != nil {
-		return scoreresult.UnknownFailureError.Wrap(err, "Failed to write to allPlanetVarDB")
+		return err
 	}
 
-	// TODO: Remaining reward and active planet state handling
+	// TODO: Remaining reward and active Planet state handling
 	return nil
 }
 
@@ -220,18 +220,15 @@ func (s *State) SetPlanetOwner(id int64, owner module.Address) error {
 	if err != nil {
 		return err
 	}
-	if p.isDirty() {
-		return planetDictDB.Set(id, p.Bytes())
-	}
-	return nil
+	return s.setPlanet(planetDictDB, id, p)
 }
 
-func (s *State) GetPlanet(id int64) (*planet, error) {
+func (s *State) GetPlanet(id int64) (*Planet, error) {
 	dictDB := s.getDictDB(hvhmodule.DictPlanet, 1)
 	return s.getPlanet(dictDB, id)
 }
 
-func (s *State) getPlanet(dictDB *containerdb.DictDB, id int64) (*planet, error) {
+func (s *State) getPlanet(dictDB *containerdb.DictDB, id int64) (*Planet, error) {
 	if err := validatePlanetId(id); err != nil {
 		return nil, err
 	}
@@ -246,10 +243,15 @@ func (s *State) getPlanet(dictDB *containerdb.DictDB, id int64) (*planet, error)
 	return p, nil
 }
 
-func (s *State) ReportPlanetWork(id, height int64) error {
+func (s *State) setPlanet(dictDB *containerdb.DictDB, id int64, p *Planet) error {
+	return dictDB.Set(id, p.Bytes())
+}
+
+/*
+func (s *State) ReportPlanetWork(id, height int64) (*big.Int, *big.Int, error) {
 	p, err := s.GetPlanet(id)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
 	issueStart := s.GetIssueStart()
@@ -258,24 +260,26 @@ func (s *State) ReportPlanetWork(id, height int64) error {
 	termStart := termSequence*termPeriod + issueStart
 
 	if p.height >= termStart {
-		// If a planet is registered in this term, ignore its work report
-		return nil
+		// If a Planet is registered in this term, ignore its work report
+		return nil, nil, nil
 	}
 
 	reward := new(big.Int).Div(
-		s.getBigInt(hvhmodule.VarRewardTotal),
-		s.getBigInt(hvhmodule.VarActivePlanet))
+		s.GetBigInt(hvhmodule.VarRewardTotal),
+		s.GetBigInt(hvhmodule.VarActivePlanet))
 	rewardWithHoover := reward
+
 	if err = s.decreaseRewardRemain(reward); err != nil {
-		return err
+		// Not enough rewardRemain
+		return nil, nil, err
 	}
 
-	pr, err := s.getPlanetReward(id)
+	pr, err := s.GetPlanetReward(id)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	// hooverLimit = planetReward.total + reward - planet.price
+	// hooverLimit = planetReward.total + reward - Planet.price
 	hooverLimit := pr.Total()
 	hooverLimit.Add(hooverLimit, reward)
 	hooverLimit.Sub(hooverLimit, p.Price())
@@ -294,25 +298,17 @@ func (s *State) ReportPlanetWork(id, height int64) error {
 	}
 	return s.offerReward(termSequence+1, id, rewardWithHoover)
 }
+*/
 
-func (s *State) getBigInt(key string) *big.Int {
+func (s *State) GetBigInt(key string) *big.Int {
 	return s.getVarDB(key).BigInt()
 }
 
-func (s *State) getInt64(key string) int64 {
+func (s *State) GetInt64(key string) int64 {
 	return s.getVarDB(key).Int64()
 }
 
-func (s *State) calcHooverGuide(p *planet) *big.Int {
-	hooverGuide := p.USDT()
-	hooverGuide.Mul(hooverGuide, s.getBigInt(hvhmodule.VarActiveUSDTPrice))
-	hooverGuide.Div(hooverGuide, hvhmodule.BigIntUSDTDecimal)
-	hooverGuide.Div(hooverGuide, big.NewInt(10))
-	hooverGuide.Div(hooverGuide, s.getBigInt(hvhmodule.VarIssueReductionCycle))
-	return hooverGuide
-}
-
-func (s *State) decreaseRewardRemain(amount *big.Int) error {
+func (s *State) DecreaseRewardRemain(amount *big.Int) error {
 	if amount == nil || amount.Sign() < 0 {
 		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid amount: %v", amount)
 	}
@@ -332,18 +328,118 @@ func (s *State) decreaseRewardRemain(amount *big.Int) error {
 	return varDB.Set(rewardRemain)
 }
 
-func (s *State) offerReward(tn, id int64, amount *big.Int) error {
-	pr, err := s.getPlanetReward(id)
+func (s *State) OfferReward(tn, id int64, amount *big.Int) error {
+	pr, err := s.GetPlanetReward(id)
 	if err != nil {
 		return err
 	}
-	return pr.increment(tn, amount)
+	if err = pr.increment(tn, amount); err != nil {
+		return err
+	}
+	return s.setPlanetReward(id, pr)
 }
 
-func (s *State) getPlanetReward(id int64) (*planetReward, error) {
+func (s *State) GetPlanetReward(id int64) (*planetReward, error) {
 	planetRewardDictDB := s.getDictDB(hvhmodule.DictPlanetReward, 1)
 	b := planetRewardDictDB.Get(id).Bytes()
 	return newPlanetRewardFromBytes(b)
+}
+
+func (s *State) setPlanetReward(id int64, pr *planetReward) error {
+	dictDB := s.getDictDB(hvhmodule.DictPlanetReward, 1)
+	return dictDB.Set(id, pr.Bytes())
+}
+
+func (s *State) ClaimPlanetReward(id, height int64, owner module.Address) (*big.Int, error) {
+	p, err := s.GetPlanet(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if !owner.Equal(p.Owner()) {
+		return nil, scoreresult.AccessDeniedError.Errorf(
+			"Invalid owner: id=%d owner=%s from=%s", id, p.Owner(), owner)
+	}
+	if p.IsCompany() {
+		return nil, scoreresult.Errorf(
+			hvhmodule.StatusRewardError,
+			"Claim is not allowed for company Planet")
+	}
+
+	pr, err := s.GetPlanetReward(id)
+	if err != nil {
+		return nil, err
+	}
+
+	if p.IsPrivate() {
+		return s.claimPrivatePlanetReward(id, height, p, pr)
+	} else {
+		// public Planet
+	}
+
+	return nil, nil
+}
+
+func (s *State) claimPrivatePlanetReward(id, height int64, p *Planet, pr *planetReward) (*big.Int, error) {
+	termPeriod := s.GetTermPeriod()
+	privateLockupTerm := s.GetInt64(hvhmodule.VarPrivateLockup)
+
+	lockupTerm := (height - p.Height() - 1) / termPeriod
+	if lockupTerm < privateLockupTerm {
+		return nil, scoreresult.New(hvhmodule.StatusRewardError, "Reward is locked up")
+	}
+
+	var rewardToClaim *big.Int
+	releaseCycle := (lockupTerm-privateLockupTerm)/hvhmodule.DayPerMonth + 1
+	if releaseCycle < hvhmodule.MaxPrivateReleaseCycle {
+		lockedReward := big.NewInt(hvhmodule.MaxPrivateReleaseCycle - releaseCycle)
+		lockedReward.Mul(lockedReward, pr.Total())
+		lockedReward.Div(lockedReward, big.NewInt(hvhmodule.MaxPrivateReleaseCycle))
+
+		rewardToClaim = new(big.Int).Sub(pr.Current(), lockedReward)
+		if rewardToClaim.Sign() < 0 {
+			rewardToClaim.SetInt64(0)
+		}
+	} else {
+		rewardToClaim = pr.Current()
+	}
+
+	if rewardToClaim.Sign() > 0 {
+		if err := pr.claim(rewardToClaim); err != nil {
+			return nil, err
+		}
+		dictDB := s.getDictDB(hvhmodule.DictPlanetReward, 1)
+		if err := dictDB.Set(id, pr); err != nil {
+			return nil, err
+		}
+	}
+	return rewardToClaim, nil
+}
+
+func (s *State) calcPrivatePlanetRewardToClaim(height int64, p *Planet, pr *planetReward) (*big.Int, error) {
+	termPeriod := s.GetTermPeriod()
+	privateLockupTerm := s.GetInt64(hvhmodule.VarPrivateLockup)
+	rewardToClaim := new(big.Int)
+
+	lockupTerm := (height - p.Height() - 1) / termPeriod
+	if lockupTerm < privateLockupTerm {
+		return rewardToClaim, nil
+	}
+
+	releaseCycle := (lockupTerm-privateLockupTerm)/hvhmodule.DayPerMonth + 1
+	if releaseCycle < hvhmodule.MaxPrivateReleaseCycle {
+		lockedReward := big.NewInt(hvhmodule.MaxPrivateReleaseCycle - releaseCycle)
+		lockedReward.Mul(lockedReward, pr.Total())
+		lockedReward.Div(lockedReward, big.NewInt(hvhmodule.MaxPrivateReleaseCycle))
+
+		rewardToClaim = new(big.Int).Sub(pr.Current(), lockedReward)
+		if rewardToClaim.Sign() < 0 {
+			rewardToClaim.SetInt64(0)
+		}
+	} else {
+		rewardToClaim = pr.Current()
+	}
+	return rewardToClaim, nil
 }
 
 func validatePlanetId(id int64) error {
