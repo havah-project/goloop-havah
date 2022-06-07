@@ -91,7 +91,33 @@ func (s *State) SetIssueStart(curBH, startBH int64) error {
 
 func (s *State) GetTermPeriod() int64 {
 	varDB := s.getVarDB(hvhmodule.VarTermPeriod)
-	return varDB.Int64()
+	value := varDB.Int64()
+	if value <= 0 {
+		value = hvhmodule.TermPeriod
+	}
+	return value
+}
+
+func (s *State) GetIssueReductionCycle() int64 {
+	varDB := s.getVarDB(hvhmodule.VarIssueReductionCycle)
+	value := varDB.Int64()
+	if value <= 0 {
+		value = hvhmodule.ReductionCycle
+	}
+	return value
+}
+
+func (s *State) GetIssueReductionRate() *big.Rat {
+	return hvhmodule.BigRatIssueReductionRate
+}
+
+// GetIssueAmount returns the amount of coins which are issued during one term
+func (s *State) GetIssueAmount() *big.Int {
+	value := s.GetBigInt(hvhmodule.VarIssueAmount)
+	if value.Sign() <= 0 {
+		value.Mul(big.NewInt(hvhmodule.IssueAmount), hvhmodule.BigIntCoinDecimal)
+	}
+	return value
 }
 
 func (s *State) GetTermSequence(height int64) int64 {
@@ -101,10 +127,6 @@ func (s *State) GetTermSequence(height int64) int64 {
 	}
 	termPeriod := s.GetTermPeriod()
 	return (height - issueStart) / termPeriod
-}
-
-func (s *State) GetTermNumber(height int64) int64 {
-	return s.GetTermSequence(height) + 1
 }
 
 func (s *State) AddPlanetManager(address module.Address) error {
@@ -311,12 +333,12 @@ func (s *State) SetBigInt(key string, value *big.Int) error {
 	return s.getVarDB(key).Set(value)
 }
 
-func (s *State) SetInt32(key string, value int32) error {
-	return s.getVarDB(key).Set(value)
-}
-
 func (s *State) GetInt64(key string) int64 {
 	return s.getVarDB(key).Int64()
+}
+
+func (s *State) SetInt64(key string, value int64) error {
+	return s.getVarDB(key).Set(value)
 }
 
 func (s *State) DecreaseRewardRemain(amount *big.Int) error {
@@ -451,6 +473,38 @@ func (s *State) calcPrivatePlanetRewardToClaim(height int64, p *Planet, pr *plan
 		rewardToClaim = pr.Current()
 	}
 	return rewardToClaim, nil
+}
+
+func (s *State) OnTermStart(termSeq int64, issueAmount *big.Int) error {
+	var err error
+	if termSeq > 0 {
+		if err = s.SetInt64(hvhmodule.VarWorkingPlanet, 0); err != nil {
+			return err
+		}
+		if err = s.SetInt64(hvhmodule.VarActivePlanet, 0); err != nil {
+			return err
+		}
+		if err = s.SetBigInt(hvhmodule.VarActiveUSDTPrice, new(big.Int)); err != nil {
+			return err
+		}
+	}
+
+	if issueAmount.Sign() <= 0 {
+		if err = s.SetInt64(hvhmodule.VarActivePlanet, s.GetInt64(hvhmodule.VarAllPlanet)); err != nil {
+			return err
+		}
+		if err = s.SetBigInt(hvhmodule.VarActiveUSDTPrice, s.GetUSDTPrice()); err != nil {
+			return err
+		}
+		rewardRemain := new(big.Int).Add(s.GetBigInt(hvhmodule.VarRewardRemain), issueAmount)
+		if err = s.SetBigInt(hvhmodule.VarRewardRemain, rewardRemain); err != nil {
+			return err
+		}
+		if err = s.SetBigInt(hvhmodule.VarRewardTotal, rewardRemain); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func validatePlanetId(id int64) error {

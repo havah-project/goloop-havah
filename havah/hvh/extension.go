@@ -155,28 +155,28 @@ func (es *ExtensionStateImpl) InitPlatformConfig(cfg *PlatformConfig) error {
 	var err error
 
 	if cfg.TermPeriod != nil {
-		if err = es.state.SetInt32(hvhmodule.VarTermPeriod, cfg.TermPeriod.Value); err != nil {
+		if err = es.state.SetInt64(hvhmodule.VarTermPeriod, cfg.TermPeriod.Value); err != nil {
 			return err
 		}
 	}
 	if cfg.IssueReductionCycle != nil {
-		if err = es.state.SetInt32(hvhmodule.VarIssueReductionCycle, cfg.IssueReductionCycle.Value); err != nil {
+		if err = es.state.SetInt64(hvhmodule.VarIssueReductionCycle, cfg.IssueReductionCycle.Value); err != nil {
 			return err
 		}
 	}
 	if cfg.PrivateReleaseCycle != nil {
-		if err = es.state.SetInt32(hvhmodule.VarPrivateReleaseCycle, cfg.PrivateReleaseCycle.Value); err != nil {
+		if err = es.state.SetInt64(hvhmodule.VarPrivateReleaseCycle, cfg.PrivateReleaseCycle.Value); err != nil {
 			return err
 		}
 	}
 	if cfg.PrivateLockup != nil {
-		if err = es.state.SetInt32(hvhmodule.VarPrivateLockup, cfg.PrivateLockup.Value); err != nil {
+		if err = es.state.SetInt64(hvhmodule.VarPrivateLockup, cfg.PrivateLockup.Value); err != nil {
 			return err
 		}
 	}
 
-	if cfg.InitialIssueAmount != nil {
-		if err = es.state.SetBigInt(hvhmodule.VarInitialIssueAmount, cfg.InitialIssueAmount.Value()); err != nil {
+	if cfg.IssueAmount != nil {
+		if err = es.state.SetBigInt(hvhmodule.VarIssueAmount, cfg.IssueAmount.Value()); err != nil {
 			return err
 		}
 	}
@@ -197,7 +197,13 @@ func (es *ExtensionStateImpl) InitPlatformConfig(cfg *PlatformConfig) error {
 }
 
 func (es *ExtensionStateImpl) IsIssueStarted(height int64) bool {
-	return height >= es.state.GetIssueStart()
+	issueStart := es.state.GetIssueStart()
+	return issueStart > 0 && height >= issueStart
+}
+
+// NewBaseTransactionData creates data part of a baseTransaction
+func (es *ExtensionStateImpl) NewBaseTransactionData() map[string]interface{} {
+	return nil
 }
 
 func (es *ExtensionStateImpl) GetUSDTPrice() (*big.Int, error) {
@@ -221,8 +227,7 @@ func (es *ExtensionStateImpl) GetIssueInfo(cc hvhmodule.CallContext) (map[string
 		"height": height,
 	}
 	if issueStart > 0 {
-		termSeq := (height - issueStart) / termPeriod
-		jso["termSequence"] = termSeq
+		jso["termSequence"] = (height - issueStart) / termPeriod
 	}
 	return jso, nil
 }
@@ -338,7 +343,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 	if err = es.state.OfferReward(termSequence+1, id, rewardWithHoover); err != nil {
 		return err
 	}
-	onRewardOffered(cc, termSequence, id, rewardWithHoover, hooverRequest)
+	onRewardOfferedEvent(cc, termSequence, id, rewardWithHoover, hooverRequest)
 	return nil
 }
 
@@ -354,9 +359,7 @@ func (es *ExtensionStateImpl) transferHooverFundSubsidy(
 	cc hvhmodule.CallContext, amount *big.Int) error {
 	if amount.Sign() > 0 {
 		// HooverFund provides the subsidy for reward to PublicTreasury
-		from := cc.SystemAddress(hvhmodule.HooverFund)
-		to := cc.SystemAddress(hvhmodule.PublicTreasury)
-		if err := cc.Transfer(from, to, amount); err != nil {
+		if err := cc.Transfer(hvhmodule.HooverFund, hvhmodule.PublicTreasury, amount); err != nil {
 			return err
 		}
 	}
@@ -380,8 +383,7 @@ func (es *ExtensionStateImpl) ClaimPlanetReward(cc hvhmodule.CallContext, ids []
 			es.Logger().Warnf("Failed to claim a reward for %d", id)
 		}
 		if reward != nil && reward.Sign() > 0 {
-			from := cc.SystemAddress(hvhmodule.PublicTreasury)
-			if err = cc.Transfer(from, owner, reward); err != nil {
+			if err = cc.Transfer(hvhmodule.PublicTreasury, owner, reward); err != nil {
 				return nil
 			}
 			onRewardClaimedEvent(cc, id, owner, reward)

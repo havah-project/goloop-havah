@@ -36,8 +36,10 @@ import (
 )
 
 type baseDataJSON struct {
-	PRep   json.RawMessage `json:"prep"`
-	Result json.RawMessage `json:"result"`
+	issueAmount *common.HexInt `json:"issueAmount"`
+
+	//rewardTotal  *common.HexInt `json:"rewardTotal"`
+	//rewardRemain *common.HexInt `json:"rewardRemain"`
 }
 
 func parseBaseData(data []byte) (*baseDataJSON, error) {
@@ -284,5 +286,116 @@ func RegisterBaseTx() {
 }
 
 func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) error {
+	height := cc.BlockHeight()
+	issueStart := es.state.GetIssueStart()
+
+	if !(issueStart > 0 && height >= issueStart) {
+		panic("This method MUST NOT be called in this case")
+	}
+
+	baseData, err := parseBaseData(data)
+	if err != nil {
+		return transaction.InvalidFormat.Wrap(err, "Failed to parse baseData")
+	}
+
+	termPeriod := es.state.GetTermPeriod()
+	issueAmount := es.state.GetIssueAmount()
+	baseTxCount := height - issueStart
+	termSeq := baseTxCount / termPeriod
+
+	if baseData.issueAmount.Value().Cmp(issueAmount) != 0 {
+		return transaction.InvalidTxValue.Errorf(
+			"IssueAmount mismatch: actual(%s) != expected(%s)", issueAmount, baseData.issueAmount)
+	}
+
+	if err = es.onTermEnd(cc, termSeq-1); err != nil {
+		return err
+	}
+	if err = es.onTermStart(cc, termSeq); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (es *ExtensionStateImpl) onTermEnd(cc hvhmodule.CallContext, termSeq int64) error {
+	var err error
+	if termSeq >= 0 {
+		// TxFee Distribution
+		if err = distributeFee(cc, cc.Treasury(), hvhmodule.BigRatEcoSystemProportion); err != nil {
+			return err
+		}
+		// ServiceFee Distribution
+		if err = distributeFee(cc, hvhmodule.ServiceTreasury, hvhmodule.BigRatEcoSystemProportion); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (es *ExtensionStateImpl) onTermStart(cc hvhmodule.CallContext, termSeq int64) error {
+	var err error
+	issueAmount := es.state.GetIssueAmount()
+	reductionCycle := es.state.GetIssueReductionCycle()
+
+	if termSeq > 0 && termSeq%reductionCycle == 0 {
+		newIssueAmount := calcIssueAmount(issueAmount, es.state.GetIssueReductionRate())
+
+		if issueAmount.Cmp(newIssueAmount) != 0 {
+			issueAmount = newIssueAmount
+			if err = es.state.SetBigInt(hvhmodule.VarIssueAmount, issueAmount); err != nil {
+				return err
+			}
+		}
+	}
+
+	if err = issueCoin(cc, termSeq, issueAmount); err != nil {
+		return err
+	}
+
+	// Reset reward-related states
+	if err = es.state.OnTermStart(termSeq, issueAmount); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func issueCoin(cc hvhmodule.CallContext, termSeq int64, amount *big.Int) error {
+	if amount != nil && amount.Sign() > 0 {
+		newTotalSupply, err := cc.AddTotalSupply(amount)
+		if err != nil {
+			return err
+		}
+		if err = cc.Deposit(hvhmodule.PublicTreasury, amount); err != nil {
+			return err
+		}
+		onICXIssuedEvent(cc, termSeq, amount, newTotalSupply)
+	}
+	return nil
+}
+
+func distributeFee(cc hvhmodule.CallContext, from module.Address, proportion *big.Rat) error {
+	var err error
+	balance := cc.GetBalance(from)
+	if balance.Sign() > 0 {
+		ecoAmount := new(big.Int).Mul(balance, proportion.Num())
+		ecoAmount.Div(ecoAmount, proportion.Denom())
+		susAmount := new(big.Int).Sub(balance, ecoAmount)
+
+		if err = cc.Transfer(from, hvhmodule.SustainableFund, susAmount); err != nil {
+			return err
+		}
+		if err = cc.Transfer(from, hvhmodule.EcoSystem, ecoAmount); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func calcIssueAmount(curIssueAmount *big.Int, reductionRate *big.Rat) *big.Int {
+	amount := new(big.Int).Set(curIssueAmount)
+	numerator := new(big.Int).Sub(reductionRate.Denom(), reductionRate.Num())
+	amount.Mul(amount, numerator)
+	amount.Div(amount, reductionRate.Denom())
+	return amount
 }

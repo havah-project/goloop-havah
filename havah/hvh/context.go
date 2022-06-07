@@ -4,7 +4,6 @@ import (
 	"math/big"
 
 	"github.com/icon-project/goloop/common/errors"
-	"github.com/icon-project/goloop/common/intconv"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/havah/hvhutils"
 	"github.com/icon-project/goloop/module"
@@ -178,32 +177,6 @@ type callContextImpl struct {
 
 func (ctx *callContextImpl) From() module.Address {
 	return ctx.from
-}
-
-func (ctx *callContextImpl) SystemAddress(name hvhmodule.SystemAddressName) module.Address {
-	return hvhmodule.SystemAddresses[name]
-}
-
-func (ctx *callContextImpl) HandleBurn(from module.Address, amount *big.Int) error {
-	sign := amount.Sign()
-	if sign < 0 {
-		return errors.Errorf("Invalid amount: %v", amount)
-	}
-	if sign > 0 {
-		ts, err := ctx.AddTotalSupply(new(big.Int).Neg(amount))
-		if err != nil {
-			return err
-		}
-		ctx.onBurned(from, amount, ts)
-	}
-	return nil
-}
-
-func (ctx *callContextImpl) onBurned(from module.Address, amount, ts *big.Int) {
-	ctx.cc.OnEvent(state.SystemAddress,
-		[][]byte{[]byte("CoinBurned(Address,int,int)"), from.Bytes()},
-		[][]byte{intconv.BigIntToBytes(amount), intconv.BigIntToBytes(ts)},
-	)
 }
 
 func (ctx *callContextImpl) SumOfStepUsed() *big.Int {

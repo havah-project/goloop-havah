@@ -63,7 +63,7 @@ const (
 // PlatformConfig default values
 const (
 	TermPeriod          = DayBlock
-	InitialIssueAmount  = 5_000_000                  // unit: hvh
+	IssueAmount         = 5_000_000                  // unit: hvh
 	ReductionCycle      = MonthPerYear * DayPerMonth // 1 year (360) in term
 	PrivateReleaseCycle = DayPerMonth
 	PrivateLockup       = MonthPerYear * DayPerMonth // 1 year (360) in term
@@ -72,24 +72,25 @@ const (
 
 // VarDB, DictDB, ArrayDB keys
 const (
-	VarIssueAmount         = "issue_amount"
-	VarIssueStart          = "issue_start"
-	VarTermPeriod          = "term_period"
-	VarInitialIssueAmount  = "initial_issue_amount"
-	VarIssueReductionCycle = "issue_reduction_cycle"
-	VarPrivateReleaseCycle = "private_release_cycle"
-	VarPrivateLockup       = "private_lockup"
-	VarHooverBudget        = "hoover_budget"
-	VarUSDTPrice           = "usdt_price"
-	VarActiveUSDTPrice     = "active_usdt_price"
+	VarIssueAmount         = "issue_amount"          // unit: loop
+	VarIssueStart          = "issue_start"           // block height
+	VarIssueLimit          = "issue_limit"           // unit: term
+	VarTermPeriod          = "term_period"           // unit: block
+	VarIssueReductionCycle = "issue_reduction_cycle" // unit: term
+	VarPrivateReleaseCycle = "private_release_cycle" // unit: term
+	VarPrivateLockup       = "private_lockup"        // unit: term
+	VarHooverBudget        = "hoover_budget"         // unit: hvh
+	VarUSDTPrice           = "usdt_price"            // unit: hvh
+	VarActiveUSDTPrice     = "active_usdt_price"     // unit: hvh
 	DictPlanet             = "planet"
 	ArrayPlanetManager     = "planet_manager"
 	DictPlanetReward       = "planet_reward"
 	VarAllPlanet           = "all_planet"
 	VarActivePlanet        = "active_planet"
-	VarRewardTotal         = "reward_total"
-	VarRewardRemain        = "reward_remain"
-	VarCompanyReward       = "company_reward"
+	VarWorkingPlanet       = "working_planet"
+	VarRewardTotal         = "reward_total"  // unit: hvh
+	VarRewardRemain        = "reward_remain" // unit: hvh
+	VarEcoReward           = "eco_reward"    // unit: hvh
 )
 
 // ErrorCodes for havah chainscore
@@ -101,32 +102,30 @@ const (
 
 // The following variables are read-only
 var (
-	BigIntZero        = new(big.Int)
-	BigIntCoinDecimal = big.NewInt(1_000_000_000_000_000_000)
-	BigIntUSDTDecimal = big.NewInt(1_000_000)
-	BigIntDayBlocks   = big.NewInt(DayBlock)
+	BigIntZero                = new(big.Int)
+	BigIntCoinDecimal         = big.NewInt(1_000_000_000_000_000_000)
+	BigIntUSDTDecimal         = big.NewInt(1_000_000)
+	BigIntDayBlocks           = big.NewInt(DayBlock)
+	BigRatIssueReductionRate  = big.NewRat(3, 10) // 30%
+	BigRatEcoSystemProportion = big.NewRat(1, 5)  // 20%
 )
 
-type SystemAddressName string
+//type SystemAddressName string
+//const (
+//	PublicTreasury  = SystemAddressName("PublicTreasury")
+//	SustainableFund = SystemAddressName("SustainableFund")
+//	CompanyTreasury = SystemAddressName("CompanyTreasury")
+//	HooverFund      = SystemAddressName("HooverFund")
+//	EcoSystem       = SystemAddressName("EcoSystem")
+//	PlanetNFT       = SystemAddressName("PlanetNFT")
+//)
 
-const (
-	SystemTreasury  = SystemAddressName("SystemTreasury")
-	Governance      = SystemAddressName("Governance")
-	PublicTreasury  = SystemAddressName("PublicTreasury")
-	SustainableFund = SystemAddressName("SustainableFund")
-	CompanyTreasury = SystemAddressName("CompanyTreasury")
-	HooverFund      = SystemAddressName("HooverFund")
-	EcoSystem       = SystemAddressName("EcoSystem")
-	PlanetNFT       = SystemAddressName("PlanetNFT")
+var (
+	PublicTreasury  = common.MustNewAddressFromString("hx3000000000000000000000000000000000000000")
+	SustainableFund = common.MustNewAddressFromString("cx4000000000000000000000000000000000000000")
+	CompanyTreasury = common.MustNewAddressFromString("cx5000000000000000000000000000000000000000")
+	HooverFund      = common.MustNewAddressFromString("hx6000000000000000000000000000000000000000")
+	EcoSystem       = common.MustNewAddressFromString("cx7000000000000000000000000000000000000000")
+	PlanetNFT       = common.MustNewAddressFromString("cx8000000000000000000000000000000000000000")
+	ServiceTreasury = common.MustNewAddressFromString("hx9000000000000000000000000000000000000000")
 )
-
-var SystemAddresses = map[SystemAddressName]module.Address{
-	SystemTreasury:  common.MustNewAddressFromString("hx1000000000000000000000000000000000000000"),
-	Governance:      common.MustNewAddressFromString("cx0000000000000000000000000000000000000001"),
-	PublicTreasury:  common.MustNewAddressFromString("hx3000000000000000000000000000000000000000"),
-	SustainableFund: common.MustNewAddressFromString("cx4000000000000000000000000000000000000000"),
-	CompanyTreasury: common.MustNewAddressFromString("cx5000000000000000000000000000000000000000"),
-	HooverFund:      common.MustNewAddressFromString("cx6000000000000000000000000000000000000000"),
-	EcoSystem:       common.MustNewAddressFromString("cx7000000000000000000000000000000000000000"),
-	PlanetNFT:       common.MustNewAddressFromString("cx8000000000000000000000000000000000000000"),
-}
