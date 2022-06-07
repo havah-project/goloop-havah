@@ -50,10 +50,10 @@ func (p *platform) ToRevision(value int) module.Revision {
 }
 
 func (p *platform) NewBaseTransaction(wc state.WorldContext) (module.Transaction, error) {
-	//es := p.getExtensionState(wc, nil)
-	//if es == nil || !es.IsIssueStarted() {
-	//	return nil, nil
-	//}
+	es := p.getExtensionState(wc, nil)
+	if es == nil || !es.IsIssueStarted(wc.BlockHeight()) {
+		return nil, nil
+	}
 
 	t := common.HexInt64{Value: wc.BlockTimeStamp()}
 	v := common.HexUint16{Value: module.TransactionVersion3}

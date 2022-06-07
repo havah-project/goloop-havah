@@ -196,6 +196,10 @@ func (es *ExtensionStateImpl) InitPlatformConfig(cfg *PlatformConfig) error {
 	return nil
 }
 
+func (es *ExtensionStateImpl) IsIssueStarted(height int64) bool {
+	return height >= es.state.GetIssueStart()
+}
+
 func (es *ExtensionStateImpl) GetUSDTPrice() (*big.Int, error) {
 	price := es.state.GetUSDTPrice()
 	if price == nil || price.Sign() < 0 {
