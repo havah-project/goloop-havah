@@ -24,6 +24,7 @@ import (
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/log"
+	"github.com/icon-project/goloop/havah/hvh"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/havah/hvhutils"
 	"github.com/icon-project/goloop/module"
@@ -431,52 +432,15 @@ func applyStepPrice(as state.AccountState, price *big.Int) error {
 	return scoredb.NewVarDB(as, state.VarStepPrice).Set(price)
 }
 
-func initPlatformConfig(cfg *PlatformConfig, as state.AccountState) error {
-	if cfg != nil {
-		if cfg.TermPeriod != nil {
-			if err := scoredb.NewVarDB(as, hvhmodule.VarTermPeriod).Set(cfg.TermPeriod.Value); err != nil {
-				return err
-			}
-		}
-		if cfg.InitialIssueAmount != nil {
-			if err := scoredb.NewVarDB(
-				as, hvhmodule.VarInitialIssueAmount).Set(cfg.InitialIssueAmount.Value); err != nil {
-				return err
-			}
-		}
-		if cfg.IssueReductionCycle != nil {
-			if err := scoredb.NewVarDB(
-				as, hvhmodule.VarIssueReductionCycle).Set(cfg.IssueReductionCycle.Value); err != nil {
-				return err
-			}
-		}
-		if cfg.PrivateReleaseCycle != nil {
-			if err := scoredb.NewVarDB(
-				as, hvhmodule.VarPrivateReleaseCycle).Set(cfg.PrivateReleaseCycle.Value); err != nil {
-				return err
-			}
-		}
-		if cfg.PrivateLockup != nil {
-			if err := scoredb.NewVarDB(
-				as, hvhmodule.VarPrivateLockup).Set(cfg.PrivateLockup.Value); err != nil {
-				return err
-			}
-		}
-		if cfg.HooverBudget != nil {
-			if err := scoredb.NewVarDB(as, hvhmodule.VarHooverBudget).Set(cfg.HooverBudget.Value()); err != nil {
-				return err
-			}
-		}
-		if cfg.USDTPrice != nil {
-			if err := scoredb.NewVarDB(
-				as, hvhmodule.VarUSDTPrice).Set(cfg.InitialIssueAmount.Value); err != nil {
-				return err
-			}
-		} else {
-			return scoreresult.InvalidParameterError.New("USDTPrice not found")
-		}
+func (s *chainScore) initPlatformConfig(cfg *hvh.PlatformConfig) error {
+	if cfg == nil {
+		return nil
 	}
-	return nil
+	es, err := s.getExtensionState()
+	if err != nil {
+		return err
+	}
+	return es.InitPlatformConfig(cfg)
 }
 
 func (s *chainScore) Install(param []byte) error {
@@ -564,7 +528,7 @@ func (s *chainScore) Install(param []byte) error {
 
 	platformConfig := cfg.Platform
 	if platformConfig != nil {
-		if err := initPlatformConfig(platformConfig, as); err != nil {
+		if err := s.initPlatformConfig(platformConfig); err != nil {
 			return err
 		}
 	}

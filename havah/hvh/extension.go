@@ -151,6 +151,51 @@ func (es *ExtensionStateImpl) OnTransactionEnd(blockHeight int64, success bool) 
 	return nil
 }
 
+func (es *ExtensionStateImpl) InitPlatformConfig(cfg *PlatformConfig) error {
+	var err error
+
+	if cfg.TermPeriod != nil {
+		if err = es.state.SetInt32(hvhmodule.VarTermPeriod, cfg.TermPeriod.Value); err != nil {
+			return err
+		}
+	}
+	if cfg.IssueReductionCycle != nil {
+		if err = es.state.SetInt32(hvhmodule.VarIssueReductionCycle, cfg.IssueReductionCycle.Value); err != nil {
+			return err
+		}
+	}
+	if cfg.PrivateReleaseCycle != nil {
+		if err = es.state.SetInt32(hvhmodule.VarPrivateReleaseCycle, cfg.PrivateReleaseCycle.Value); err != nil {
+			return err
+		}
+	}
+	if cfg.PrivateLockup != nil {
+		if err = es.state.SetInt32(hvhmodule.VarPrivateLockup, cfg.PrivateLockup.Value); err != nil {
+			return err
+		}
+	}
+
+	if cfg.InitialIssueAmount != nil {
+		if err = es.state.SetBigInt(hvhmodule.VarInitialIssueAmount, cfg.InitialIssueAmount.Value()); err != nil {
+			return err
+		}
+	}
+	if cfg.HooverBudget != nil {
+		if err = es.state.SetBigInt(hvhmodule.VarHooverBudget, cfg.HooverBudget.Value()); err != nil {
+			return err
+		}
+	}
+	if cfg.USDTPrice != nil {
+		if err = es.state.SetBigInt(hvhmodule.VarUSDTPrice, cfg.USDTPrice.Value()); err != nil {
+			return err
+		}
+	} else {
+		return scoreresult.InvalidParameterError.New("USDTPrice not found")
+	}
+
+	return nil
+}
+
 func (es *ExtensionStateImpl) GetUSDTPrice() (*big.Int, error) {
 	price := es.state.GetUSDTPrice()
 	if price == nil || price.Sign() < 0 {

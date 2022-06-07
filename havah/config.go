@@ -2,16 +2,17 @@ package havah
 
 import (
 	"github.com/icon-project/goloop/common"
+	"github.com/icon-project/goloop/havah/hvh"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 )
 
 type chainConfig struct {
-	BlockInterval    *common.HexInt32  `json:"blockInterval,omitempty"`
-	Revision         *common.HexInt32  `json:"revision,omitempty"`
-	RoundLimitFactor *common.HexInt32  `json:"roundLimitFactor,omitempty"`
-	ValidatorList    []*common.Address `json:"validators"`
-	Fee              *FeeConfig        `json:"fee,omitempty"`
-	Platform         *PlatformConfig   `json:"platform"`
+	BlockInterval    *common.HexInt32    `json:"blockInterval,omitempty"`
+	Revision         *common.HexInt32    `json:"revision,omitempty"`
+	RoundLimitFactor *common.HexInt32    `json:"roundLimitFactor,omitempty"`
+	ValidatorList    []*common.Address   `json:"validators"`
+	Fee              *FeeConfig          `json:"fee,omitempty"`
+	Platform         *hvh.PlatformConfig `json:"platform"`
 }
 
 type FeeConfig struct {
@@ -20,15 +21,15 @@ type FeeConfig struct {
 	StepCosts map[string]common.HexInt64 `json:"stepCosts,omitempty"`
 }
 
-type PlatformConfig struct {
-	TermPeriod          *common.HexInt32 `json:"termPeriod"`          // 43200 in block
-	InitialIssueAmount  *common.HexInt   `json:"initialIssueAmount"`  // 5M in hvh
-	IssueReductionCycle *common.HexInt32 `json:"reductionCycle"`      // 360 in term
-	PrivateReleaseCycle *common.HexInt32 `join:"privateReleaseCycle"` // 30 in term (1 month)
-	PrivateLockup       *common.HexInt32 `join:"privateLockup"`       // 360 in term
-	HooverBudget        *common.HexInt   `json:"hooverBudget"`        // unit: hvh
-	USDTPrice           *common.HexInt   `json:"usdtPrice"`           // unit: hvh
-}
+//type PlatformConfig struct {
+//	TermPeriod          *common.HexInt32 `json:"termPeriod"`          // 43200 in block
+//	InitialIssueAmount  *common.HexInt   `json:"initialIssueAmount"`  // 5M in hvh
+//	IssueReductionCycle *common.HexInt32 `json:"reductionCycle"`      // 360 in term
+//	PrivateReleaseCycle *common.HexInt32 `join:"privateReleaseCycle"` // 30 in term (1 month)
+//	PrivateLockup       *common.HexInt32 `join:"privateLockup"`       // 360 in term
+//	HooverBudget        *common.HexInt   `json:"hooverBudget"`        // unit: hvh
+//	USDTPrice           *common.HexInt   `json:"usdtPrice"`           // unit: hvh
+//}
 
 func newChainConfig() *chainConfig {
 	return &chainConfig{

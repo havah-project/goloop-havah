@@ -304,6 +304,17 @@ func (s *State) GetBigInt(key string) *big.Int {
 	return s.getVarDB(key).BigInt()
 }
 
+func (s *State) SetBigInt(key string, value *big.Int) error {
+	if value == nil {
+		return scoreresult.New(hvhmodule.StatusIllegalArgument, "Invalid value")
+	}
+	return s.getVarDB(key).Set(value)
+}
+
+func (s *State) SetInt32(key string, value int32) error {
+	return s.getVarDB(key).Set(value)
+}
+
 func (s *State) GetInt64(key string) int64 {
 	return s.getVarDB(key).Int64()
 }
