@@ -333,12 +333,12 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 			if hooverRequest.Cmp(hooverLimit) > 0 {
 				hooverRequest = hooverLimit
 			}
+			// HooverFund provides the subsidy for reward to PublicTreasury
+			if hooverRequest, err = es.transferSubsidyFromHooverFund(cc, hooverRequest); err != nil {
+				return err
+			}
 			rewardWithHoover = new(big.Int).Add(reward, hooverRequest)
 		}
-	}
-	// HooverFund provides the subsidy for reward to PublicTreasury
-	if err = es.transferHooverFundSubsidy(cc, hooverRequest); err != nil {
-		return err
 	}
 	if err = es.state.OfferReward(termSequence+1, id, rewardWithHoover); err != nil {
 		return err
@@ -355,15 +355,22 @@ func (es *ExtensionStateImpl) calcHooverGuide(p *hvhstate.Planet) *big.Int {
 	return hooverGuide
 }
 
-func (es *ExtensionStateImpl) transferHooverFundSubsidy(
-	cc hvhmodule.CallContext, amount *big.Int) error {
+// transferSubsidyFromHooverFund() transfers coins from HooverFund to PublicTreasury to support a planet reward
+func (es *ExtensionStateImpl) transferSubsidyFromHooverFund(
+	cc hvhmodule.CallContext, amount *big.Int) (*big.Int, error) {
 	if amount.Sign() > 0 {
+		balance := cc.GetBalance(hvhmodule.HooverFund)
+		if balance.Cmp(amount) < 0 {
+			// In the case where there is not enough balance in HooverFund to pay subsidy
+			amount = balance
+		}
+
 		// HooverFund provides the subsidy for reward to PublicTreasury
 		if err := cc.Transfer(hvhmodule.HooverFund, hvhmodule.PublicTreasury, amount); err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return amount, nil
 }
 
 // ClaimPlanetReward is used by a planet owner

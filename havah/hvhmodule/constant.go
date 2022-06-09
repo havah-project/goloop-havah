@@ -68,6 +68,7 @@ const (
 	PrivateReleaseCycle = DayPerMonth
 	PrivateLockup       = MonthPerYear * DayPerMonth // 1 year (360) in term
 	HooverBudget        = 5_000_000                  // unit: hvh
+	IssueLimit          = 50 * ReductionCycle        // unit: term
 )
 
 // VarDB, DictDB, ArrayDB keys

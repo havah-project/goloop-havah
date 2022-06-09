@@ -337,14 +337,19 @@ func (es *ExtensionStateImpl) onTermStart(cc hvhmodule.CallContext, termSeq int6
 	issueAmount := es.state.GetIssueAmount()
 	reductionCycle := es.state.GetIssueReductionCycle()
 
+	// Reduce the amount of coin to issue by 30% every reduction cycle
 	if termSeq > 0 && termSeq%reductionCycle == 0 {
-		newIssueAmount := calcIssueAmount(issueAmount, es.state.GetIssueReductionRate())
+		reductionRate := es.state.GetIssueReductionRate()
+		newIssueAmount := calcIssueAmount(issueAmount, reductionRate)
 
 		if issueAmount.Cmp(newIssueAmount) != 0 {
-			issueAmount = newIssueAmount
-			if err = es.state.SetBigInt(hvhmodule.VarIssueAmount, issueAmount); err != nil {
+			if err = es.state.SetBigInt(hvhmodule.VarIssueAmount, newIssueAmount); err != nil {
 				return err
 			}
+			es.Logger().Infof(
+				"IssueAmount is reduced: rate=%v before=%s after=%s",
+				reductionRate, issueAmount, newIssueAmount)
+			issueAmount = newIssueAmount
 		}
 	}
 

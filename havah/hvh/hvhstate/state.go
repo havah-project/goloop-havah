@@ -477,7 +477,11 @@ func (s *State) calcPrivatePlanetRewardToClaim(height int64, p *Planet, pr *plan
 
 func (s *State) OnTermStart(termSeq int64, issueAmount *big.Int) error {
 	var err error
-	if termSeq > 0 {
+	// unit: term
+	// 0 means that there is no issueLimit
+	issueLimit := s.getIssueLimit()
+
+	if termSeq > 0 && termSeq <= issueLimit {
 		if err = s.SetInt64(hvhmodule.VarWorkingPlanet, 0); err != nil {
 			return err
 		}
@@ -489,7 +493,7 @@ func (s *State) OnTermStart(termSeq int64, issueAmount *big.Int) error {
 		}
 	}
 
-	if issueAmount.Sign() <= 0 {
+	if termSeq < issueLimit {
 		if err = s.SetInt64(hvhmodule.VarActivePlanet, s.GetInt64(hvhmodule.VarAllPlanet)); err != nil {
 			return err
 		}
@@ -505,6 +509,14 @@ func (s *State) OnTermStart(termSeq int64, issueAmount *big.Int) error {
 		}
 	}
 	return nil
+}
+
+func (s *State) getIssueLimit() int64 {
+	issueLimit := s.GetInt64(hvhmodule.VarIssueLimit)
+	if issueLimit <= 0 {
+		issueLimit = hvhmodule.IssueLimit
+	}
+	return issueLimit
 }
 
 func validatePlanetId(id int64) error {
