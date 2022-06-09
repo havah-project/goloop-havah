@@ -404,75 +404,51 @@ func (s *State) ClaimPlanetReward(id, height int64, owner module.Address) (*big.
 		return nil, err
 	}
 
-	if p.IsPrivate() {
-		return s.claimPrivatePlanetReward(id, height, p, pr)
-	} else {
-		// public Planet
+	claimableReward, err := s.calcClaimableReward(height, p, pr)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, nil
+	if claimableReward.Sign() > 0 {
+		if err = pr.claim(claimableReward); err != nil {
+			return nil, err
+		}
+		if err = s.setPlanetReward(id, pr); err != nil {
+			return nil, err
+		}
+	}
+	return claimableReward, nil
 }
 
-func (s *State) claimPrivatePlanetReward(id, height int64, p *Planet, pr *planetReward) (*big.Int, error) {
+func (s *State) calcClaimableReward(height int64, p *Planet, pr *planetReward) (*big.Int, error) {
+	claimableReward := pr.Current()
+	if !p.IsPrivate() || claimableReward.Sign() == 0 {
+		return claimableReward, nil
+	}
+
 	termPeriod := s.GetTermPeriod()
 	privateLockupTerm := s.GetInt64(hvhmodule.VarPrivateLockup)
 
+	// All rewards have been locked
 	lockupTerm := (height - p.Height() - 1) / termPeriod
 	if lockupTerm < privateLockupTerm {
-		return nil, scoreresult.New(hvhmodule.StatusRewardError, "Reward is locked up")
+		return new(big.Int), nil
 	}
 
-	var rewardToClaim *big.Int
 	releaseCycle := (lockupTerm-privateLockupTerm)/hvhmodule.DayPerMonth + 1
+
 	if releaseCycle < hvhmodule.MaxPrivateReleaseCycle {
 		lockedReward := big.NewInt(hvhmodule.MaxPrivateReleaseCycle - releaseCycle)
 		lockedReward.Mul(lockedReward, pr.Total())
 		lockedReward.Div(lockedReward, big.NewInt(hvhmodule.MaxPrivateReleaseCycle))
 
-		rewardToClaim = new(big.Int).Sub(pr.Current(), lockedReward)
-		if rewardToClaim.Sign() < 0 {
-			rewardToClaim.SetInt64(0)
-		}
-	} else {
-		rewardToClaim = pr.Current()
-	}
-
-	if rewardToClaim.Sign() > 0 {
-		if err := pr.claim(rewardToClaim); err != nil {
-			return nil, err
-		}
-		dictDB := s.getDictDB(hvhmodule.DictPlanetReward, 1)
-		if err := dictDB.Set(id, pr); err != nil {
-			return nil, err
+		claimableReward.Sub(claimableReward, lockedReward)
+		if claimableReward.Sign() < 0 {
+			claimableReward.SetInt64(0)
 		}
 	}
-	return rewardToClaim, nil
-}
 
-func (s *State) calcPrivatePlanetRewardToClaim(height int64, p *Planet, pr *planetReward) (*big.Int, error) {
-	termPeriod := s.GetTermPeriod()
-	privateLockupTerm := s.GetInt64(hvhmodule.VarPrivateLockup)
-	rewardToClaim := new(big.Int)
-
-	lockupTerm := (height - p.Height() - 1) / termPeriod
-	if lockupTerm < privateLockupTerm {
-		return rewardToClaim, nil
-	}
-
-	releaseCycle := (lockupTerm-privateLockupTerm)/hvhmodule.DayPerMonth + 1
-	if releaseCycle < hvhmodule.MaxPrivateReleaseCycle {
-		lockedReward := big.NewInt(hvhmodule.MaxPrivateReleaseCycle - releaseCycle)
-		lockedReward.Mul(lockedReward, pr.Total())
-		lockedReward.Div(lockedReward, big.NewInt(hvhmodule.MaxPrivateReleaseCycle))
-
-		rewardToClaim = new(big.Int).Sub(pr.Current(), lockedReward)
-		if rewardToClaim.Sign() < 0 {
-			rewardToClaim.SetInt64(0)
-		}
-	} else {
-		rewardToClaim = pr.Current()
-	}
-	return rewardToClaim, nil
+	return claimableReward, nil
 }
 
 func (s *State) OnTermStart(termSeq int64, issueAmount *big.Int) error {
@@ -517,6 +493,29 @@ func (s *State) getIssueLimit() int64 {
 		issueLimit = hvhmodule.IssueLimit
 	}
 	return issueLimit
+}
+
+func (s *State) GetRewardInfo(height, id int64) (map[string]interface{}, error) {
+	pr, err := s.GetPlanetReward(id)
+	if err != nil {
+		return nil, err
+	}
+	p, err := s.GetPlanet(id)
+	if err != nil {
+		return nil, err
+	}
+
+	claimable, err := s.calcClaimableReward(height, p, pr)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]interface{}{
+		"height":    height,
+		"total":     pr.Total(),
+		"remain":    pr.Current(),
+		"claimable": claimable,
+	}, nil
 }
 
 func validatePlanetId(id int64) error {

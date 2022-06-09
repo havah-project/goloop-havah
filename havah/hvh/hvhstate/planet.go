@@ -23,8 +23,8 @@ type Planet struct {
 	flags  PlanetFlag
 	owner  *common.Address
 	usdt   *big.Int // priceInUSDT
-	price  *big.Int
-	height int64
+	price  *big.Int // priceInHVH
+	height int64    // regTime
 }
 
 func newPlanet(isPrivate, isCompany bool, owner module.Address, usdt, price *big.Int, height int64) *Planet {

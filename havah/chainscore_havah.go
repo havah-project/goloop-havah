@@ -161,3 +161,11 @@ func (s *chainScore) Ex_claimPlanetReward(ids []int64) error {
 	}
 	return es.ClaimPlanetReward(s.newCallContext(), ids)
 }
+
+func (s *chainScore) Ex_getRewardInfo(id int64) (map[string]interface{}, error) {
+	es, err := s.getExtensionState()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetRewardInfo(s.newCallContext(), id)
+}
