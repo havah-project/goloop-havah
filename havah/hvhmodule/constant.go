@@ -109,6 +109,8 @@ var (
 	BigIntDayBlocks           = big.NewInt(DayBlock)
 	BigRatIssueReductionRate  = big.NewRat(3, 10) // 30%
 	BigRatEcoSystemProportion = big.NewRat(1, 5)  // 20%
+	// BigRatEcoRewardProportion is the EcoSystem proportion to company planet reward
+	BigRatEcoRewardProportion = big.NewRat(3, 5) // 60%
 )
 
 //type SystemAddressName string

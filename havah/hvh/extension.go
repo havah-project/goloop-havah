@@ -294,8 +294,8 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 	height := cc.BlockHeight()
 	issueStart := es.state.GetIssueStart()
 	termPeriod := es.state.GetTermPeriod()
-	termSequence := (height - issueStart) / termPeriod
-	termStart := termSequence*termPeriod + issueStart
+	termSeq := (height - issueStart) / termPeriod
+	termStart := termSeq*termPeriod + issueStart
 
 	if p.Height() >= termStart {
 		// If a planet is registered in this term, ignore its work report
@@ -318,33 +318,50 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 	}
 
 	// hooverLimit = planetReward.total + reward - planet.price
-	hooverLimit := pr.Total()
-	hooverLimit.Add(hooverLimit, reward)
-	hooverLimit.Sub(hooverLimit, p.Price())
-	hooverRequest := new(big.Int)
+	hooverLimit := calcHooverLimit(pr.Total(), reward, p.Price())
 
+	var hooverRequest *big.Int
 	if hooverLimit.Sign() > 0 {
 		hooverGuide := es.calcHooverGuide(p)
-
-		// if reward < hooverGuide
-		if reward.Cmp(hooverGuide) < 0 {
-			hooverRequest.Sub(hooverGuide, reward)
-			// if hooverRequest > hooverLimit
-			if hooverRequest.Cmp(hooverLimit) > 0 {
-				hooverRequest = hooverLimit
-			}
-			// HooverFund provides the subsidy for reward to PublicTreasury
-			if hooverRequest, err = es.transferSubsidyFromHooverFund(cc, hooverRequest); err != nil {
-				return err
-			}
-			rewardWithHoover = new(big.Int).Add(reward, hooverRequest)
-		}
+		hooverBalance := cc.GetBalance(hvhmodule.HooverFund)
+		hooverRequest = es.calcSubsidyFromHooverFund(hooverLimit, hooverGuide, hooverBalance, reward)
+		rewardWithHoover.Add(rewardWithHoover, hooverRequest)
+	} else {
+		hooverRequest = new(big.Int)
 	}
-	if err = es.state.OfferReward(termSequence+1, id, rewardWithHoover); err != nil {
+
+	if err = cc.Transfer(
+		hvhmodule.HooverFund, hvhmodule.PublicTreasury, hooverRequest); err != nil {
 		return err
 	}
-	onRewardOfferedEvent(cc, termSequence, id, rewardWithHoover, hooverRequest)
+
+	if p.IsCompany() {
+		proportion := hvhmodule.BigRatEcoRewardProportion
+		ecoReward := new(big.Int).Mul(rewardWithHoover, proportion.Num())
+		ecoReward.Div(ecoReward, proportion.Denom())
+		planetReward := new(big.Int).Sub(rewardWithHoover, ecoReward)
+
+		if err = es.state.OfferReward(termSeq+1, id, pr, planetReward); err != nil {
+			return err
+		}
+		if err = es.state.IncreaseEcoSystemReward(ecoReward); err != nil {
+			return err
+		}
+	} else {
+		if err = es.state.OfferReward(
+			termSeq+1, id, pr, rewardWithHoover); err != nil {
+			return err
+		}
+	}
+
+	onRewardOfferedEvent(cc, termSeq, id, rewardWithHoover, hooverRequest)
 	return nil
+}
+
+func calcHooverLimit(total, rewardPerPlanet, planetPrice *big.Int) *big.Int {
+	// hooverLimit = planetReward.total + reward - planet.price
+	hooverLimit := new(big.Int).Add(total, rewardPerPlanet)
+	return hooverLimit.Sub(hooverLimit, planetPrice)
 }
 
 func (es *ExtensionStateImpl) calcHooverGuide(p *hvhstate.Planet) *big.Int {
@@ -355,22 +372,25 @@ func (es *ExtensionStateImpl) calcHooverGuide(p *hvhstate.Planet) *big.Int {
 	return hooverGuide
 }
 
-// transferSubsidyFromHooverFund() transfers coins from HooverFund to PublicTreasury to support a planet reward
-func (es *ExtensionStateImpl) transferSubsidyFromHooverFund(
-	cc hvhmodule.CallContext, amount *big.Int) (*big.Int, error) {
-	if amount.Sign() > 0 {
-		balance := cc.GetBalance(hvhmodule.HooverFund)
-		if balance.Cmp(amount) < 0 {
-			// In the case where there is not enough balance in HooverFund to pay subsidy
-			amount = balance
-		}
+func (es *ExtensionStateImpl) calcSubsidyFromHooverFund(
+	hooverLimit, hooverGuide, hooverBalance, reward *big.Int) *big.Int {
+	hooverRequest := new(big.Int)
 
-		// HooverFund provides the subsidy for reward to PublicTreasury
-		if err := cc.Transfer(hvhmodule.HooverFund, hvhmodule.PublicTreasury, amount); err != nil {
-			return nil, err
+	if hooverLimit.Sign() > 0 {
+		// if reward < hooverGuide
+		if reward.Cmp(hooverGuide) < 0 {
+			hooverRequest.Sub(hooverGuide, reward)
+			// if hooverRequest > hooverLimit
+			if hooverRequest.Cmp(hooverLimit) > 0 {
+				hooverRequest.Set(hooverLimit)
+			}
+			if hooverRequest.Cmp(hooverBalance) > 0 {
+				hooverRequest.Set(hooverBalance)
+			}
 		}
 	}
-	return amount, nil
+
+	return hooverRequest
 }
 
 // ClaimPlanetReward is used by a planet owner

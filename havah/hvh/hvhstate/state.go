@@ -361,15 +361,21 @@ func (s *State) DecreaseRewardRemain(amount *big.Int) error {
 	return varDB.Set(rewardRemain)
 }
 
-func (s *State) OfferReward(tn, id int64, amount *big.Int) error {
-	pr, err := s.GetPlanetReward(id)
-	if err != nil {
-		return err
+func (s *State) OfferReward(tn, id int64, pr *planetReward, amount *big.Int) error {
+	if pr == nil {
+		return scoreresult.New(
+			hvhmodule.StatusIllegalArgument, "Invalid planetReward")
 	}
-	if err = pr.increment(tn, amount); err != nil {
+	if err := pr.increment(tn, amount); err != nil {
 		return err
 	}
 	return s.setPlanetReward(id, pr)
+}
+
+func (s *State) IncreaseEcoSystemReward(amount *big.Int) error {
+	varDB := s.getVarDB(hvhmodule.VarEcoReward)
+	reward := varDB.BigInt()
+	return varDB.Set(reward.Add(reward, amount))
 }
 
 func (s *State) GetPlanetReward(id int64) (*planetReward, error) {
