@@ -389,6 +389,22 @@ func (s *State) setPlanetReward(id int64, pr *planetReward) error {
 	return dictDB.Set(id, pr.Bytes())
 }
 
+func (s *State) ClaimEcoSystemReward() (*big.Int, error) {
+	reward := s.GetBigInt(hvhmodule.VarEcoReward)
+	if reward == nil || reward.Sign() < 0 {
+		return nil, scoreresult.Errorf(
+			hvhmodule.StatusCriticalError, "Invalid EcoSystem reward: %v", reward)
+	}
+
+	if reward.Sign() > 0 {
+		if err := s.SetBigInt(hvhmodule.VarEcoReward, new(big.Int)); err != nil {
+			return nil, err
+		}
+	}
+
+	return reward, nil
+}
+
 func (s *State) ClaimPlanetReward(id, height int64, owner module.Address) (*big.Int, error) {
 	p, err := s.GetPlanet(id)
 	if err != nil {

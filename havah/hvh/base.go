@@ -30,6 +30,7 @@ import (
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/contract"
+	"github.com/icon-project/goloop/service/scoreresult"
 	"github.com/icon-project/goloop/service/state"
 	"github.com/icon-project/goloop/service/transaction"
 	"github.com/icon-project/goloop/service/txresult"
@@ -319,15 +320,76 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 
 func (es *ExtensionStateImpl) onTermEnd(cc hvhmodule.CallContext, termSeq int64) error {
 	var err error
-	if termSeq >= 0 {
-		// TxFee Distribution
-		if err = distributeFee(cc, cc.Treasury(), hvhmodule.BigRatEcoSystemProportion); err != nil {
-			return err
+	if err = es.claimEcoSystemReward(cc); err != nil {
+		return err
+	}
+
+	if err = distributeFees(cc); err != nil {
+		return err
+	}
+
+	if err = transferRemainingCoinToSustainableFund(cc); err != nil {
+		return err
+	}
+
+	if err = refillHooverFund(cc); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (es *ExtensionStateImpl) claimEcoSystemReward(cc hvhmodule.CallContext) error {
+	reward, err := es.state.ClaimEcoSystemReward()
+	if err != nil {
+		return err
+	}
+	if err = cc.Transfer(hvhmodule.PublicTreasury, hvhmodule.EcoSystem, reward); err != nil {
+		return err
+	}
+	return nil
+}
+
+func distributeFees(cc hvhmodule.CallContext) error {
+	var err error
+
+	// TxFee Distribution
+	if err = distributeFee(cc, cc.Treasury(), hvhmodule.BigRatEcoSystemProportion); err != nil {
+		return err
+	}
+	// ServiceFee Distribution
+	if err = distributeFee(cc, hvhmodule.ServiceTreasury, hvhmodule.BigRatEcoSystemProportion); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func transferRemainingCoinToSustainableFund(cc hvhmodule.CallContext) error {
+	balance := cc.GetBalance(hvhmodule.PublicTreasury)
+	if balance.Sign() < 0 {
+		return scoreresult.Errorf(
+			hvhmodule.StatusCriticalError,
+			"Invalid PublicTreasury balance: %v", balance)
+	}
+	return cc.Transfer(hvhmodule.PublicTreasury, hvhmodule.SustainableFund, balance)
+}
+
+func refillHooverFund(cc hvhmodule.CallContext) error {
+	sf := hvhmodule.SustainableFund
+	hf := hvhmodule.HooverFund
+
+	// amount = original HooverFund Budget - hfBalance
+	hfBalance := cc.GetBalance(hf)
+	amount := big.NewInt(hvhmodule.HooverBudget)
+	amount.Mul(amount, hvhmodule.BigIntCoinDecimal)
+	amount.Sub(amount, hfBalance)
+
+	if amount.Sign() > 0 {
+		sfBalance := cc.GetBalance(sf)
+		if sfBalance.Cmp(amount) < 0 {
+			amount.Set(sfBalance)
 		}
-		// ServiceFee Distribution
-		if err = distributeFee(cc, hvhmodule.ServiceTreasury, hvhmodule.BigRatEcoSystemProportion); err != nil {
-			return err
-		}
+		return cc.Transfer(sf, hf, amount)
 	}
 	return nil
 }
