@@ -5,7 +5,7 @@
   "db_type": "goleveldb",
   "ee_instances": 1,
   "ee_socket": "",
-  "engines": "python,java",
+  "engines": "java",
   "p2p": "127.0.0.1:8083",
   "p2p_listen": "",
   "role": 2,
