@@ -1,7 +1,10 @@
 rootProject.name = 'goloop-testsuite'
+//include(':sdk', ':api', ':rt', ':tooling', ':samples', ':planet-nft', ':testinteg')
 include(':sdk', ':api', ':rt', ':tooling', ':samples')
 project(':sdk').projectDir = new File(settingsDir, '../sdk/java/library')
 project(':api').projectDir = new File(settingsDir, '../javaee/api')
 project(':rt').projectDir = new File(settingsDir, '../javaee/rt')
 project(':tooling').projectDir = new File(settingsDir, '../javaee/tooling')
 project(':samples').projectDir = new File(settingsDir, '../javaee/samples')
+//project(':planet-nft').projectDir = new File(settingsDir, '../score/havah/planet-nft')
+//project(':testinteg').projectDir = new File(settingsDir, '../score/havah/testinteg')
