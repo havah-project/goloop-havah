@@ -94,6 +94,14 @@ const (
 	VarEcoReward           = "eco_reward"    // unit: hvh
 )
 
+// VarDBs in SustainableFund Score
+const (
+	VarServiceFee    = "service_fee"
+	VarTxFee         = "tx_fee"
+	VarMissingReward = "missing_reward"
+	VarHooverRefill  = "hoover_refill"
+)
+
 // ErrorCodes for havah chainscore
 const (
 	StatusIllegalArgument = module.StatusReverted + iota

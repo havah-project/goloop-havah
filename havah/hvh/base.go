@@ -30,6 +30,7 @@ import (
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/contract"
+	"github.com/icon-project/goloop/service/scoredb"
 	"github.com/icon-project/goloop/service/scoreresult"
 	"github.com/icon-project/goloop/service/state"
 	"github.com/icon-project/goloop/service/transaction"
@@ -353,11 +354,11 @@ func distributeFees(cc hvhmodule.CallContext) error {
 	var err error
 
 	// TxFee Distribution
-	if err = distributeFee(cc, cc.Treasury(), hvhmodule.BigRatEcoSystemToFee); err != nil {
+	if err = distributeTxFee(cc, hvhmodule.BigRatEcoSystemToFee); err != nil {
 		return err
 	}
 	// ServiceFee Distribution
-	if err = distributeFee(cc, hvhmodule.ServiceTreasury, hvhmodule.BigRatEcoSystemToFee); err != nil {
+	if err = distributeServiceFee(cc, hvhmodule.BigRatEcoSystemToFee); err != nil {
 		return err
 	}
 
@@ -372,7 +373,16 @@ func transferMissingRewardToSustainableFund(cc hvhmodule.CallContext) error {
 			hvhmodule.StatusCriticalError,
 			"Invalid PublicTreasury balance: %v", balance)
 	}
-	return cc.Transfer(hvhmodule.PublicTreasury, hvhmodule.SustainableFund, balance)
+	if balance.Sign() == 0 {
+		return nil
+	}
+	if err := cc.Transfer(hvhmodule.PublicTreasury, hvhmodule.SustainableFund, balance); err != nil {
+		return err
+	}
+	if err := increaseVarDBInSustainableFund(cc, hvhmodule.VarMissingReward, balance); err != nil {
+		return err
+	}
+	return nil
 }
 
 func refillHooverFund(cc hvhmodule.CallContext) error {
@@ -388,7 +398,13 @@ func refillHooverFund(cc hvhmodule.CallContext) error {
 		if sfBalance.Cmp(amount) < 0 {
 			amount.Set(sfBalance)
 		}
-		return cc.Transfer(sf, hf, amount)
+		if err := cc.Transfer(sf, hf, amount); err != nil {
+			return err
+		}
+		if err := increaseVarDBInSustainableFund(cc, hvhmodule.VarHooverRefill, amount); err != nil {
+			return err
+		}
+		onHooverRefilledEvent(cc, amount, cc.GetBalance(hf), cc.GetBalance(sf))
 	}
 	return nil
 }
@@ -440,22 +456,51 @@ func issueCoin(cc hvhmodule.CallContext, termSeq int64, amount *big.Int) error {
 	return nil
 }
 
-func distributeFee(cc hvhmodule.CallContext, from module.Address, proportion *big.Rat) error {
-	var err error
-	balance := cc.GetBalance(from)
-	if balance.Sign() > 0 {
-		ecoAmount := new(big.Int).Mul(balance, proportion.Num())
-		ecoAmount.Div(ecoAmount, proportion.Denom())
-		susAmount := new(big.Int).Sub(balance, ecoAmount)
-
-		if err = cc.Transfer(from, hvhmodule.SustainableFund, susAmount); err != nil {
-			return err
-		}
-		if err = cc.Transfer(from, hvhmodule.EcoSystem, ecoAmount); err != nil {
-			return err
-		}
+func distributeServiceFee(cc hvhmodule.CallContext, proportion *big.Rat) error {
+	from := hvhmodule.ServiceTreasury
+	_, sfAmount, err := distributeFee(cc, from, proportion)
+	if err != nil {
+		return err
+	}
+	if err = increaseVarDBInSustainableFund(cc, hvhmodule.VarServiceFee, sfAmount); err != nil {
+		return err
 	}
 	return nil
+}
+
+func distributeTxFee(cc hvhmodule.CallContext, proportion *big.Rat) error {
+	from := cc.Treasury()
+	_, sfAmount, err := distributeFee(cc, from, proportion)
+	if err != nil {
+		return err
+	}
+	if err = increaseVarDBInSustainableFund(cc, hvhmodule.VarTxFee, sfAmount); err != nil {
+		return err
+	}
+	return nil
+}
+
+func distributeFee(
+	cc hvhmodule.CallContext, from module.Address, proportion *big.Rat,
+) (*big.Int, *big.Int, error) {
+	var err error
+	balance := cc.GetBalance(from)
+	ecoAmount := new(big.Int)
+	susAmount := new(big.Int)
+
+	if balance.Sign() > 0 {
+		ecoAmount.Mul(balance, proportion.Num())
+		ecoAmount.Div(ecoAmount, proportion.Denom())
+		susAmount.Sub(balance, ecoAmount)
+
+		if err = cc.Transfer(from, hvhmodule.SustainableFund, susAmount); err != nil {
+			return nil, nil, err
+		}
+		if err = cc.Transfer(from, hvhmodule.EcoSystem, ecoAmount); err != nil {
+			return nil, nil, err
+		}
+	}
+	return ecoAmount, susAmount, nil
 }
 
 func calcIssueAmount(curIssueAmount *big.Int, reductionRate *big.Rat) *big.Int {
@@ -464,4 +509,17 @@ func calcIssueAmount(curIssueAmount *big.Int, reductionRate *big.Rat) *big.Int {
 	amount.Mul(amount, numerator)
 	amount.Div(amount, reductionRate.Denom())
 	return amount
+}
+
+func increaseVarDBInSustainableFund(cc hvhmodule.CallContext, key string, amount *big.Int) error {
+	return increaseScoreVarDB(cc, hvhmodule.SustainableFund, key, amount)
+}
+
+func increaseScoreVarDB(cc hvhmodule.CallContext, score module.Address, key string, amount *big.Int) error {
+	if amount == nil || amount.Sign() <= 0 {
+		return nil
+	}
+	as := cc.GetAccountState(score.ID())
+	varDB := scoredb.NewVarDB(as, key)
+	return varDB.Set(new(big.Int).Add(varDB.BigInt(), amount))
 }

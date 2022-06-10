@@ -163,6 +163,10 @@ func (ctx *worldContextImpl) SetScoreOwner(from module.Address, score module.Add
 	return as.SetContractOwner(newOwner)
 }
 
+func (ctx *worldContextImpl) GetAccountState(id []byte) state.AccountState {
+	return ctx.GetAccountState(id)
+}
+
 func NewWorldContext(ctx state.WorldContext) hvhmodule.WorldContext {
 	return &worldContextImpl{
 		WorldContext: ctx,
