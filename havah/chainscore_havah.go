@@ -17,8 +17,6 @@
 package havah
 
 import (
-	"math/big"
-
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/havah/hvh"
@@ -52,12 +50,16 @@ func (s *chainScore) newCallContext() hvhmodule.CallContext {
 	return hvh.NewCallContext(s.cc, s.from)
 }
 
-func (s *chainScore) Ex_getUSDTPrice() (*big.Int, error) {
+func (s *chainScore) Ex_getUSDTPrice() ([]byte, error) {
 	es, err := s.getExtensionState()
 	if err != nil {
 		return nil, err
 	}
-	return es.GetUSDTPrice()
+	price, err := es.GetUSDTPrice()
+	if err != nil {
+		return nil, err
+	}
+	return price.Bytes(), nil
 }
 
 func (s *chainScore) Ex_setUSDTPrice(price *common.HexInt) error {
@@ -113,59 +115,66 @@ func (s *chainScore) Ex_isPlanetManager(address module.Address) (bool, error) {
 }
 
 func (s *chainScore) Ex_registerPlanet(
-	id int64,
+	id *common.HexInt,
 	isPrivate, isCompany bool, owner module.Address, usdt, price *common.HexInt) error {
 	es, err := s.getExtensionState()
 	if err != nil {
 		return err
 	}
-	return es.RegisterPlanet(s.newCallContext(), id, isPrivate, isCompany, owner, usdt.Value(), price.Value())
+	return es.RegisterPlanet(
+		s.newCallContext(), id.Int64(),
+		isPrivate, isCompany, owner, usdt.Value(), price.Value())
 }
 
-func (s *chainScore) Ex_unregisterPlanet(id int64) error {
+func (s *chainScore) Ex_unregisterPlanet(id *common.HexInt) error {
 	es, err := s.getExtensionState()
 	if err != nil {
 		return err
 	}
-	return es.UnregisterPlanet(s.newCallContext(), id)
+	return es.UnregisterPlanet(s.newCallContext(), id.Int64())
 }
 
-func (s *chainScore) Ex_setPlanetOwner(id int64, owner module.Address) error {
+func (s *chainScore) Ex_setPlanetOwner(id *common.HexInt, owner module.Address) error {
 	es, err := s.getExtensionState()
 	if err != nil {
 		return err
 	}
-	return es.SetPlanetOwner(s.newCallContext(), id, owner)
+	return es.SetPlanetOwner(s.newCallContext(), id.Int64(), owner)
 }
 
-func (s *chainScore) Ex_getPlanetInfo(id int64) (map[string]interface{}, error) {
+func (s *chainScore) Ex_getPlanetInfo(id *common.HexInt) (map[string]interface{}, error) {
 	es, err := s.getExtensionState()
 	if err != nil {
 		return nil, err
 	}
-	return es.GetPlanetInfo(s.newCallContext(), id)
+	return es.GetPlanetInfo(s.newCallContext(), id.Int64())
 }
 
-func (s *chainScore) Ex_reportPlanetWork(id int64) error {
+func (s *chainScore) Ex_reportPlanetWork(id *common.HexInt) error {
 	es, err := s.getExtensionState()
 	if err != nil {
 		return err
 	}
-	return es.ReportPlanetWork(s.newCallContext(), id)
+	return es.ReportPlanetWork(s.newCallContext(), id.Int64())
 }
 
-func (s *chainScore) Ex_claimPlanetReward(ids []int64) error {
+func (s *chainScore) Ex_claimPlanetReward(ids []interface{}) error {
 	es, err := s.getExtensionState()
 	if err != nil {
 		return err
 	}
-	return es.ClaimPlanetReward(s.newCallContext(), ids)
+
+	planetIds := make([]int64, len(ids))
+	for i := 0; i < len(ids); i++ {
+		planetIds[i] = (ids[i].(*common.HexInt)).Int64()
+	}
+	return es.ClaimPlanetReward(s.newCallContext(), planetIds)
 }
 
-func (s *chainScore) Ex_getRewardInfo(id int64) (map[string]interface{}, error) {
+func (s *chainScore) Ex_getRewardInfo(id *common.HexInt) (map[string]interface{}, error) {
 	es, err := s.getExtensionState()
 	if err != nil {
 		return nil, err
 	}
-	return es.GetRewardInfo(s.newCallContext(), id)
+	return es.GetRewardInfo(s.newCallContext(), id.Int64())
 }

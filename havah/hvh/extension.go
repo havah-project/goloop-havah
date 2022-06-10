@@ -336,6 +336,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 	}
 
 	if p.IsCompany() {
+		// Divide company rewards into ecoSystem and owner in a ratio of 6:4
 		proportion := hvhmodule.BigRatEcoSystemToCompanyReward
 		ecoReward := new(big.Int).Mul(rewardWithHoover, proportion.Num())
 		ecoReward.Div(ecoReward, proportion.Denom())

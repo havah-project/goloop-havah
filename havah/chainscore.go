@@ -18,10 +18,8 @@ package havah
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"math/big"
 
-	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/log"
 	"github.com/icon-project/goloop/havah/hvh"
@@ -33,7 +31,6 @@ import (
 	"github.com/icon-project/goloop/service/scoredb"
 	"github.com/icon-project/goloop/service/scoreresult"
 	"github.com/icon-project/goloop/service/state"
-	"github.com/icon-project/goloop/service/transaction"
 )
 
 const (
@@ -250,7 +247,7 @@ var chainMethods = []*chainMethod{
 		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 0,
 		nil,
 		[]scoreapi.DataType{
-			scoreapi.Integer,
+			scoreapi.Bytes,
 		},
 	}, 0, 0},
 	{scoreapi.Method{
@@ -300,9 +297,9 @@ var chainMethods = []*chainMethod{
 		scoreapi.FlagExternal, 6,
 		[]scoreapi.Parameter{
 			{"id", scoreapi.Integer, nil, nil},
-			{"owner", scoreapi.Address, nil, nil},
 			{"isPrivate", scoreapi.Bool, nil, nil},
 			{"isCompany", scoreapi.Bool, nil, nil},
+			{"owner", scoreapi.Address, nil, nil},
 			{"usdt", scoreapi.Integer, nil, nil},
 			{"price", scoreapi.Integer, nil, nil},
 		},
@@ -347,7 +344,7 @@ var chainMethods = []*chainMethod{
 		scoreapi.Function, "claimPlanetReward",
 		scoreapi.FlagExternal, 1,
 		[]scoreapi.Parameter{
-			{"ids", scoreapi.List, nil, nil},
+			{"ids", scoreapi.ListTypeOf(1, scoreapi.Integer), nil, nil},
 		},
 		nil,
 	}, 0, 0},
@@ -454,6 +451,7 @@ func (s *chainScore) initPlatformConfig(cfg *hvh.PlatformConfig) error {
 }
 
 func (s *chainScore) Install(param []byte) error {
+	s.log.Debugf("chainScore start")
 	if s.from != nil {
 		return scoreresult.AccessDeniedError.New("AccessDeniedToInstallChainSCORE")
 	}
@@ -462,12 +460,12 @@ func (s *chainScore) Install(param []byte) error {
 
 	var systemConfig int
 	var revision int
-	var handlers []contract.ContractHandler
-	if handler, err := s.deployBuiltinGovernance(); err == nil {
-		handlers = append(handlers, handler)
-	} else {
-		return err
-	}
+	//var handlers []contract.ContractHandler
+	//if handler, err := s.deployBuiltinGovernance(); err == nil {
+	//	handlers = append(handlers, handler)
+	//} else {
+	//	return err
+	//}
 
 	if param != nil {
 		if err := json.Unmarshal(param, cfg); err != nil {
@@ -547,35 +545,37 @@ func (s *chainScore) Install(param []byte) error {
 		return err
 	}
 
-	for _, handler := range handlers {
-		if status, _, _, _ := s.cc.Call(handler, s.cc.StepAvailable()); status != nil {
-			return transaction.InvalidGenesisError.Wrap(
-				status,
-				"FAIL to install initial governance score.",
-			)
-		}
-	}
+	//for _, handler := range handlers {
+	//	if status, _, _, _ := s.cc.Call(handler, s.cc.StepAvailable()); status != nil {
+	//		return transaction.InvalidGenesisError.Wrap(
+	//			status,
+	//			"FAIL to install initial governance score.",
+	//		)
+	//	}
+	//}
 
-	return s.handleRevisionChange(as, hvhmodule.Revision0, revision)
+	err := s.handleRevisionChange(as, hvhmodule.Revision0, revision)
+	s.log.Debugf("chainScore end")
+	return err
 }
 
-func (s *chainScore) deployBuiltinGovernance() (*contract.DeployHandler, error) {
-	// prepare Governance SCORE
-	governance, err := ioutil.ReadFile("icon_governance.zip")
-	if err != nil || len(governance) == 0 {
-		return nil, transaction.InvalidGenesisError.Wrap(err, "FailOnGovernance")
-	}
-	params := json.RawMessage("{}")
-	handler := contract.NewDeployHandlerForPreInstall(
-		common.MustNewAddressFromString("hx677133298ed5319607a321a38169031a8867085c"),
-		s.cc.Governance(),
-		"application/zip",
-		governance,
-		&params,
-		s.cc.Logger(),
-	)
-	return handler, nil
-}
+//func (s *chainScore) deployBuiltinGovernance() (*contract.DeployHandler, error) {
+//	// prepare Governance SCORE
+//	governance, err := ioutil.ReadFile("icon_governance.zip")
+//	if err != nil || len(governance) == 0 {
+//		return nil, transaction.InvalidGenesisError.Wrap(err, "FailOnGovernance")
+//	}
+//	params := json.RawMessage("{}")
+//	handler := contract.NewDeployHandlerForPreInstall(
+//		common.MustNewAddressFromString("hx677133298ed5319607a321a38169031a8867085c"),
+//		s.cc.Governance(),
+//		"application/zip",
+//		governance,
+//		&params,
+//		s.cc.Logger(),
+//	)
+//	return handler, nil
+//}
 
 func (s *chainScore) handleRevisionChange(as state.AccountState, oldRev, newRev int) error {
 	if oldRev >= newRev {

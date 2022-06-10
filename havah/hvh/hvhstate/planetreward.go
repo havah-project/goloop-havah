@@ -14,7 +14,6 @@ type planetReward struct {
 	// The last term number when the reward is claimed
 	lastTN int64
 	// Reward to claim at this moment
-	// If the Planet is owned by company, this value should always be 0
 	current *big.Int
 }
 
