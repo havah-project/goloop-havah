@@ -103,25 +103,16 @@ const (
 
 // The following variables are read-only
 var (
-	BigIntZero                = new(big.Int)
-	BigIntCoinDecimal         = big.NewInt(1_000_000_000_000_000_000)
-	BigIntUSDTDecimal         = big.NewInt(1_000_000)
-	BigIntDayBlocks           = big.NewInt(DayBlock)
-	BigRatIssueReductionRate  = big.NewRat(3, 10) // 30%
-	BigRatEcoSystemProportion = big.NewRat(1, 5)  // 20%
-	// BigRatEcoRewardProportion is the EcoSystem proportion to company planet reward
-	BigRatEcoRewardProportion = big.NewRat(3, 5) // 60%
+	BigIntZero               = new(big.Int)
+	BigIntCoinDecimal        = big.NewInt(1_000_000_000_000_000_000)
+	BigIntUSDTDecimal        = big.NewInt(1_000_000)
+	BigIntInitIssueAmount    = new(big.Int).Mul(big.NewInt(IssueAmount), BigIntCoinDecimal)
+	BigIntHooverBudget       = new(big.Int).Mul(big.NewInt(HooverBudget), BigIntCoinDecimal)
+	BigRatIssueReductionRate = big.NewRat(3, 10) // 30%
+	BigRatEcoSystemToFee     = big.NewRat(1, 5)  // 20%
+	// BigRatEcoSystemToCompanyReward is the EcoSystem proportion to company planet reward
+	BigRatEcoSystemToCompanyReward = big.NewRat(3, 5) // 60%
 )
-
-//type SystemAddressName string
-//const (
-//	PublicTreasury  = SystemAddressName("PublicTreasury")
-//	SustainableFund = SystemAddressName("SustainableFund")
-//	CompanyTreasury = SystemAddressName("CompanyTreasury")
-//	HooverFund      = SystemAddressName("HooverFund")
-//	EcoSystem       = SystemAddressName("EcoSystem")
-//	PlanetNFT       = SystemAddressName("PlanetNFT")
-//)
 
 var (
 	PublicTreasury  = common.MustNewAddressFromString("hx3000000000000000000000000000000000000000")

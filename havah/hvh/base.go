@@ -328,7 +328,7 @@ func (es *ExtensionStateImpl) onTermEnd(cc hvhmodule.CallContext, termSeq int64)
 		return err
 	}
 
-	if err = transferRemainingCoinToSustainableFund(cc); err != nil {
+	if err = transferMissingRewardToSustainableFund(cc); err != nil {
 		return err
 	}
 
@@ -353,18 +353,19 @@ func distributeFees(cc hvhmodule.CallContext) error {
 	var err error
 
 	// TxFee Distribution
-	if err = distributeFee(cc, cc.Treasury(), hvhmodule.BigRatEcoSystemProportion); err != nil {
+	if err = distributeFee(cc, cc.Treasury(), hvhmodule.BigRatEcoSystemToFee); err != nil {
 		return err
 	}
 	// ServiceFee Distribution
-	if err = distributeFee(cc, hvhmodule.ServiceTreasury, hvhmodule.BigRatEcoSystemProportion); err != nil {
+	if err = distributeFee(cc, hvhmodule.ServiceTreasury, hvhmodule.BigRatEcoSystemToFee); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func transferRemainingCoinToSustainableFund(cc hvhmodule.CallContext) error {
+// TODO: Consider VarRewardRemain and this
+func transferMissingRewardToSustainableFund(cc hvhmodule.CallContext) error {
 	balance := cc.GetBalance(hvhmodule.PublicTreasury)
 	if balance.Sign() < 0 {
 		return scoreresult.Errorf(
@@ -380,9 +381,7 @@ func refillHooverFund(cc hvhmodule.CallContext) error {
 
 	// amount = original HooverFund Budget - hfBalance
 	hfBalance := cc.GetBalance(hf)
-	amount := big.NewInt(hvhmodule.HooverBudget)
-	amount.Mul(amount, hvhmodule.BigIntCoinDecimal)
-	amount.Sub(amount, hfBalance)
+	amount := new(big.Int).Sub(hvhmodule.BigIntHooverBudget, hfBalance)
 
 	if amount.Sign() > 0 {
 		sfBalance := cc.GetBalance(sf)
@@ -399,7 +398,7 @@ func (es *ExtensionStateImpl) onTermStart(cc hvhmodule.CallContext, termSeq int6
 	issueAmount := es.state.GetIssueAmount()
 	reductionCycle := es.state.GetIssueReductionCycle()
 
-	// Reduce the amount of coin to issue by 30% every reduction cycle
+	// Reduce the amount of coin to issue by 30% every reduction cycle (360 terms)
 	if termSeq > 0 && termSeq%reductionCycle == 0 {
 		reductionRate := es.state.GetIssueReductionRate()
 		newIssueAmount := calcIssueAmount(issueAmount, reductionRate)

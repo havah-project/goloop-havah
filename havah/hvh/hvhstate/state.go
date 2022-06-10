@@ -115,7 +115,7 @@ func (s *State) GetIssueReductionRate() *big.Rat {
 func (s *State) GetIssueAmount() *big.Int {
 	value := s.GetBigInt(hvhmodule.VarIssueAmount)
 	if value.Sign() <= 0 {
-		value.Mul(big.NewInt(hvhmodule.IssueAmount), hvhmodule.BigIntCoinDecimal)
+		value.Set(hvhmodule.BigIntInitIssueAmount)
 	}
 	return value
 }

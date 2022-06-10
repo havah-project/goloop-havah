@@ -336,7 +336,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 	}
 
 	if p.IsCompany() {
-		proportion := hvhmodule.BigRatEcoRewardProportion
+		proportion := hvhmodule.BigRatEcoSystemToCompanyReward
 		ecoReward := new(big.Int).Mul(rewardWithHoover, proportion.Num())
 		ecoReward.Div(ecoReward, proportion.Denom())
 		planetReward := new(big.Int).Sub(rewardWithHoover, ecoReward)
