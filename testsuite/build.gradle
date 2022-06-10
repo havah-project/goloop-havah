@@ -73,10 +73,6 @@ class ChainTest extends Test {
 
         ProcessBuilder pb = new ProcessBuilder(commands)
 
-        // adding PYTHONPATH for using pyee directly.
-        def env = pb.environment()
-        env.put("PYTHONPATH", "../pyee")
-
         // set working directory
         pb.directory(new File("."))
 
@@ -174,51 +170,6 @@ class ChainTest extends Test {
     }
 }
 
-task testPyGov(type: ChainTest, overwrite: true) {
-    useJUnitPlatform {
-        includeTags "pyGov"
-    }
-    def audit = System.getProperty("AUDIT")
-    if (audit == "true") {
-        configFile = "./data/config/pygov.json"
-        chainDir = ".chain/pyaudit"
-        logFile = ".chain/pyaudit.log"
-        gsDir = "./data/genesisStorage/genesis_audit.json"
-        envFile = "./data/chainenv/pygov.props"
-        dockerEnv = "pyaudit"
-    } else {
-        configFile = "./data/config/pygov.json"
-        chainDir = ".chain/pygov"
-        logFile = ".chain/pygov.log"
-        gsDir = "./data/genesisStorage/genesis_gov.json"
-        envFile = "./data/chainenv/pygov.props"
-        dockerEnv = "pygov"
-    }
-
-    dependsOn 'cleanTestPyGov'
-    testLogging.showStandardStreams = true
-}
-
-task testPyScore(type: ChainTest, overwrite: true) {
-    useJUnitPlatform {
-        includeTags "pyScore"
-    }
-    configFile = "./data/config/py.json"
-    chainDir = ".chain/pyscore"
-    logFile = ".chain/pyscore.log"
-    gsDir = "./data/genesisStorage/genesis_py.json"
-    envFile = "./data/chainenv/py.props"
-    dockerEnv = "pyscore"
-
-    dependsOn 'cleanTestPyScore'
-    testLogging.showStandardStreams = true
-
-    def forks = System.getProperty("FORKS")
-    if (forks != null && forks.isInteger()) {
-        maxParallelForks = Integer.valueOf(forks)
-    }
-}
-
 task testJavaScore(type: ChainTest, overwrite: true) {
     useJUnitPlatform {
         includeTags "javaScore"
@@ -248,6 +199,21 @@ task testJavaGov(type: ChainTest, overwrite: true) {
     testLogging.showStandardStreams = true
 }
 
+task testHavah(type: ChainTest, overwrite: true) {
+    useJUnitPlatform {
+        includeTags "havah"
+    }
+    configFile = "./data/config/javagov.json"
+    chainDir = ".chain/javagov"
+    logFile = ".chain/javagov.log"
+    gsDir = "./data/genesisStorage/genesis_havah.json"
+    envFile = "./data/chainenv/javagov.props"
+    dockerEnv = "javagov"
+
+    dependsOn 'cleanTestJavaGov'
+    testLogging.showStandardStreams = true
+}
+
 task test(overwrite: true) {
-    dependsOn 'testPyScore', 'testPyGov', 'testJavaScore', 'testJavaGov'
+    dependsOn 'testJavaScore', 'testJavaGov', 'testHavah'
 }
