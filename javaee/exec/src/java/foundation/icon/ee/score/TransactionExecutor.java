@@ -135,10 +135,11 @@ public class TransactionExecutor {
         Address origin = (Address) info.get(EEProxy.Info.TX_FROM);
         @SuppressWarnings("unchecked")
         Map<String, BigInteger> stepCosts = (Map<String, BigInteger>) info.get(EEProxy.Info.STEP_COSTS);
+        long revision = ((BigInteger) info.get(EEProxy.Info.REVISION)).longValue();
 
         ExternalState kernel = new ExternalState(proxy, option, code,
                 fileIO, contractID, blockHeight, blockTimestamp, owner,
-                stepCosts, nextHash, graphHash);
+                stepCosts, revision, nextHash, graphHash);
         Transaction tx = new Transaction(from, to, value, nonce,
                 limit.longValue(), method, params, txHash, txIndex, txTimestamp,
                 isInstall);
@@ -170,14 +171,18 @@ public class TransactionExecutor {
         logger.trace("    method={}", method);
         logger.trace("    params=[");
         for (Object p : params) {
-            logger.trace("     - {}", p);
+            if (p instanceof byte[]) {
+                logger.trace("     - 0x{}", Bytes.toHexString((byte[]) p));
+            } else {
+                logger.trace("     - {}", p);
+            }
         }
         logger.trace("    ]");
     }
 
     private void printGetInfo(Map<String, Object> info) {
         logger.trace(">>> getInfo: info={}", info);
-        logger.trace("    txHash={}", Bytes.toHexString((byte[]) info.get(EEProxy.Info.TX_HASH)));
+        logger.trace("    txHash=0x{}", Bytes.toHexString((byte[]) info.get(EEProxy.Info.TX_HASH)));
         logger.trace("    txIndex={}", info.get(EEProxy.Info.TX_INDEX));
         logger.trace("    txFrom={}", info.get(EEProxy.Info.TX_FROM));
         logger.trace("    txTimestamp={}", info.get(EEProxy.Info.TX_TIMESTAMP));
