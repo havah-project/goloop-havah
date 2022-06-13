@@ -466,12 +466,6 @@ func (s *chainScore) Install(param []byte) error {
 
 	var systemConfig int
 	var revision int
-	//var handlers []contract.ContractHandler
-	//if handler, err := s.deployBuiltinGovernance(); err == nil {
-	//	handlers = append(handlers, handler)
-	//} else {
-	//	return err
-	//}
 
 	if param != nil {
 		if err := json.Unmarshal(param, cfg); err != nil {
@@ -588,15 +582,6 @@ func (s *chainScore) Install(param []byte) error {
 	if err := scoredb.NewVarDB(as, state.VarServiceConfig).Set(systemConfig); err != nil {
 		return err
 	}
-
-	//for _, handler := range handlers {
-	//	if status, _, _, _ := s.cc.Call(handler, s.cc.StepAvailable()); status != nil {
-	//		return transaction.InvalidGenesisError.Wrap(
-	//			status,
-	//			"FAIL to install initial governance score.",
-	//		)
-	//	}
-	//}
 
 	err := s.handleRevisionChange(as, hvhmodule.Revision0, revision)
 	s.log.Debugf("chainScore end")
