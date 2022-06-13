@@ -444,11 +444,17 @@ func (s *chainScore) initPlatformConfig(cfg *hvh.PlatformConfig) error {
 	if cfg == nil {
 		return nil
 	}
-	es, err := s.getExtensionState()
+
+	// Initialize ExtensionState
+	s.cc.GetExtensionState().Reset(hvh.NewExtensionSnapshot(s.cc.Database(), nil))
+
+	esi, err := s.getExtensionState()
 	if err != nil {
 		return err
 	}
-	return es.InitPlatformConfig(cfg)
+	esi.SetLogger(hvhutils.NewLogger(s.cc.Logger()))
+
+	return nil
 }
 
 func (s *chainScore) Install(param []byte) error {
