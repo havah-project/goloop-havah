@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"math/big"
 
+	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/log"
 	"github.com/icon-project/goloop/havah/hvh"
@@ -532,11 +533,34 @@ func (s *chainScore) Install(param []byte) error {
 	}
 
 	feeConfig := cfg.Fee
-	if feeConfig != nil {
-		systemConfig |= state.SysConfigFee
-		if err := initFeeConfig(feeConfig, as); err != nil {
-			return err
+	systemConfig |= state.SysConfigFee
+	if feeConfig == nil {
+		feeConfig = new(FeeConfig)
+		feeConfig.StepLimit = map[string]common.HexInt64{
+			state.StepLimitTypeInvoke: {0x9502f900},
+			state.StepLimitTypeQuery:  {0x2faf080},
 		}
+		feeConfig.StepCosts = map[string]common.HexInt64{
+			state.StepTypeSchema:         {1},
+			state.StepTypeDefault:        {100_000},
+			state.StepTypeContractCall:   {25_000},
+			state.StepTypeContractCreate: {1_000_000_000},
+			state.StepTypeContractUpdate: {1_000_000_000},
+			state.StepTypeContractSet:    {15_000},
+			state.StepTypeGetBase:        {3_000},
+			state.StepTypeGet:            {25},
+			state.StepTypeSetBase:        {10_000},
+			state.StepTypeSet:            {320},
+			state.StepTypeDeleteBase:     {200},
+			state.StepTypeDelete:         {-240},
+			state.StepTypeInput:          {200},
+			state.StepTypeLogBase:        {5_000},
+			state.StepTypeLog:            {100},
+			state.StepTypeApiCall:        {10_000},
+		}
+	}
+	if err := initFeeConfig(feeConfig, as); err != nil {
+		return err
 	}
 
 	platformConfig := cfg.Havah
