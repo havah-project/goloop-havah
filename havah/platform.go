@@ -3,6 +3,7 @@ package havah
 import (
 	"encoding/json"
 
+	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/havah/hvh"
 	"github.com/icon-project/goloop/havah/hvhutils"
 
@@ -76,6 +77,29 @@ func (p *platform) NewBaseTransaction(wc state.WorldContext) (module.Transaction
 
 func (p *platform) OnExtensionSnapshotFinalization(state.ExtensionSnapshot, log.Logger) {
 	// Do nothing
+}
+
+func checkBaseTX(txs module.TransactionList) bool {
+	tx, err := txs.Get(0)
+	if err == nil {
+		return hvh.CheckBaseTX(tx)
+	} else {
+		return false
+	}
+}
+
+func (p *platform) OnValidateTransactions(wc state.WorldContext, patches, txs module.TransactionList) error {
+	es := p.getExtensionState(wc, nil)
+	needBaseTX := es != nil && es.IsIssueStarted(wc.BlockHeight())
+	if hasBaseTX := checkBaseTX(txs); needBaseTX == hasBaseTX {
+		return nil
+	} else {
+		if needBaseTX {
+			return errors.IllegalArgumentError.New("NoBaseTransaction")
+		} else {
+			return errors.IllegalArgumentError.New("InvalidBaseTransaction")
+		}
+	}
 }
 
 func (p *platform) OnExecutionBegin(wc state.WorldContext, logger log.Logger) error {

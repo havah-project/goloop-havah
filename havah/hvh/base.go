@@ -523,3 +523,8 @@ func increaseScoreVarDB(cc hvhmodule.CallContext, score module.Address, key stri
 	varDB := scoredb.NewVarDB(as, key)
 	return varDB.Set(new(big.Int).Add(varDB.BigInt(), amount))
 }
+
+func CheckBaseTX(tx module.Transaction) bool {
+	_, ok := transaction.Unwrap(tx).(*baseV3)
+	return ok
+}
