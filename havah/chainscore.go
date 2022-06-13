@@ -39,20 +39,18 @@ const (
 	StatusNotFound
 )
 
-type handleRevFunc func(*chainScore, state.AccountState, int, int) error
 type chainMethod struct {
 	scoreapi.Method
 	minVer, maxVer int
 }
 
 type chainScore struct {
-	cc             contract.CallContext
-	log            log.Logger
-	from           module.Address
-	value          *big.Int
-	gov            bool
-	flags          int
-	handleRevFuncs map[int]handleRevFunc
+	cc    contract.CallContext
+	log   log.Logger
+	from  module.Address
+	value *big.Int
+	gov   bool
+	flags int
 }
 
 var chainMethods = []*chainMethod{
@@ -568,39 +566,27 @@ func (s *chainScore) Install(param []byte) error {
 	return err
 }
 
-//func (s *chainScore) deployBuiltinGovernance() (*contract.DeployHandler, error) {
-//	// prepare Governance SCORE
-//	governance, err := ioutil.ReadFile("icon_governance.zip")
-//	if err != nil || len(governance) == 0 {
-//		return nil, transaction.InvalidGenesisError.Wrap(err, "FailOnGovernance")
-//	}
-//	params := json.RawMessage("{}")
-//	handler := contract.NewDeployHandlerForPreInstall(
-//		common.MustNewAddressFromString("hx677133298ed5319607a321a38169031a8867085c"),
-//		s.cc.Governance(),
-//		"application/zip",
-//		governance,
-//		&params,
-//		s.cc.Logger(),
-//	)
-//	return handler, nil
-//}
+type handleRevFunc func(*chainScore, state.AccountState, int, int) error
+
+var handleRevFuncs = map[int]handleRevFunc{
+	hvhmodule.Revision0: handleRev1,
+}
+
+func handleRev1(s *chainScore, as state.AccountState, oldRev, newRev int) error {
+	return nil
+}
 
 func (s *chainScore) handleRevisionChange(as state.AccountState, oldRev, newRev int) error {
 	if oldRev >= newRev {
 		return nil
 	}
 	for rev := oldRev; rev < newRev; rev++ {
-		if fn, ok := s.handleRevFuncs[rev]; ok {
+		if fn, ok := handleRevFuncs[rev]; ok {
 			if err := fn(s, as, oldRev, newRev); err != nil {
 				return err
 			}
 		}
 	}
-	return nil
-}
-
-func handleRev1(s *chainScore, as state.AccountState, oldRev, newRev int) error {
 	return nil
 }
 
@@ -641,17 +627,12 @@ const (
 func newChainScore(cc contract.CallContext, from module.Address, value *big.Int) (contract.SystemScore, error) {
 	fromGov := cc.Governance().Equal(from)
 	flags := 0
-	handleRevFuncs := map[int]handleRevFunc{
-		hvhmodule.Revision0: handleRev1,
-	}
-
 	return &chainScore{
-		cc:             cc,
-		from:           from,
-		value:          value,
-		log:            hvhutils.NewLogger(cc.Logger()),
-		gov:            fromGov,
-		flags:          flags,
-		handleRevFuncs: handleRevFuncs,
+		cc:    cc,
+		from:  from,
+		value: value,
+		log:   hvhutils.NewLogger(cc.Logger()),
+		gov:   fromGov,
+		flags: flags,
 	}, nil
 }
