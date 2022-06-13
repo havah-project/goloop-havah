@@ -535,7 +535,7 @@ func (s *chainScore) Install(param []byte) error {
 		}
 	}
 
-	platformConfig := cfg.Platform
+	platformConfig := cfg.Havah
 	if platformConfig != nil {
 		if err := s.initPlatformConfig(platformConfig); err != nil {
 			return transaction.InvalidGenesisError.Wrap(err, "Failed to initialize platformConfig")

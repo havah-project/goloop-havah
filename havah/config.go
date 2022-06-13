@@ -7,12 +7,13 @@ import (
 )
 
 type chainConfig struct {
+	Platform         string              `json:"platform"`
 	BlockInterval    *common.HexInt32    `json:"blockInterval,omitempty"`
 	Revision         *common.HexInt32    `json:"revision,omitempty"`
 	RoundLimitFactor *common.HexInt32    `json:"roundLimitFactor,omitempty"`
 	ValidatorList    []*common.Address   `json:"validators"`
 	Fee              *FeeConfig          `json:"fee,omitempty"`
-	Platform         *hvh.PlatformConfig `json:"platform"`
+	Havah            *hvh.PlatformConfig `json:"havah"`
 }
 
 type FeeConfig struct {
