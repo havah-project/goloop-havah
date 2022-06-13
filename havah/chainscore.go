@@ -563,6 +563,19 @@ func (s *chainScore) Install(param []byte) error {
 		return err
 	}
 
+	systemConfig |= state.SysConfigDeployerWhiteList
+	if len(cfg.Deployers) > 0 {
+		deployersDB := scoredb.NewArrayDB(as, state.VarDeployers)
+		for _, addr := range cfg.Deployers {
+			if addr == nil {
+				continue
+			}
+			if err := deployersDB.Put(addr); err != nil {
+				return err
+			}
+		}
+	}
+
 	platformConfig := cfg.Havah
 	if platformConfig != nil {
 		if err := s.initPlatformConfig(platformConfig); err != nil {
