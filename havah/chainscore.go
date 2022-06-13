@@ -546,6 +546,8 @@ func (s *chainScore) Install(param []byte) error {
 		if err := s.initPlatformConfig(platformConfig); err != nil {
 			return transaction.InvalidGenesisError.Wrap(err, "Failed to initialize platformConfig")
 		}
+	} else {
+		return transaction.InvalidGenesisError.New("NoPlatformConfiguration(field=\"havah\")")
 	}
 
 	if err := scoredb.NewVarDB(as, state.VarServiceConfig).Set(systemConfig); err != nil {
