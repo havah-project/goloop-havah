@@ -31,6 +31,7 @@ import (
 	"github.com/icon-project/goloop/service/scoredb"
 	"github.com/icon-project/goloop/service/scoreresult"
 	"github.com/icon-project/goloop/service/state"
+	"github.com/icon-project/goloop/service/transaction"
 )
 
 const (
@@ -537,7 +538,7 @@ func (s *chainScore) Install(param []byte) error {
 	platformConfig := cfg.Platform
 	if platformConfig != nil {
 		if err := s.initPlatformConfig(platformConfig); err != nil {
-			return err
+			return transaction.InvalidGenesisError.Wrap(err, "Failed to initialize platformConfig")
 		}
 	}
 

@@ -174,6 +174,11 @@ func (es *ExtensionStateImpl) InitPlatformConfig(cfg *PlatformConfig) error {
 			return err
 		}
 	}
+	if cfg.IssueLimit != nil {
+		if err = es.state.SetInt64(hvhmodule.VarIssueLimit, cfg.IssueLimit.Value); err != nil {
+			return err
+		}
+	}
 
 	if cfg.IssueAmount != nil {
 		if err = es.state.SetBigInt(hvhmodule.VarIssueAmount, cfg.IssueAmount.Value()); err != nil {
