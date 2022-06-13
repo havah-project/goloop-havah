@@ -30,7 +30,9 @@ const (
 )
 
 var revisionFlags = []module.Revision{
-	0, // Revision0
+	// Revision 0
+	module.FixLostFeeByDeposit | module.InputCostingWithJSON | module.ExpandErrorCode | module.UseChainID |
+		module.UseMPTOnEvents | module.UseCompactAPIInfo | module.PurgeEnumCache,
 }
 
 func init() {
