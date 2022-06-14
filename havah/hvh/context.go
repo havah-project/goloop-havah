@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/icon-project/goloop/common/errors"
+	"github.com/icon-project/goloop/common/intconv"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/havah/hvhutils"
 	"github.com/icon-project/goloop/module"
@@ -11,7 +12,7 @@ import (
 	"github.com/icon-project/goloop/service/scoredb"
 	"github.com/icon-project/goloop/service/scoreresult"
 	"github.com/icon-project/goloop/service/state"
-	"github.com/icon-project/goloop/service/trace"
+	"github.com/icon-project/goloop/service/txresult"
 )
 
 func validateAmount(amount *big.Int) error {
@@ -81,6 +82,12 @@ func (ctx *callContextImpl) Transfer(from module.Address, to module.Address, amo
 	if err = ctx.addBalance(to, amount); err != nil {
 		return
 	}
+	ctx.CallContext.OnEvent(state.SystemAddress, [][]byte{
+		[]byte(txresult.EventLogICXTransfer),
+		from.Bytes(),
+		to.Bytes(),
+		intconv.BigIntToBytes(amount),
+	}, [][]byte{})
 	return
 }
 
