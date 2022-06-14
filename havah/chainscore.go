@@ -36,8 +36,8 @@ import (
 )
 
 const (
-	StatusIllegalArgument = module.StatusReverted + iota
-	StatusNotFound
+	StatusIllegalArgument = hvhmodule.StatusIllegalArgument
+	StatusNotFound        = hvhmodule.StatusNotFound
 )
 
 type chainMethod struct {

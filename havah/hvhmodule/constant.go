@@ -108,6 +108,7 @@ const (
 // ErrorCodes for havah chainscore
 const (
 	StatusIllegalArgument = module.StatusReverted + iota
+	StatusNotFound
 	StatusCriticalError
 	StatusRewardError
 )
