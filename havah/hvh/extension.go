@@ -324,14 +324,16 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 	// hooverLimit = planetReward.total + reward - planet.price
 	hooverLimit := calcHooverLimit(pr.Total(), reward, p.Price())
 
-	var hooverRequest *big.Int
+	hooverRequest := hvhmodule.BigIntZero
 	if hooverLimit.Sign() > 0 {
 		hooverGuide := es.calcHooverGuide(p)
-		hooverBalance := cc.GetBalance(hvhmodule.HooverFund)
-		hooverRequest = es.calcSubsidyFromHooverFund(hooverLimit, hooverGuide, hooverBalance, reward)
-		rewardWithHoover = new(big.Int).Add(rewardWithHoover, hooverRequest)
-	} else {
-		hooverRequest = new(big.Int)
+		if reward.Cmp(hooverGuide) < 0 {
+			hooverBalance := cc.GetBalance(hvhmodule.HooverFund)
+			if hooverBalance.Sign() > 0 {
+				hooverRequest = es.calcSubsidyFromHooverFund(hooverLimit, hooverGuide, hooverBalance, reward)
+				rewardWithHoover = new(big.Int).Add(rewardWithHoover, hooverRequest)
+			}
+		}
 	}
 
 	if err = cc.Transfer(
@@ -379,20 +381,14 @@ func (es *ExtensionStateImpl) calcHooverGuide(p *hvhstate.Planet) *big.Int {
 
 func (es *ExtensionStateImpl) calcSubsidyFromHooverFund(
 	hooverLimit, hooverGuide, hooverBalance, reward *big.Int) *big.Int {
-	hooverRequest := new(big.Int)
-
-	if hooverLimit.Sign() > 0 {
-		// if reward < hooverGuide
-		if reward.Cmp(hooverGuide) < 0 {
-			hooverRequest.Sub(hooverGuide, reward)
-			// if hooverRequest > hooverLimit
-			if hooverRequest.Cmp(hooverLimit) > 0 {
-				hooverRequest.Set(hooverLimit)
-			}
-			if hooverRequest.Cmp(hooverBalance) > 0 {
-				hooverRequest.Set(hooverBalance)
-			}
-		}
+	hooverRequest := new(big.Int).Sub(hooverGuide, reward)
+	// if hooverRequest > hooverLimit
+	if hooverRequest.Cmp(hooverLimit) > 0 {
+		hooverRequest.Set(hooverLimit)
+	}
+	// if hoooverRequest > hooverBalance
+	if hooverRequest.Cmp(hooverBalance) > 0 {
+		hooverRequest.Set(hooverBalance)
 	}
 
 	return hooverRequest
