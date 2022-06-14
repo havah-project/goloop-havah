@@ -541,3 +541,22 @@ func (s *chainScore) Ex_setDeployerWhiteListEnabled(yn bool) error {
 	}
 	return scoredb.NewVarDB(as, state.VarServiceConfig).Set(confValue)
 }
+
+func (s *chainScore) Ex_setTimestampThreshold(threshold *common.HexInt) error {
+	if err := s.checkGovernance(true); err != nil {
+		return err
+	}
+	as := s.cc.GetAccountState(state.SystemID)
+	db := scoredb.NewVarDB(as, state.VarTimestampThreshold)
+	return db.Set(threshold)
+}
+
+func (s *chainScore) Ex_getTimestampThreshold() (int64, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return 0, err
+	}
+	as := s.cc.GetAccountState(state.SystemID)
+	db := scoredb.NewVarDB(as, state.VarTimestampThreshold)
+	return db.Int64(), nil
+}
+

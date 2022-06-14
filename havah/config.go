@@ -13,6 +13,7 @@ type chainConfig struct {
 	RoundLimitFactor *common.HexInt32    `json:"roundLimitFactor,omitempty"`
 	ValidatorList    []*common.Address   `json:"validators"`
 	Fee              *FeeConfig          `json:"fee,omitempty"`
+	TSThreshold      *common.HexInt32    `json:"timestampThreshold,omitempty"`
 	Havah            *hvh.PlatformConfig `json:"havah"`
 }
 
@@ -26,5 +27,6 @@ func newChainConfig() *chainConfig {
 	return &chainConfig{
 		BlockInterval:    &common.HexInt32{Value: hvhmodule.BlockInterval},
 		RoundLimitFactor: &common.HexInt32{Value: hvhmodule.RoundLimitFactor},
+		TSThreshold:      &common.HexInt32{Value: hvhmodule.TimestampThreshold},
 	}
 }

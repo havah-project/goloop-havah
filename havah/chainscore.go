@@ -395,6 +395,22 @@ var chainMethods = []*chainMethod{
 		},
 		nil,
 	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "setTimestampThreshold",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"threshold", scoreapi.Integer, nil, nil},
+		},
+		nil,
+	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "getTimestampThreshold",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 0,
+		nil,
+		[]scoreapi.DataType{
+			scoreapi.Integer,
+		},
+	}, 0, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {
@@ -595,6 +611,13 @@ func (s *chainScore) Install(param []byte) error {
 	}
 	if err := initFeeConfig(feeConfig, as); err != nil {
 		return err
+	}
+
+	if cfg.TSThreshold != nil {
+		ts := int(cfg.TSThreshold.Value)
+		if err := scoredb.NewVarDB(as, state.VarTimestampThreshold).Set(ts); err != nil {
+			return err
+		}
 	}
 
 	platformConfig := cfg.Havah

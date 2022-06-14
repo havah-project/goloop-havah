@@ -58,6 +58,10 @@ const (
 	StepLogBase        = 5000
 	StepSet            = 320
 	StepSetBase        = 10000
+
+	// TimestampThreshold indicates threshold of timestamp of transactions
+	// to be included in the block in millisecond.
+	TimestampThreshold = 30_000
 )
 
 // PlatformConfig default values
