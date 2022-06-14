@@ -358,6 +358,43 @@ var chainMethods = []*chainMethod{
 			scoreapi.Dict,
 		},
 	}, 0, 0},
+	{scoreapi.Method{scoreapi.Function, "addDeployer",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"address", scoreapi.Address, nil, nil},
+		},
+		nil,
+	}, 0, 0},
+	{scoreapi.Method{scoreapi.Function, "removeDeployer",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"address", scoreapi.Address, nil, nil},
+		},
+		nil,
+	}, 0, 0},
+	{scoreapi.Method{scoreapi.Function, "isDeployer",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"address", scoreapi.Address, nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.Integer,
+		},
+	}, 0, 0},
+	{scoreapi.Method{scoreapi.Function, "getDeployers",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 0,
+		nil,
+		[]scoreapi.DataType{
+			scoreapi.List,
+		},
+	}, 0, 0},
+	{scoreapi.Method{scoreapi.Function, "setDeployerWhiteListEnabled",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"yn", scoreapi.Bool, nil, nil},
+		},
+		nil,
+	}, 0, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {
@@ -558,19 +595,6 @@ func (s *chainScore) Install(param []byte) error {
 	}
 	if err := initFeeConfig(feeConfig, as); err != nil {
 		return err
-	}
-
-	systemConfig |= state.SysConfigDeployerWhiteList
-	if len(cfg.Deployers) > 0 {
-		deployersDB := scoredb.NewArrayDB(as, state.VarDeployers)
-		for _, addr := range cfg.Deployers {
-			if addr == nil {
-				continue
-			}
-			if err := deployersDB.Put(addr); err != nil {
-				return err
-			}
-		}
 	}
 
 	platformConfig := cfg.Havah

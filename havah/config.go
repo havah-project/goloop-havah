@@ -12,7 +12,6 @@ type chainConfig struct {
 	Revision         common.HexInt32     `json:"revision,omitempty"`
 	RoundLimitFactor *common.HexInt32    `json:"roundLimitFactor,omitempty"`
 	ValidatorList    []*common.Address   `json:"validators"`
-	Deployers        []*common.Address   `json:"deployers,omitempty"`
 	Fee              *FeeConfig          `json:"fee,omitempty"`
 	Havah            *hvh.PlatformConfig `json:"havah"`
 }
