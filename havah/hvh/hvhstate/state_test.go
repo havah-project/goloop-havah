@@ -207,3 +207,40 @@ func TestState_UnregisterPlanet_InAbnormalCase(t *testing.T) {
 	}
 	checkAllPlanet(t, state, int64(0))
 }
+
+func TestState_GetBigInt(t *testing.T) {
+	key := "key"
+	state := newDummyState()
+	varDB := state.getVarDB(key)
+
+	if varDB.BigInt() != nil {
+		t.Errorf("value is not nil")
+	}
+
+	value := state.GetBigInt(key)
+	if value == nil {
+		t.Errorf("GetBigInt() error")
+	}
+
+	defValue := hvhmodule.BigIntHooverBudget
+	value = state.GetBigIntWithDefault(key, defValue)
+	if value == nil || value.Cmp(defValue) != 0 {
+		t.Errorf("GetBigIntWithDefault() error")
+	}
+
+	newValue := new(big.Int).Add(defValue, big.NewInt(100))
+	err := state.SetBigInt(key, newValue)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	value = state.GetBigInt(key)
+	if value == nil || value.Cmp(newValue) != 0 {
+		t.Errorf("GetBigIntWithDefault() error")
+	}
+
+	value = state.GetBigIntWithDefault(key, defValue)
+	if value == nil || value.Cmp(newValue) != 0 {
+		t.Errorf("GetBigIntWithDefault() error")
+	}
+}

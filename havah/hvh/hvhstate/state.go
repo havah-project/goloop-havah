@@ -59,47 +59,37 @@ func (s *State) getKeyBuilder(key string) containerdb.KeyBuilder {
 }
 
 func (s *State) GetUSDTPrice() *big.Int {
-	return s.getVarDB(hvhmodule.VarUSDTPrice).BigInt()
+	return s.GetBigInt(hvhmodule.VarUSDTPrice)
 }
 
 func (s *State) SetUSDTPrice(price *big.Int) error {
 	if price == nil || price.Sign() < 0 {
 		return scoreresult.RevertedError.New("Invalid USDTPrice")
 	}
-	varDB := s.getVarDB(hvhmodule.VarUSDTPrice)
-	return varDB.Set(price)
+	return s.getVarDB(hvhmodule.VarUSDTPrice).Set(price)
 }
 
 func (s *State) GetIssueStart() int64 {
-	varDB := s.getVarDB(hvhmodule.VarIssueStart)
-	return varDB.Int64()
+	return s.GetInt64(hvhmodule.VarIssueStart)
 }
 
 // SetIssueStart writes the issue start height to varDB in ExtensionState
 func (s *State) SetIssueStart(curBH, startBH int64) error {
 	if startBH < 1 || startBH <= curBH {
-		return scoreresult.RevertedError.New("Invalid height")
+		return scoreresult.Errorf(
+			hvhmodule.StatusIllegalArgument,
+			"Invalid height: cur=%v start=%v", curBH, startBH)
 	}
 	varDB := s.getVarDB(hvhmodule.VarIssueStart)
 	return varDB.Set(startBH)
 }
 
 func (s *State) GetTermPeriod() int64 {
-	varDB := s.getVarDB(hvhmodule.VarTermPeriod)
-	value := varDB.Int64()
-	if value <= 0 {
-		value = hvhmodule.TermPeriod
-	}
-	return value
+	return s.GetInt64WithDefault(hvhmodule.VarTermPeriod, hvhmodule.TermPeriod)
 }
 
 func (s *State) GetIssueReductionCycle() int64 {
-	varDB := s.getVarDB(hvhmodule.VarIssueReductionCycle)
-	value := varDB.Int64()
-	if value <= 0 {
-		value = hvhmodule.ReductionCycle
-	}
-	return value
+	return s.GetInt64WithDefault(hvhmodule.VarIssueReductionCycle, hvhmodule.ReductionCycle)
 }
 
 func (s *State) GetIssueReductionRate() *big.Rat {
@@ -108,20 +98,13 @@ func (s *State) GetIssueReductionRate() *big.Rat {
 
 // GetIssueAmount returns the amount of coins which are issued during one term
 func (s *State) GetIssueAmount() *big.Int {
-	value := s.GetBigInt(hvhmodule.VarIssueAmount)
-	if value.Sign() <= 0 {
-		value.Set(hvhmodule.BigIntInitIssueAmount)
-	}
-	return value
+	return s.GetBigIntWithDefault(
+		hvhmodule.VarIssueAmount, hvhmodule.BigIntInitIssueAmount)
 }
 
-func (s *State) GetTermSequence(height int64) int64 {
-	issueStart := s.GetIssueStart()
-	if issueStart == 0 {
-		return -1
-	}
-	termPeriod := s.GetTermPeriod()
-	return (height - issueStart) / termPeriod
+func (s *State) GetHooverBudget() *big.Int {
+	return s.GetBigIntWithDefault(
+		hvhmodule.VarHooverBudget, hvhmodule.BigIntHooverBudget)
 }
 
 func (s *State) AddPlanetManager(address module.Address) error {
@@ -264,61 +247,20 @@ func (s *State) setPlanet(dictDB *containerdb.DictDB, id int64, p *Planet) error
 	return dictDB.Set(id, p.Bytes())
 }
 
-/*
-func (s *State) ReportPlanetWork(id, height int64) (*big.Int, *big.Int, error) {
-	p, err := s.GetPlanet(id)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	issueStart := s.GetIssueStart()
-	termPeriod := s.GetTermPeriod()
-	termSequence := (height - issueStart) / termPeriod
-	termStart := termSequence*termPeriod + issueStart
-
-	if p.height >= termStart {
-		// If a Planet is registered in this term, ignore its work report
-		return nil, nil, nil
-	}
-
-	reward := new(big.Int).Div(
-		s.GetBigInt(hvhmodule.VarRewardTotal),
-		s.GetBigInt(hvhmodule.VarActivePlanet))
-	rewardWithHoover := reward
-
-	if err = s.decreaseRewardRemain(reward); err != nil {
-		// Not enough rewardRemain
-		return nil, nil, err
-	}
-
-	pr, err := s.GetPlanetReward(id)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// hooverLimit = planetReward.total + reward - Planet.price
-	hooverLimit := pr.Total()
-	hooverLimit.Add(hooverLimit, reward)
-	hooverLimit.Sub(hooverLimit, p.Price())
-	if hooverLimit.Sign() > 0 {
-		hooverGuide := s.calcHooverGuide(p)
-
-		// if reward < hooverGuide
-		if reward.Cmp(hooverGuide) < 0 {
-			hooverRequest := new(big.Int).Sub(hooverGuide, reward)
-			// if hooverRequest > hooverLimit
-			if hooverRequest.Cmp(hooverLimit) > 0 {
-				hooverRequest = hooverLimit
-			}
-			rewardWithHoover = new(big.Int).Add(reward, hooverRequest)
-		}
-	}
-	return s.offerReward(termSequence+1, id, rewardWithHoover)
-}
-*/
-
 func (s *State) GetBigInt(key string) *big.Int {
-	return s.getVarDB(key).BigInt()
+	value := s.getVarDB(key).BigInt()
+	if value == nil {
+		return new(big.Int)
+	}
+	return value
+}
+
+func (s *State) GetBigIntWithDefault(key string, defValue *big.Int) *big.Int {
+	value := s.getVarDB(key).BigInt()
+	if value == nil {
+		return new(big.Int).Set(defValue)
+	}
+	return value
 }
 
 func (s *State) SetBigInt(key string, value *big.Int) error {
@@ -330,6 +272,14 @@ func (s *State) SetBigInt(key string, value *big.Int) error {
 
 func (s *State) GetInt64(key string) int64 {
 	return s.getVarDB(key).Int64()
+}
+
+func (s *State) GetInt64WithDefault(key string, defValue int64) int64 {
+	value := s.getVarDB(key).Int64()
+	if value <= 0 {
+		return defValue
+	}
+	return value
 }
 
 func (s *State) SetInt64(key string, value int64) error {
@@ -444,7 +394,8 @@ func (s *State) calcClaimableReward(height int64, p *Planet, pr *planetReward) (
 	}
 
 	termPeriod := s.GetTermPeriod()
-	privateLockupTerm := s.GetInt64(hvhmodule.VarPrivateLockup)
+	privateLockupTerm := s.GetInt64WithDefault(
+		hvhmodule.VarPrivateLockup, hvhmodule.PrivateLockup)
 
 	// All rewards have been locked
 	lockupTerm := (height - p.Height() - 1) / termPeriod
@@ -505,11 +456,7 @@ func (s *State) OnTermStart(termSeq int64, issueAmount *big.Int) error {
 }
 
 func (s *State) getIssueLimit() int64 {
-	issueLimit := s.GetInt64(hvhmodule.VarIssueLimit)
-	if issueLimit <= 0 {
-		issueLimit = hvhmodule.IssueLimit
-	}
-	return issueLimit
+	return s.GetInt64WithDefault(hvhmodule.VarIssueLimit, hvhmodule.IssueLimit)
 }
 
 func (s *State) GetRewardInfo(height, id int64) (map[string]interface{}, error) {

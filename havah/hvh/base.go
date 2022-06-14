@@ -333,7 +333,7 @@ func (es *ExtensionStateImpl) onTermEnd(cc hvhmodule.CallContext, termSeq int64)
 		return err
 	}
 
-	if err = refillHooverFund(cc); err != nil {
+	if err = es.refillHooverFund(cc); err != nil {
 		return err
 	}
 	return nil
@@ -385,13 +385,14 @@ func transferMissingRewardToSustainableFund(cc hvhmodule.CallContext) error {
 	return nil
 }
 
-func refillHooverFund(cc hvhmodule.CallContext) error {
+func (es *ExtensionStateImpl) refillHooverFund(cc hvhmodule.CallContext) error {
 	sf := hvhmodule.SustainableFund
 	hf := hvhmodule.HooverFund
+	hooverBudget := es.state.GetHooverBudget() // unit: hvh
 
 	// amount = original HooverFund Budget - hfBalance
 	hfBalance := cc.GetBalance(hf)
-	amount := new(big.Int).Sub(hvhmodule.BigIntHooverBudget, hfBalance)
+	amount := new(big.Int).Sub(hooverBudget, hfBalance)
 
 	if amount.Sign() > 0 {
 		sfBalance := cc.GetBalance(sf)
