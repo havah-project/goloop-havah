@@ -51,6 +51,12 @@ class ChainTest extends Test {
     Process process = null
 
     void startServer() {
+        def dirname = chainDir.split('/')[0]
+        def dir = new File(dirname)
+        if (!dir.exists()) {
+            logging.println("make ${dirname} dir")
+            dir.mkdirs()
+        }
         List<String> commands = new LinkedList<String>()
         commands.add("../bin/gochain")
         commands.add("--config")
@@ -203,14 +209,15 @@ task testHavah(type: ChainTest, overwrite: true) {
     useJUnitPlatform {
         includeTags "havah"
     }
-    configFile = "./data/config/javagov.json"
-    chainDir = ".chain/javagov"
-    logFile = ".chain/javagov.log"
-    gsDir = "./data/genesisStorage/genesis_havah.json"
-    envFile = "./data/chainenv/javagov.props"
-    dockerEnv = "javagov"
 
-    dependsOn 'cleanTestJavaGov'
+    configFile = "./data/config/havah.json"
+    chainDir = ".chain/havah"
+    logFile = ".chain/havah.log"
+    gsDir = "./data/genesisStorage/genesis_havah.json"
+    envFile = "./data/chainenv/havah.props"
+    dockerEnv = "havah"
+
+    dependsOn 'cleanTestHavah'
     testLogging.showStandardStreams = true
 }
 
