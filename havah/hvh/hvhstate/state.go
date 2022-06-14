@@ -59,12 +59,7 @@ func (s *State) getKeyBuilder(key string) containerdb.KeyBuilder {
 }
 
 func (s *State) GetUSDTPrice() *big.Int {
-	varDB := s.getVarDB(hvhmodule.VarUSDTPrice)
-	price := varDB.BigInt()
-	if price == nil {
-		price = hvhmodule.BigIntZero
-	}
-	return price
+	return s.getVarDB(hvhmodule.VarUSDTPrice).BigInt()
 }
 
 func (s *State) SetUSDTPrice(price *big.Int) error {

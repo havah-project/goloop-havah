@@ -247,7 +247,7 @@ var chainMethods = []*chainMethod{
 		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 0,
 		nil,
 		[]scoreapi.DataType{
-			scoreapi.Bytes,
+			scoreapi.Integer,
 		},
 	}, 0, 0},
 	{scoreapi.Method{
@@ -449,6 +449,9 @@ func (s *chainScore) initPlatformConfig(cfg *hvh.PlatformConfig) error {
 
 	esi, err := s.getExtensionState()
 	if err != nil {
+		return err
+	}
+	if err = esi.InitPlatformConfig(cfg); err != nil {
 		return err
 	}
 	esi.SetLogger(hvhutils.NewLogger(s.cc.Logger()))
