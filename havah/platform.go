@@ -103,28 +103,15 @@ func (p *platform) OnValidateTransactions(wc state.WorldContext, patches, txs mo
 }
 
 func (p *platform) OnExecutionBegin(wc state.WorldContext, logger log.Logger) error {
-	es := p.getExtensionState(wc, logger)
-	if es == nil {
-		return nil
-	}
-	return es.OnExecutionBegin(hvh.NewWorldContext(wc))
+	return nil
 }
 
 func (p *platform) OnExecutionEnd(wc state.WorldContext, _ base.ExecutionResult, logger log.Logger) error {
-	es := p.getExtensionState(wc, logger)
-	if es == nil {
-		return nil
-	}
-	return es.OnExecutionEnd(hvh.NewWorldContext(wc))
+	return nil
 }
 
 func (p *platform) OnTransactionEnd(wc state.WorldContext, logger log.Logger, rct txresult.Receipt) error {
-	success := rct.Status() == module.StatusSuccess
-	es := p.getExtensionState(wc, logger)
-	if es == nil {
-		return nil
-	}
-	return es.OnTransactionEnd(wc.BlockHeight(), success)
+	return nil
 }
 
 // Term means 'Terminate'

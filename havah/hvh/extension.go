@@ -139,18 +139,6 @@ func (es *ExtensionStateImpl) ClearCache() {
 	//es.state.ClearCache()
 }
 
-func (es *ExtensionStateImpl) OnExecutionBegin(wc hvhmodule.WorldContext) error {
-	return nil
-}
-
-func (es *ExtensionStateImpl) OnExecutionEnd(wc hvhmodule.WorldContext) error {
-	return nil
-}
-
-func (es *ExtensionStateImpl) OnTransactionEnd(blockHeight int64, success bool) error {
-	return nil
-}
-
 func (es *ExtensionStateImpl) InitPlatformConfig(cfg *PlatformConfig) error {
 	var err error
 

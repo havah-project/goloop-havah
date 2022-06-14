@@ -32,20 +32,21 @@ func setBalance(address module.Address, as state.AccountState, balance *big.Int)
 	return nil
 }
 
-type worldContextImpl struct {
-	state.WorldContext
+type callContextImpl struct {
+	contract.CallContext
+	from module.Address
 }
 
-func (ctx *worldContextImpl) Origin() module.Address {
+func (ctx *callContextImpl) Origin() module.Address {
 	return ctx.TransactionInfo().From
 }
 
-func (ctx *worldContextImpl) GetBalance(address module.Address) *big.Int {
+func (ctx *callContextImpl) GetBalance(address module.Address) *big.Int {
 	account := ctx.GetAccountState(address.ID())
 	return account.GetBalance()
 }
 
-func (ctx *worldContextImpl) Deposit(address module.Address, amount *big.Int) error {
+func (ctx *callContextImpl) Deposit(address module.Address, amount *big.Int) error {
 	if err := validateAmount(amount); err != nil {
 		return err
 	}
@@ -55,7 +56,7 @@ func (ctx *worldContextImpl) Deposit(address module.Address, amount *big.Int) er
 	return ctx.addBalance(address, amount)
 }
 
-func (ctx *worldContextImpl) Withdraw(address module.Address, amount *big.Int) error {
+func (ctx *callContextImpl) Withdraw(address module.Address, amount *big.Int) error {
 	if err := validateAmount(amount); err != nil {
 		return err
 	}
@@ -65,7 +66,7 @@ func (ctx *worldContextImpl) Withdraw(address module.Address, amount *big.Int) e
 	return ctx.addBalance(address, new(big.Int).Neg(amount))
 }
 
-func (ctx *worldContextImpl) Transfer(from module.Address, to module.Address, amount *big.Int) (err error) {
+func (ctx *callContextImpl) Transfer(from module.Address, to module.Address, amount *big.Int) (err error) {
 	if err = validateAmount(amount); err != nil {
 		return
 	}
@@ -83,13 +84,13 @@ func (ctx *worldContextImpl) Transfer(from module.Address, to module.Address, am
 	return
 }
 
-func (ctx *worldContextImpl) addBalance(address module.Address, amount *big.Int) error {
+func (ctx *callContextImpl) addBalance(address module.Address, amount *big.Int) error {
 	as := ctx.GetAccountState(address.ID())
 	ob := as.GetBalance()
 	return setBalance(address, as, new(big.Int).Add(ob, amount))
 }
 
-func (ctx *worldContextImpl) GetTotalSupply() *big.Int {
+func (ctx *callContextImpl) GetTotalSupply() *big.Int {
 	as := ctx.GetAccountState(state.SystemID)
 	tsVar := scoredb.NewVarDB(as, state.VarTotalSupply)
 	if ts := tsVar.BigInt(); ts != nil {
@@ -98,7 +99,7 @@ func (ctx *worldContextImpl) GetTotalSupply() *big.Int {
 	return hvhmodule.BigIntZero
 }
 
-func (ctx *worldContextImpl) AddTotalSupply(amount *big.Int) (*big.Int, error) {
+func (ctx *callContextImpl) AddTotalSupply(amount *big.Int) (*big.Int, error) {
 	as := ctx.GetAccountState(state.SystemID)
 	varDB := scoredb.NewVarDB(as, state.VarTotalSupply)
 	oldTs := varDB.BigInt()
@@ -112,11 +113,11 @@ func (ctx *worldContextImpl) AddTotalSupply(amount *big.Int) (*big.Int, error) {
 	return ts, varDB.Set(ts)
 }
 
-func (ctx *worldContextImpl) SetValidators(validators []module.Validator) error {
+func (ctx *callContextImpl) SetValidators(validators []module.Validator) error {
 	return ctx.GetValidatorState().Set(validators)
 }
 
-func (ctx *worldContextImpl) GetScoreOwner(score module.Address) (module.Address, error) {
+func (ctx *callContextImpl) GetScoreOwner(score module.Address) (module.Address, error) {
 	if score == nil || !score.IsContract() {
 		return nil, scoreresult.InvalidParameterError.Errorf("Invalid score address")
 	}
@@ -127,7 +128,7 @@ func (ctx *worldContextImpl) GetScoreOwner(score module.Address) (module.Address
 	return as.ContractOwner(), nil
 }
 
-func (ctx *worldContextImpl) SetScoreOwner(from module.Address, score module.Address, newOwner module.Address) error {
+func (ctx *callContextImpl) SetScoreOwner(from module.Address, score module.Address, newOwner module.Address) error {
 	// Parameter sanity check
 	if from == nil {
 		return scoreresult.InvalidParameterError.Errorf("Invalid sender")
@@ -163,46 +164,13 @@ func (ctx *worldContextImpl) SetScoreOwner(from module.Address, score module.Add
 	return as.SetContractOwner(newOwner)
 }
 
-func (ctx *worldContextImpl) GetAccountState(id []byte) state.AccountState {
-	return ctx.GetAccountState(id)
-}
-
-func NewWorldContext(ctx state.WorldContext) hvhmodule.WorldContext {
-	return &worldContextImpl{
-		WorldContext: ctx,
-	}
-}
-
-type callContextImpl struct {
-	hvhmodule.WorldContext
-	cc   contract.CallContext
-	from module.Address
-}
-
 func (ctx *callContextImpl) From() module.Address {
 	return ctx.from
 }
 
-func (ctx *callContextImpl) SumOfStepUsed() *big.Int {
-	return ctx.cc.SumOfStepUsed()
-}
-
-func (ctx *callContextImpl) OnEvent(addr module.Address, indexed, data [][]byte) {
-	ctx.cc.OnEvent(addr, indexed, data)
-}
-
-func (ctx *callContextImpl) Governance() module.Address {
-	return ctx.cc.Governance()
-}
-
-func (ctx *callContextImpl) FrameLogger() *trace.Logger {
-	return ctx.cc.FrameLogger()
-}
-
 func NewCallContext(cc contract.CallContext, from module.Address) hvhmodule.CallContext {
 	return &callContextImpl{
-		WorldContext: NewWorldContext(cc),
-		cc:           cc,
-		from:         from,
+		CallContext: cc,
+		from:        from,
 	}
 }
