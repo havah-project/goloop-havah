@@ -229,9 +229,12 @@ func (es *ExtensionStateImpl) GetIssueInfo(cc hvhmodule.CallContext) (map[string
 	termPeriod := es.state.GetTermPeriod() // in height
 
 	jso := map[string]interface{}{
-		"height": height,
+		"height":              height,
+		"termPeriod":          termPeriod,
+		"issueReductionCycle": es.state.GetIssueReductionCycle(),
 	}
 	if issueStart > 0 {
+		jso["issueStart"] = issueStart
 		jso["termSequence"] = (height - issueStart) / termPeriod
 	}
 	return jso, nil
