@@ -329,7 +329,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 		hooverGuide := es.calcHooverGuide(p)
 		hooverBalance := cc.GetBalance(hvhmodule.HooverFund)
 		hooverRequest = es.calcSubsidyFromHooverFund(hooverLimit, hooverGuide, hooverBalance, reward)
-		rewardWithHoover.Add(rewardWithHoover, hooverRequest)
+		rewardWithHoover = new(big.Int).Add(rewardWithHoover, hooverRequest)
 	} else {
 		hooverRequest = new(big.Int)
 	}
