@@ -39,7 +39,7 @@ public class PlanetNFTBasicTest extends TestBase {
 
     @BeforeAll
     static void setup() throws Exception {
-        Env.Node node = foundation.icon.test.common.Env.nodes[0];
+        Env.Node node = Env.nodes[0];
         Env.Channel channel = node.channels[0];
         Env.Chain chain = channel.chain;
         IconService iconService = new IconService(new HttpProvider(channel.getAPIUrl(Env.testApiVer)));
@@ -47,19 +47,18 @@ public class PlanetNFTBasicTest extends TestBase {
         deployer = txHandler.getChain().governorWallet;
 
         // init wallets
-//        deployer = KeyWallet.create();
         wallets = new KeyWallet[]{
                 KeyWallet.create(), KeyWallet.create(), KeyWallet.create()
         };
         List<KeyWallet> walletList = new ArrayList<>(Arrays.asList(wallets));
-//        walletList.add(deployer);
-        BigInteger amount = ICX.multiply(BigInteger.valueOf(500));
+        walletList.add(deployer);
+        BigInteger amount = ICX.multiply(BigInteger.valueOf(50));
         for (KeyWallet wallet : walletList) {
             txHandler.transfer(wallet.getAddress(), amount);
         }
-        for (KeyWallet wallet : walletList) {
-            ensureIcxBalance(txHandler, wallet.getAddress(), BigInteger.ZERO, amount);
-        }
+//        for (KeyWallet wallet : walletList) {
+//            ensureIcxBalance(txHandler, wallet.getAddress(), BigInteger.ZERO, amount);
+//        }
         planetNFTScore = new PlanetNFTScore(txHandler);
     }
 
@@ -88,7 +87,7 @@ public class PlanetNFTBasicTest extends TestBase {
         var totalSupply = planetNFTScore.totalSupply().intValue();
         Bytes txHash = planetNFTScore.mintPlanet(wallet, to, 1, BigInteger.ONE, BigInteger.ONE);
         TransactionResult result = planetNFTScore.getResult(txHash);
-        assertEquals(success ? 1 : 0, result.getStatus().intValue());
+        assertEquals(success ? 1 : 0, result.getStatus().intValue(), "failure result(" + result + ")");
 
         // compare token balance
         int expectedBalance = success ? balance + 1 : balance;
@@ -130,13 +129,17 @@ public class PlanetNFTBasicTest extends TestBase {
             txHashes.add(txHash);
         }
 
+        int successTx = 0;
         for (int i = 0; i < testMintCnt; i++) {
             Bytes txHash = txHashes.get(i);
             TransactionResult result = planetNFTScore.getResult(txHash);
-            assertEquals(1, result.getStatus().intValue());
+            if (result.getStatus().intValue() == 1) {
+                successTx++;
+            }
+//            assertEquals(1, result.getStatus().intValue());
         }
 
-        assertEquals(totalSupply + testMintCnt, planetNFTScore.totalSupply().intValue());
+        assertEquals(totalSupply + successTx, planetNFTScore.totalSupply().intValue());
     }
 
     // mint & transfer
@@ -147,7 +150,9 @@ public class PlanetNFTBasicTest extends TestBase {
 
         int fromBalance = planetNFTScore.balanceOf(from.getAddress()).intValue();
         int toBalance = planetNFTScore.balanceOf(to).intValue();
-        var tokenIds = planetNFTScore.tokenIdsOf(holder.getAddress(), 0, 10);
+        var tokenIdsMap = planetNFTScore.tokenIdsOf(holder.getAddress(), 0, 10);
+        var tokenIds = tokenIdsMap.tokenIds;
+        assertEquals(tokenIdsMap.balance.intValue(), tokenIds.size());
         assertNotEquals(0, tokenIds.size());
         var tokenId = tokenIds.get(0);
         Bytes txHash = planetNFTScore.transfer(from, to, tokenId);
@@ -180,7 +185,7 @@ public class PlanetNFTBasicTest extends TestBase {
     void _mintAndTransferFrom(Wallet holder, Wallet approveInvoker, Wallet approval, Wallet transferInvoker, Address to) throws Exception {
         boolean success = approval.equals(transferInvoker);
         var tokenIds = planetNFTScore.tokenIdsOf(holder.getAddress(), 0, 10);
-        var approved = tokenIds.get(0);
+        var approved = tokenIds.tokenIds.get(0);
         boolean approveSuccess = holder.equals(approveInvoker);
         var txHash = planetNFTScore.approve(approveInvoker, approval.getAddress(), approved); // approve From
         assertEquals(approveSuccess ? 1 : 0, planetNFTScore.getResult(txHash).getStatus().intValue());
@@ -216,7 +221,8 @@ public class PlanetNFTBasicTest extends TestBase {
         // mint 2
         int balance = planetNFTScore.balanceOf(holder).intValue();
         int supply = planetNFTScore.totalSupply().intValue();
-        var tokenIds = planetNFTScore.tokenIdsOf(holder, 0, 100);
+        var tokenIdsMap = planetNFTScore.tokenIdsOf(holder, 0, 100);
+        var tokenIds = tokenIdsMap.tokenIds;
         var burned = tokenIds.get(0);
         var txHash = planetNFTScore.burn(deployer, burned);
         var result = planetNFTScore.getResult(txHash);
@@ -224,8 +230,9 @@ public class PlanetNFTBasicTest extends TestBase {
         assertEquals(balance - 1, planetNFTScore.balanceOf(holder).intValue());
         assertEquals(supply - 1, planetNFTScore.totalSupply().intValue());
 
-        var latestTokenIds = planetNFTScore.tokenIdsOf(holder, 0, 100);
-        for (var tokenId : latestTokenIds) {
+        var updated = planetNFTScore.tokenIdsOf(holder, 0, 100);
+        var updatedTokenIds = updated.tokenIds;
+        for (var tokenId : updatedTokenIds) {
             assertNotEquals(burned.intValue(), tokenId.intValue());
         }
     }
@@ -235,15 +242,91 @@ public class PlanetNFTBasicTest extends TestBase {
 
     }
 
-    @Test
-    void tokenInfo() throws IOException {
+//    @Test
+//    void tokenInfo() throws IOException {
+//        RpcObject params = new RpcObject.Builder()
+//                .put("_tokenId", new RpcValue(BigInteger.ONE))
+//                .build();
+//        RpcItem item = planetNFTScore.call("infoOf", params);
+//    }
+
+    int _getOpState(BigInteger tokenId) throws Exception {
         RpcObject params = new RpcObject.Builder()
-                .put("_tokenId", new RpcValue(BigInteger.ONE))
+                .put("_tokenId", new RpcValue(tokenId))
                 .build();
-        RpcItem item = planetNFTScore.call("infoOf", params);
-        System.out.println("ITEM(" + item + ")");
+        RpcItem item = planetNFTScore.call("getOpState", params);
+        return item.asInteger().intValue();
     }
 
+    private static final int _agentNone = 0;
+    private static final int _agentRequestingDelegation = 1;
+    private static final int _agentAccepted = 2;
+    private static final int _agentRequestingCancel = 3;
+
+    void _assertResult(Bytes txHash, boolean success) throws Exception {
+        TransactionResult result = planetNFTScore.getResult(txHash);
+        // print result
+        assertEquals(success ? 1 : 0, result.getStatus().intValue());
+    }
+
+    void _validStepForAgentRequest(Wallet requester, BigInteger tokenId, boolean successTest) throws Exception {
+        String testCase = (successTest ? "success" : "failure") + " case";
+        LOG.infoEntering("validStepForAgentRequest tokenId(" + tokenId + ") for " + testCase);
+        boolean validRequester = requester.getAddress().equals(planetNFTScore.ownerOf(tokenId));
+        assertEquals(successTest, validRequester);
+        Wallet agent = KeyWallet.create();
+        assertEquals(_agentNone, _getOpState(tokenId));
+        TransactionResult result = planetNFTScore.getResult(planetNFTScore.requestStartOp(requester, tokenId, agent.getAddress()));
+        assertEquals(validRequester ? 1 : 0, result.getStatus().intValue());
+        assertEquals(validRequester ? _agentRequestingDelegation : _agentNone, _getOpState(tokenId));
+
+        _assertResult(planetNFTScore.cancelStartOpReq(requester, tokenId), validRequester);
+        assertEquals(_agentNone, _getOpState(tokenId));
+
+        _assertResult(planetNFTScore.requestStartOp(requester, tokenId, agent.getAddress()), validRequester);
+        assertEquals(validRequester ? _agentRequestingDelegation : _agentNone, _getOpState(tokenId));
+        _assertResult(planetNFTScore.rejectStartOpReq(agent, tokenId), validRequester);
+        assertEquals(validRequester ? 1 : 0, result.getStatus().intValue());
+        assertEquals(_agentNone, _getOpState(tokenId));
+
+        _assertResult(planetNFTScore.requestStartOp(requester, tokenId, agent.getAddress()), validRequester);
+        assertEquals(validRequester ? _agentRequestingDelegation : _agentNone, _getOpState(tokenId));
+
+        _assertResult(planetNFTScore.acceptStartOpReq(agent, tokenId, agent.getAddress()), validRequester);
+        assertEquals(validRequester ? _agentAccepted : _agentNone, _getOpState(tokenId));
+
+        // check planetInfo
+        _assertResult(planetNFTScore.requestStopOp(requester, tokenId), validRequester);
+        assertEquals(validRequester ? _agentRequestingCancel : _agentNone, _getOpState(tokenId));
+
+        _assertResult(planetNFTScore.cancelStopOpReq(requester, tokenId), validRequester);
+        assertEquals(validRequester ? _agentAccepted : _agentNone, _getOpState(tokenId));
+
+        _assertResult(planetNFTScore.requestStopOp(requester, tokenId), validRequester);
+        assertEquals(validRequester ? _agentRequestingCancel : _agentNone, _getOpState(tokenId));
+
+        _assertResult(planetNFTScore.acceptStopOpReq(agent, tokenId), validRequester);
+        assertEquals(_agentNone, _getOpState(tokenId));
+
+        // check planetInfo
+        LOG.infoExiting();
+    }
+
+    @Test
+    void requestAgent() throws Exception {
+        Wallet holder = wallets[0];
+        _mintAndCheckBalance(deployer, holder.getAddress());
+        var tokenIdsMap = planetNFTScore.tokenIdsOf(holder.getAddress(), 0, 10);
+        var tokenIds = tokenIdsMap.tokenIds;
+        var tokenId = tokenIds.get(0);
+        Wallet fake = wallets[1];
+        _validStepForAgentRequest(fake, tokenId, false);
+        _validStepForAgentRequest(holder, tokenId, true);
+    }
+
+    // test for agent
+    // reqeustStartOp
+    //
     // approved
     // balanceOf
     // ownerOf
