@@ -61,6 +61,14 @@ func (pr *planetReward) equal(other *planetReward) bool {
 		pr.lastTN == other.lastTN
 }
 
+func (pr *planetReward) clone() *planetReward {
+	return &planetReward{
+		pr.Total(),
+		pr.LastTermNumber(),
+		pr.Current(),
+	}
+}
+
 func (pr *planetReward) increment(tn int64, amount *big.Int) error {
 	if amount == nil || amount.Sign() < 0 {
 		return scoreresult.New(
