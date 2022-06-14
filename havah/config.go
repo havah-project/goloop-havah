@@ -9,7 +9,7 @@ import (
 type chainConfig struct {
 	Platform         string              `json:"platform"`
 	BlockInterval    *common.HexInt32    `json:"blockInterval,omitempty"`
-	Revision         *common.HexInt32    `json:"revision,omitempty"`
+	Revision         common.HexInt32     `json:"revision,omitempty"`
 	RoundLimitFactor *common.HexInt32    `json:"roundLimitFactor,omitempty"`
 	ValidatorList    []*common.Address   `json:"validators"`
 	Deployers        []*common.Address   `json:"deployers,omitempty"`
@@ -36,7 +36,6 @@ type FeeConfig struct {
 func newChainConfig() *chainConfig {
 	return &chainConfig{
 		BlockInterval:    &common.HexInt32{Value: hvhmodule.BlockInterval},
-		Revision:         &common.HexInt32{Value: hvhmodule.Revision0},
 		RoundLimitFactor: &common.HexInt32{Value: hvhmodule.RoundLimitFactor},
 	}
 }
