@@ -28,6 +28,14 @@ import (
 	"github.com/icon-project/goloop/service/scoreresult"
 )
 
+func checkPermission(from, expected module.Address) error {
+	if hvhutils.IsNil(from) || hvhutils.IsNil(expected) || !from.Equal(expected) {
+		return scoreresult.AccessDeniedError.Errorf(
+			"NoPermission: from=%s expected=%s", from, expected)
+	}
+	return nil
+}
+
 func (s *chainScore) getExtensionState() (*hvh.ExtensionStateImpl, error) {
 	es := s.cc.GetExtensionState()
 	if es == nil {
@@ -61,6 +69,7 @@ func (s *chainScore) Ex_getUSDTPrice() (*big.Int, error) {
 }
 
 func (s *chainScore) Ex_setUSDTPrice(price *common.HexInt) error {
+	// TODO: caller restriction
 	es, err := s.getExtensionState()
 	if err != nil {
 		return err
@@ -77,6 +86,9 @@ func (s *chainScore) Ex_getIssueInfo() (map[string]interface{}, error) {
 }
 
 func (s *chainScore) Ex_startRewardIssue(height *common.HexInt) error {
+	if err := checkPermission(s.from, s.cc.Governance()); err != nil {
+		return err
+	}
 	es, err := s.getExtensionState()
 	if err != nil {
 		return err
@@ -89,6 +101,9 @@ func (s *chainScore) Ex_startRewardIssue(height *common.HexInt) error {
 }
 
 func (s *chainScore) Ex_addPlanetManager(address module.Address) error {
+	if err := checkPermission(s.from, s.cc.Governance()); err != nil {
+		return err
+	}
 	es, err := s.getExtensionState()
 	if err != nil {
 		return err
@@ -97,6 +112,9 @@ func (s *chainScore) Ex_addPlanetManager(address module.Address) error {
 }
 
 func (s *chainScore) Ex_removePlanetManager(address module.Address) error {
+	if err := checkPermission(s.from, s.cc.Governance()); err != nil {
+		return err
+	}
 	es, err := s.getExtensionState()
 	if err != nil {
 		return err
@@ -115,6 +133,9 @@ func (s *chainScore) Ex_isPlanetManager(address module.Address) (bool, error) {
 func (s *chainScore) Ex_registerPlanet(
 	id *common.HexInt,
 	isPrivate, isCompany bool, owner module.Address, usdt, price *common.HexInt) error {
+	if err := checkPermission(s.from, hvhmodule.PlanetNFT); err != nil {
+		return err
+	}
 	es, err := s.getExtensionState()
 	if err != nil {
 		return err
@@ -125,6 +146,9 @@ func (s *chainScore) Ex_registerPlanet(
 }
 
 func (s *chainScore) Ex_unregisterPlanet(id *common.HexInt) error {
+	if err := checkPermission(s.from, hvhmodule.PlanetNFT); err != nil {
+		return err
+	}
 	es, err := s.getExtensionState()
 	if err != nil {
 		return err
@@ -133,6 +157,9 @@ func (s *chainScore) Ex_unregisterPlanet(id *common.HexInt) error {
 }
 
 func (s *chainScore) Ex_setPlanetOwner(id *common.HexInt, owner module.Address) error {
+	if err := checkPermission(s.from, hvhmodule.PlanetNFT); err != nil {
+		return err
+	}
 	es, err := s.getExtensionState()
 	if err != nil {
 		return err
@@ -153,6 +180,13 @@ func (s *chainScore) Ex_reportPlanetWork(id *common.HexInt) error {
 	if err != nil {
 		return err
 	}
+	ok, err := es.IsPlanetManager(s.from)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return scoreresult.AccessDeniedError.Errorf("NoPermission: %s", s.from)
+	}
 	return es.ReportPlanetWork(s.newCallContext(), id.Int64())
 }
 
@@ -166,6 +200,7 @@ func (s *chainScore) Ex_claimPlanetReward(ids []interface{}) error {
 	for i := 0; i < len(ids); i++ {
 		planetIds[i] = (ids[i].(*common.HexInt)).Int64()
 	}
+	// PlanetOwner is checked in ExtensionStateImpl.ClaimPlanetReward()
 	return es.ClaimPlanetReward(s.newCallContext(), planetIds)
 }
 

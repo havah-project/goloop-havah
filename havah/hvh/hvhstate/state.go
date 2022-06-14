@@ -364,7 +364,7 @@ func (s *State) ClaimPlanetReward(id, height int64, owner module.Address) (*big.
 
 	if !owner.Equal(p.Owner()) {
 		return nil, scoreresult.AccessDeniedError.Errorf(
-			"Invalid owner: id=%d owner=%s from=%s", id, p.Owner(), owner)
+			"NoPermission: id=%d owner=%s from=%s", id, p.Owner(), owner)
 	}
 	if p.IsCompany() {
 		return nil, scoreresult.Errorf(

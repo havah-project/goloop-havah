@@ -283,16 +283,6 @@ func (es *ExtensionStateImpl) GetPlanetInfo(cc hvhmodule.CallContext, id int64) 
 }
 
 func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int64) error {
-	from := cc.From()
-	if ok, err := es.state.IsPlanetManager(from); err != nil {
-		return err
-	} else {
-		if !ok {
-			return scoreresult.AccessDeniedError.Errorf(
-				"Only planetManager can report planet work: %s", from)
-		}
-	}
-
 	// Check if a planet exists
 	p, err := es.state.GetPlanet(id)
 	if err != nil {
