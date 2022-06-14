@@ -82,10 +82,10 @@ func TestPlanetReward_Increment(t *testing.T) {
 		}
 	}
 
-	// Ignore multiple rewards during the same term
+	// Check for multiple rewards during the same term
 	pr2 := pr.clone()
-	if err := pr.increment(tn, reward); err != nil {
-		t.Errorf(err.Error())
+	if err := pr.increment(tn, reward); err == nil {
+		t.Errorf("Duplicate reportPlanetWork")
 	}
 	if !pr.equal(pr2) {
 		t.Errorf("increment() error")

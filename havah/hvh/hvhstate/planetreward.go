@@ -76,7 +76,8 @@ func (pr *planetReward) increment(tn int64, amount *big.Int) error {
 	}
 	if tn <= pr.lastTN {
 		// tn should be larger than lastTN
-		return nil
+		return scoreresult.Errorf(
+			hvhmodule.StatusIllegalArgument, "Invalid termNumber: tn=%d lastTN=%d", tn, pr.lastTN)
 	}
 	pr.total.Add(pr.total, amount)
 	pr.current.Add(pr.current, amount)

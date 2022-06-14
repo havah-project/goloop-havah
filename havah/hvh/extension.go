@@ -294,10 +294,22 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 	termPeriod := es.state.GetTermPeriod()
 	termSeq := (height - issueStart) / termPeriod
 	termStart := termSeq*termPeriod + issueStart
+	termNumber := termSeq + 1
 
 	if p.Height() >= termStart {
 		// If a planet is registered in this term, ignore its work report
 		return nil
+	}
+
+	// All planets have their own planetReward info
+	pr, err := es.state.GetPlanetReward(id)
+	if err != nil {
+		return err
+	}
+	if termNumber <= pr.LastTermNumber() {
+		return scoreresult.Errorf(
+			hvhmodule.StatusRewardError,
+			"Duplicate reportPlanetWork: tn=%d id=%d", termNumber, id)
 	}
 
 	reward := new(big.Int).Div(
@@ -306,12 +318,6 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 	rewardWithHoover := reward
 
 	if err = es.state.DecreaseRewardRemain(reward); err != nil {
-		return err
-	}
-
-	// All planets have their own planetReward info
-	pr, err := es.state.GetPlanetReward(id)
-	if err != nil {
 		return err
 	}
 
@@ -340,7 +346,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 		ecoReward.Div(ecoReward, proportion.Denom())
 		planetReward := new(big.Int).Sub(rewardWithHoover, ecoReward)
 
-		if err = es.state.OfferReward(termSeq+1, id, pr, planetReward); err != nil {
+		if err = es.state.OfferReward(termNumber, id, pr, planetReward); err != nil {
 			return err
 		}
 		if err = es.state.IncreaseEcoSystemReward(ecoReward); err != nil {
@@ -348,7 +354,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 		}
 	} else {
 		if err = es.state.OfferReward(
-			termSeq+1, id, pr, rewardWithHoover); err != nil {
+			termNumber, id, pr, rewardWithHoover); err != nil {
 			return err
 		}
 	}
