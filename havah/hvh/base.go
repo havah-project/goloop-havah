@@ -522,7 +522,11 @@ func increaseScoreVarDB(cc hvhmodule.CallContext, score module.Address, key stri
 	}
 	as := cc.GetAccountState(score.ID())
 	varDB := scoredb.NewVarDB(as, key)
-	return varDB.Set(new(big.Int).Add(varDB.BigInt(), amount))
+	old := varDB.BigInt()
+	if old == nil {
+		old = new(big.Int)
+	}
+	return varDB.Set(new(big.Int).Add(old, amount))
 }
 
 func CheckBaseTX(tx module.Transaction) bool {

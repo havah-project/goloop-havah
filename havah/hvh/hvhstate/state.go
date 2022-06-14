@@ -296,6 +296,9 @@ func (s *State) DecreaseRewardRemain(amount *big.Int) error {
 	}
 	varDB := s.getVarDB(hvhmodule.VarRewardRemain)
 	rewardRemain := varDB.BigInt()
+	if rewardRemain == nil {
+		rewardRemain = new(big.Int)
+	}
 	rewardRemain.Sub(rewardRemain, amount)
 	if rewardRemain.Sign() < 0 {
 		return scoreresult.Errorf(
@@ -320,6 +323,9 @@ func (s *State) OfferReward(tn, id int64, pr *planetReward, amount *big.Int) err
 func (s *State) IncreaseEcoSystemReward(amount *big.Int) error {
 	varDB := s.getVarDB(hvhmodule.VarEcoReward)
 	reward := varDB.BigInt()
+	if reward == nil {
+		reward = new(big.Int)
+	}
 	return varDB.Set(reward.Add(reward, amount))
 }
 
