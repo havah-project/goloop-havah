@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/icon-project/goloop/common/containerdb"
+	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/log"
 	"github.com/icon-project/goloop/common/trie"
 	"github.com/icon-project/goloop/common/trie/trie_manager"
@@ -425,43 +426,60 @@ func (s *State) calcClaimableReward(height int64, p *Planet, pr *planetReward) (
 	return claimableReward, nil
 }
 
-func (s *State) OnTermStart(termSeq int64, issueAmount *big.Int) error {
-	var err error
-	// unit: term
-	// 0 means that there is no issueLimit
-	issueLimit := s.getIssueLimit()
+func (s *State) ClaimMissedReward() (*big.Int, error) {
+	activePlanet := s.GetBigInt(hvhmodule.VarActivePlanet)
+	workingPlanet := s.GetBigInt(hvhmodule.VarWorkingPlanet)
+	missedPlanet := new(big.Int).Sub(activePlanet, workingPlanet)
 
-	if termSeq > 0 && termSeq <= issueLimit {
-		if err = s.SetInt64(hvhmodule.VarWorkingPlanet, 0); err != nil {
-			return err
-		}
-		if err = s.SetInt64(hvhmodule.VarActivePlanet, 0); err != nil {
-			return err
-		}
-		if err = s.SetBigInt(hvhmodule.VarActiveUSDTPrice, new(big.Int)); err != nil {
-			return err
-		}
+	rewardTotal := s.GetBigInt(hvhmodule.VarRewardTotal)
+	missedReward := new(big.Int).Div(rewardTotal, activePlanet)
+	missedReward = missedReward.Mul(missedReward, missedPlanet)
+
+	rewardRemain := s.GetBigInt(hvhmodule.VarRewardRemain)
+	rewardRemain = new(big.Int).Sub(rewardRemain, missedReward)
+	if rewardRemain.Sign() < 0 {
+		return nil, errors.InvalidStateError.Errorf(
+			"RewardRemainRemain(remain=%d,missedReward=%d)",
+			rewardRemain, missedReward)
 	}
 
-	if termSeq < issueLimit {
-		if err = s.SetInt64(hvhmodule.VarActivePlanet, s.GetInt64(hvhmodule.VarAllPlanet)); err != nil {
-			return err
-		}
-		if err = s.SetBigInt(hvhmodule.VarActiveUSDTPrice, s.GetUSDTPrice()); err != nil {
-			return err
-		}
-		rewardRemain := new(big.Int).Add(s.GetBigInt(hvhmodule.VarRewardRemain), issueAmount)
-		if err = s.SetBigInt(hvhmodule.VarRewardRemain, rewardRemain); err != nil {
-			return err
-		}
-		if err = s.SetBigInt(hvhmodule.VarRewardTotal, rewardRemain); err != nil {
-			return err
-		}
+	if err := s.SetBigInt(hvhmodule.VarRewardRemain, rewardRemain); err != nil {
+		return nil, err
+	}
+	return missedReward, nil
+}
+
+func (s *State) OnTermEnd() error {
+	if err := s.SetInt64(hvhmodule.VarWorkingPlanet, 0); err != nil {
+		return err
+	}
+	if err := s.SetInt64(hvhmodule.VarActivePlanet, 0); err != nil {
+		return err
+	}
+	if err := s.SetBigInt(hvhmodule.VarActiveUSDTPrice, new(big.Int)); err != nil {
+		return err
 	}
 	return nil
 }
 
-func (s *State) getIssueLimit() int64 {
+func (s *State) OnTermStart(issueAmount *big.Int) error {
+	if err := s.SetInt64(hvhmodule.VarActivePlanet, s.GetInt64(hvhmodule.VarAllPlanet)); err != nil {
+		return err
+	}
+	if err := s.SetBigInt(hvhmodule.VarActiveUSDTPrice, s.GetUSDTPrice()); err != nil {
+		return err
+	}
+	rewardRemain := new(big.Int).Add(s.GetBigInt(hvhmodule.VarRewardRemain), issueAmount)
+	if err := s.SetBigInt(hvhmodule.VarRewardRemain, rewardRemain); err != nil {
+		return err
+	}
+	if err := s.SetBigInt(hvhmodule.VarRewardTotal, rewardRemain); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *State) GetIssueLimit() int64 {
 	return s.GetInt64WithDefault(hvhmodule.VarIssueLimit, hvhmodule.IssueLimit)
 }
 

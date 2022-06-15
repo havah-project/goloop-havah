@@ -38,7 +38,7 @@ import (
 )
 
 type baseDataJSON struct {
-	issueAmount *common.HexInt `json:"issueAmount"`
+	IssueAmount common.HexInt `json:"issueAmount"`
 
 	//rewardTotal  *common.HexInt `json:"rewardTotal"`
 	//rewardRemain *common.HexInt `json:"rewardRemain"`
@@ -139,6 +139,9 @@ func (tx *baseV3) Execute(ctx contract.Context, estimate bool) (txresult.Receipt
 
 	icc := NewCallContext(cc, tx.From())
 	es := cc.GetExtensionState().(*ExtensionStateImpl)
+	if es == nil {
+		return nil, errors.InvalidStateError.New("ExtensionIsNotReady")
+	}
 	if err := es.OnBaseTx(icc, tx.Data); err != nil {
 		return nil, err
 	}
@@ -301,27 +304,33 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 	}
 
 	termPeriod := es.state.GetTermPeriod()
-	issueAmount := es.state.GetIssueAmount()
 	baseTxCount := height - issueStart
 	termSeq := baseTxCount / termPeriod
 
-	if baseData.issueAmount.Value().Cmp(issueAmount) != 0 {
-		return transaction.InvalidTxValue.Errorf(
-			"IssueAmount mismatch: actual(%s) != expected(%s)", issueAmount, baseData.issueAmount)
+	if (baseTxCount%termPeriod) != 0 {
+		if baseData.IssueAmount.Value().Sign() != 0 {
+			return transaction.InvalidTxValue.Errorf("" +
+				"Invalid issueAmount(%s)", baseData.IssueAmount.Value())
+		}
+		return nil
 	}
-
-	if err = es.onTermEnd(cc, termSeq-1); err != nil {
-		return err
+	issueLimit := es.state.GetIssueLimit()
+	if termSeq > 0 && (issueLimit == 0 || termSeq <= issueLimit) {
+		if err = es.onTermEnd(cc); err != nil {
+			return err
+		}
 	}
-	if err = es.onTermStart(cc, termSeq); err != nil {
-		return err
+	if issueLimit == 0 || termSeq < issueLimit {
+		if err = es.onTermStart(cc, termSeq, baseData); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func (es *ExtensionStateImpl) onTermEnd(cc hvhmodule.CallContext, termSeq int64) error {
+func (es *ExtensionStateImpl) onTermEnd(cc hvhmodule.CallContext) error {
 	var err error
-	if err = es.claimEcoSystemReward(cc); err != nil {
+	if err = es.TransferEcoSystemReward(cc); err != nil {
 		return err
 	}
 
@@ -329,22 +338,45 @@ func (es *ExtensionStateImpl) onTermEnd(cc hvhmodule.CallContext, termSeq int64)
 		return err
 	}
 
-	if err = transferMissingRewardToSustainableFund(cc); err != nil {
+	if err = es.TransferMissedReward(cc); err != nil {
 		return err
 	}
 
 	if err = es.refillHooverFund(cc); err != nil {
 		return err
 	}
+	if err = es.state.OnTermEnd(); err != nil {
+		return err
+	}
 	return nil
 }
 
-func (es *ExtensionStateImpl) claimEcoSystemReward(cc hvhmodule.CallContext) error {
+func (es *ExtensionStateImpl) TransferEcoSystemReward(cc hvhmodule.CallContext) error {
 	reward, err := es.state.ClaimEcoSystemReward()
 	if err != nil {
 		return err
 	}
 	if err = cc.Transfer(hvhmodule.PublicTreasury, hvhmodule.EcoSystem, reward); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (es *ExtensionStateImpl) TransferMissedReward(cc hvhmodule.CallContext) error {
+	missed, err := es.state.ClaimMissedReward()
+	if err != nil {
+		return err
+	}
+	balance := cc.GetBalance(hvhmodule.PublicTreasury)
+	if balance.Cmp(missed) < 0 {
+		return scoreresult.Errorf(hvhmodule.StatusCriticalError,
+			"Invalid PublicTreasury balance=%d missed=%d",
+			balance, missed)
+	}
+	if err := cc.Transfer(hvhmodule.PublicTreasury, hvhmodule.SustainableFund, missed); err != nil {
+		return err
+	}
+	if err := increaseVarDBInSustainableFund(cc, hvhmodule.VarMissingReward, balance); err != nil {
 		return err
 	}
 	return nil
@@ -362,26 +394,6 @@ func distributeFees(cc hvhmodule.CallContext) error {
 		return err
 	}
 
-	return nil
-}
-
-// TODO: Consider VarRewardRemain and this
-func transferMissingRewardToSustainableFund(cc hvhmodule.CallContext) error {
-	balance := cc.GetBalance(hvhmodule.PublicTreasury)
-	if balance.Sign() < 0 {
-		return scoreresult.Errorf(
-			hvhmodule.StatusCriticalError,
-			"Invalid PublicTreasury balance: %v", balance)
-	}
-	if balance.Sign() == 0 {
-		return nil
-	}
-	if err := cc.Transfer(hvhmodule.PublicTreasury, hvhmodule.SustainableFund, balance); err != nil {
-		return err
-	}
-	if err := increaseVarDBInSustainableFund(cc, hvhmodule.VarMissingReward, balance); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -410,7 +422,7 @@ func (es *ExtensionStateImpl) refillHooverFund(cc hvhmodule.CallContext) error {
 	return nil
 }
 
-func (es *ExtensionStateImpl) onTermStart(cc hvhmodule.CallContext, termSeq int64) error {
+func (es *ExtensionStateImpl) onTermStart(cc hvhmodule.CallContext, termSeq int64, baseTx *baseDataJSON) error {
 	var err error
 	issueAmount := es.state.GetIssueAmount()
 	reductionCycle := es.state.GetIssueReductionCycle()
@@ -431,12 +443,18 @@ func (es *ExtensionStateImpl) onTermStart(cc hvhmodule.CallContext, termSeq int6
 		}
 	}
 
+	// verify baseTx
+	if baseTx.IssueAmount.Value().Cmp(issueAmount) != 0 {
+		return transaction.InvalidTxValue.Errorf("Invalid issueAmount exp=%d real=%d",
+			issueAmount, baseTx.IssueAmount.Value())
+	}
+
 	if err = issueCoin(cc, termSeq, issueAmount); err != nil {
 		return err
 	}
 
 	// Reset reward-related states
-	if err = es.state.OnTermStart(termSeq, issueAmount); err != nil {
+	if err = es.state.OnTermStart(issueAmount); err != nil {
 		return err
 	}
 
@@ -486,13 +504,13 @@ func distributeFee(
 ) (*big.Int, *big.Int, error) {
 	var err error
 	balance := cc.GetBalance(from)
-	ecoAmount := new(big.Int)
-	susAmount := new(big.Int)
+	ecoAmount := hvhmodule.BigIntZero
+	susAmount := hvhmodule.BigIntZero
 
 	if balance.Sign() > 0 {
-		ecoAmount.Mul(balance, proportion.Num())
+		ecoAmount = new(big.Int).Mul(balance, proportion.Num())
 		ecoAmount.Div(ecoAmount, proportion.Denom())
-		susAmount.Sub(balance, ecoAmount)
+		susAmount = new(big.Int).Sub(balance, ecoAmount)
 
 		if err = cc.Transfer(from, hvhmodule.SustainableFund, susAmount); err != nil {
 			return nil, nil, err
@@ -507,7 +525,7 @@ func distributeFee(
 func calcIssueAmount(curIssueAmount *big.Int, reductionRate *big.Rat) *big.Int {
 	amount := new(big.Int).Set(curIssueAmount)
 	numerator := new(big.Int).Sub(reductionRate.Denom(), reductionRate.Num())
-	amount.Mul(amount, numerator)
+	amount = new(big.Int).Mul(amount, numerator)
 	amount.Div(amount, reductionRate.Denom())
 	return amount
 }
