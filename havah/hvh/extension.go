@@ -189,14 +189,27 @@ func (es *ExtensionStateImpl) InitPlatformConfig(cfg *PlatformConfig) error {
 	return nil
 }
 
-func (es *ExtensionStateImpl) IsIssueStarted(height int64) bool {
-	issueStart := es.state.GetIssueStart()
+func IsIssueStarted(height, issueStart int64) bool {
 	return issueStart > 0 && height >= issueStart
 }
 
+func (es *ExtensionStateImpl) GetIssueStart() int64 {
+	return es.state.GetIssueStart()
+}
+
 // NewBaseTransactionData creates data part of a baseTransaction
-func (es *ExtensionStateImpl) NewBaseTransactionData() map[string]interface{} {
-	return nil
+func (es *ExtensionStateImpl) NewBaseTransactionData(height, issueStart int64) map[string]interface{} {
+	termPeriod := es.state.GetTermPeriod()
+	baseTxCount := height - issueStart
+
+	issueAmount := hvhmodule.BigIntZero
+	if (baseTxCount % termPeriod) == 0 {
+		issueAmount = es.state.GetIssueAmount()
+	}
+
+	return map[string]interface{}{
+		"issueAmount": issueAmount,
+	}
 }
 
 func (es *ExtensionStateImpl) GetUSDTPrice() (*big.Int, error) {

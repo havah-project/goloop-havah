@@ -51,8 +51,13 @@ func (p *platform) ToRevision(value int) module.Revision {
 }
 
 func (p *platform) NewBaseTransaction(wc state.WorldContext) (module.Transaction, error) {
+	height := wc.BlockHeight()
 	es := p.getExtensionState(wc, nil)
-	if es == nil || !es.IsIssueStarted(wc.BlockHeight()) {
+	if es == nil {
+		return nil, nil
+	}
+	issueStart := es.GetIssueStart()
+	if !hvh.IsIssueStarted(height, issueStart) {
 		return nil, nil
 	}
 
@@ -62,7 +67,7 @@ func (p *platform) NewBaseTransaction(wc state.WorldContext) (module.Transaction
 		"timestamp": t,
 		"version":   v,
 		"dataType":  "base",
-		"data":      es.NewBaseTransactionData(),
+		"data":      es.NewBaseTransactionData(height, issueStart),
 	}
 	bs, err := json.Marshal(mtx)
 	if err != nil {
@@ -89,8 +94,11 @@ func checkBaseTX(txs module.TransactionList) bool {
 }
 
 func (p *platform) OnValidateTransactions(wc state.WorldContext, patches, txs module.TransactionList) error {
+	needBaseTX := false
 	es := p.getExtensionState(wc, nil)
-	needBaseTX := es != nil && es.IsIssueStarted(wc.BlockHeight())
+	if es != nil {
+		needBaseTX = hvh.IsIssueStarted(wc.BlockHeight(), es.GetIssueStart())
+	}
 	if hasBaseTX := checkBaseTX(txs); needBaseTX == hasBaseTX {
 		return nil
 	} else {

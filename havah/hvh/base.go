@@ -291,6 +291,8 @@ func RegisterBaseTx() {
 }
 
 func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) error {
+	es.Logger().Debugf("OnBaseTx() start")
+
 	height := cc.BlockHeight()
 	issueStart := es.state.GetIssueStart()
 
@@ -306,10 +308,13 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 	termPeriod := es.state.GetTermPeriod()
 	baseTxCount := height - issueStart
 	termSeq := baseTxCount / termPeriod
+	es.Logger().Debugf(
+		"height=%d issueStart=%d tp=%d btc=%d tseq=%d issue=%v",
+		height, issueStart, termPeriod, baseTxCount, termSeq, baseData.IssueAmount.Value())
 
-	if (baseTxCount%termPeriod) != 0 {
+	if (baseTxCount % termPeriod) != 0 {
 		if baseData.IssueAmount.Value().Sign() != 0 {
-			return transaction.InvalidTxValue.Errorf("" +
+			return transaction.InvalidTxValue.Errorf(""+
 				"Invalid issueAmount(%s)", baseData.IssueAmount.Value())
 		}
 		return nil
@@ -325,6 +330,7 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 			return err
 		}
 	}
+	es.Logger().Debugf("OnBaseTx() end")
 	return nil
 }
 
