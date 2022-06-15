@@ -284,6 +284,8 @@ func (es *ExtensionStateImpl) GetPlanetInfo(cc hvhmodule.CallContext, id int64) 
 }
 
 func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int64) error {
+	es.Logger().Tracef("ReportPlanetWork() start: id=%d", id)
+
 	// Check if a planet exists
 	p, err := es.state.GetPlanet(id)
 	if err != nil {
@@ -296,6 +298,10 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 	termSeq := (height - issueStart) / termPeriod
 	termStart := termSeq*termPeriod + issueStart
 	termNumber := termSeq + 1
+
+	es.Logger().Tracef(
+		"planet=%#v height=%d istart=%d tp=%d tseq=%d tstart=%d",
+		p, height, issueStart, termPeriod, termSeq, termStart)
 
 	if p.Height() >= termStart {
 		// If a planet is registered in this term, ignore its work report
@@ -363,6 +369,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 	}
 
 	onRewardOfferedEvent(cc, termSeq, id, rewardWithHoover, hooverRequest)
+	es.Logger().Tracef("ReportPlanetWork() end: id=%d", id)
 	return nil
 }
 

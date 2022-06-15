@@ -16,6 +16,13 @@ func newDummyState() *State {
 	return NewStateFromSnapshot(snapshot, false, nil)
 }
 
+func newDummyPlanet(height int64) *Planet {
+	owner := common.MustNewAddressFromString("hx123")
+	usdt := big.NewInt(1000)
+	price := big.NewInt(2000)
+	return newPlanet(false, false, owner, usdt, price, height)
+}
+
 func checkAllPlanet(t *testing.T, state *State, expected int64) {
 	cur := state.getVarDB(hvhmodule.VarAllPlanet).Int64()
 	if cur != expected {
@@ -223,9 +230,9 @@ func TestState_GetBigInt(t *testing.T) {
 	}
 
 	defValue := hvhmodule.BigIntHooverBudget
-	value = state.GetBigIntWithDefault(key, defValue)
+	value = state.GetBigIntOrDefault(key, defValue)
 	if value == nil || value.Cmp(defValue) != 0 {
-		t.Errorf("GetBigIntWithDefault() error")
+		t.Errorf("GetBigIntOrDefault() error")
 	}
 
 	newValue := new(big.Int).Add(defValue, big.NewInt(100))
@@ -236,11 +243,65 @@ func TestState_GetBigInt(t *testing.T) {
 
 	value = state.GetBigInt(key)
 	if value == nil || value.Cmp(newValue) != 0 {
-		t.Errorf("GetBigIntWithDefault() error")
+		t.Errorf("GetBigIntOrDefault() error")
 	}
 
-	value = state.GetBigIntWithDefault(key, defValue)
+	value = state.GetBigIntOrDefault(key, defValue)
 	if value == nil || value.Cmp(newValue) != 0 {
-		t.Errorf("GetBigIntWithDefault() error")
+		t.Errorf("GetBigIntOrDefault() error")
+	}
+}
+
+func TestState_GetPlanet(t *testing.T) {
+	id := int64(1)
+
+	state := newDummyState()
+	p, err := state.GetPlanet(id)
+	if p != nil || err == nil {
+		t.Errorf("GetPlanet() error")
+	}
+
+	dictDB := state.getDictDB(hvhmodule.DictPlanet, 1)
+
+	p = newDummyPlanet(1234)
+	if err = state.setPlanet(dictDB, id, p); err != nil {
+		t.Errorf(err.Error())
+	}
+
+	p2, err := state.getPlanet(dictDB, id)
+	if p2 == nil || err != nil {
+		t.Errorf("getPlanet() error")
+	}
+	if !p.equal(p2) {
+		t.Errorf("getPlanet() error")
+	}
+}
+
+func TestState_GetPlanetReward(t *testing.T) {
+	id := int64(1)
+	reward := big.NewInt(100)
+
+	state := newDummyState()
+	pr, err := state.GetPlanetReward(id)
+	if pr == nil || err != nil {
+		t.Errorf("GetPlanetReward() error: pr=%#v err=%s", pr, err)
+	}
+	if !(pr.Total().Sign() == 0 && pr.Current().Sign() == 0 && pr.LastTermNumber() == 0) {
+		t.Errorf("Unexpected PlanetReward")
+	}
+
+	if err = pr.increment(10, reward); err != nil {
+		t.Errorf(err.Error())
+	}
+	if err = state.setPlanetReward(id, pr); err != nil {
+		t.Errorf(err.Error())
+	}
+
+	pr2, err := state.GetPlanetReward(id)
+	if pr2 == nil || err != nil {
+		t.Errorf("GetPlanetReward() error: pr2=%#v err=%s", pr2, err)
+	}
+	if !pr.equal(pr2) {
+		t.Errorf("setPlanetReward() error")
 	}
 }

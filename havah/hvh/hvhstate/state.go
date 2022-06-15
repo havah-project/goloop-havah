@@ -86,11 +86,11 @@ func (s *State) SetIssueStart(curBH, startBH int64) error {
 }
 
 func (s *State) GetTermPeriod() int64 {
-	return s.GetInt64WithDefault(hvhmodule.VarTermPeriod, hvhmodule.TermPeriod)
+	return s.GetInt64OrDefault(hvhmodule.VarTermPeriod, hvhmodule.TermPeriod)
 }
 
 func (s *State) GetIssueReductionCycle() int64 {
-	return s.GetInt64WithDefault(hvhmodule.VarIssueReductionCycle, hvhmodule.ReductionCycle)
+	return s.GetInt64OrDefault(hvhmodule.VarIssueReductionCycle, hvhmodule.ReductionCycle)
 }
 
 func (s *State) GetIssueReductionRate() *big.Rat {
@@ -99,12 +99,12 @@ func (s *State) GetIssueReductionRate() *big.Rat {
 
 // GetIssueAmount returns the amount of coins which are issued during one term
 func (s *State) GetIssueAmount() *big.Int {
-	return s.GetBigIntWithDefault(
+	return s.GetBigIntOrDefault(
 		hvhmodule.VarIssueAmount, hvhmodule.BigIntInitIssueAmount)
 }
 
 func (s *State) GetHooverBudget() *big.Int {
-	return s.GetBigIntWithDefault(
+	return s.GetBigIntOrDefault(
 		hvhmodule.VarHooverBudget, hvhmodule.BigIntHooverBudget)
 }
 
@@ -256,7 +256,7 @@ func (s *State) GetBigInt(key string) *big.Int {
 	return value
 }
 
-func (s *State) GetBigIntWithDefault(key string, defValue *big.Int) *big.Int {
+func (s *State) GetBigIntOrDefault(key string, defValue *big.Int) *big.Int {
 	value := s.getVarDB(key).BigInt()
 	if value == nil {
 		return new(big.Int).Set(defValue)
@@ -275,7 +275,7 @@ func (s *State) GetInt64(key string) int64 {
 	return s.getVarDB(key).Int64()
 }
 
-func (s *State) GetInt64WithDefault(key string, defValue int64) int64 {
+func (s *State) GetInt64OrDefault(key string, defValue int64) int64 {
 	value := s.getVarDB(key).Int64()
 	if value <= 0 {
 		return defValue
@@ -331,8 +331,12 @@ func (s *State) IncreaseEcoSystemReward(amount *big.Int) error {
 }
 
 func (s *State) GetPlanetReward(id int64) (*planetReward, error) {
+	var b []byte
 	planetRewardDictDB := s.getDictDB(hvhmodule.DictPlanetReward, 1)
-	b := planetRewardDictDB.Get(id).Bytes()
+	value := planetRewardDictDB.Get(id)
+	if value != nil {
+		b = value.Bytes()
+	}
 	return newPlanetRewardFromBytes(b)
 }
 
@@ -401,7 +405,7 @@ func (s *State) calcClaimableReward(height int64, p *Planet, pr *planetReward) (
 	}
 
 	termPeriod := s.GetTermPeriod()
-	privateLockupTerm := s.GetInt64WithDefault(
+	privateLockupTerm := s.GetInt64OrDefault(
 		hvhmodule.VarPrivateLockup, hvhmodule.PrivateLockup)
 
 	// All rewards have been locked
@@ -484,7 +488,7 @@ func (s *State) OnTermStart(issueAmount *big.Int) error {
 }
 
 func (s *State) GetIssueLimit() int64 {
-	return s.GetInt64WithDefault(hvhmodule.VarIssueLimit, hvhmodule.IssueLimit)
+	return s.GetInt64OrDefault(hvhmodule.VarIssueLimit, hvhmodule.IssueLimit)
 }
 
 func (s *State) GetRewardInfo(height, id int64) (map[string]interface{}, error) {
