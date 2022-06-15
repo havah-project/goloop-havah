@@ -432,8 +432,12 @@ func (s *State) ClaimMissedReward() (*big.Int, error) {
 	missedPlanet := new(big.Int).Sub(activePlanet, workingPlanet)
 
 	rewardTotal := s.GetBigInt(hvhmodule.VarRewardTotal)
-	missedReward := new(big.Int).Div(rewardTotal, activePlanet)
-	missedReward = missedReward.Mul(missedReward, missedPlanet)
+	missedReward := rewardTotal
+
+	if activePlanet.Sign() > 0 {
+		missedReward = new(big.Int).Div(rewardTotal, activePlanet)
+		missedReward = missedReward.Mul(missedReward, missedPlanet)
+	}
 
 	rewardRemain := s.GetBigInt(hvhmodule.VarRewardRemain)
 	rewardRemain = new(big.Int).Sub(rewardRemain, missedReward)

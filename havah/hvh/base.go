@@ -379,10 +379,10 @@ func (es *ExtensionStateImpl) TransferMissedReward(cc hvhmodule.CallContext) err
 			"Invalid PublicTreasury balance=%d missed=%d",
 			balance, missed)
 	}
-	if err := cc.Transfer(hvhmodule.PublicTreasury, hvhmodule.SustainableFund, missed); err != nil {
+	if err = cc.Transfer(hvhmodule.PublicTreasury, hvhmodule.SustainableFund, missed); err != nil {
 		return err
 	}
-	if err := increaseVarDBInSustainableFund(cc, hvhmodule.VarMissingReward, balance); err != nil {
+	if err = increaseVarDBInSustainableFund(cc, hvhmodule.VarMissingReward, balance); err != nil {
 		return err
 	}
 	return nil
