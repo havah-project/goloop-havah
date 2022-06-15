@@ -114,4 +114,14 @@ public class ChainScore extends Score {
         return call("isPlanetManager", params).asBoolean();
     }
 
+    public TransactionResult claimPlanetReward(Wallet wallet, BigInteger[] ids) throws IOException, ResultTimeoutException {
+        var array = new RpcArray.Builder();
+        for (var p : ids) {
+            array.add(new RpcValue(p));
+        }
+        RpcObject params = new RpcObject.Builder()
+                .put("ids", array.build())
+                .build();
+        return invokeAndWaitResult(wallet, "claimPlanetReward", params);
+    }
 }
