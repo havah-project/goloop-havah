@@ -4,6 +4,7 @@ import foundation.icon.icx.IconService;
 import foundation.icon.icx.KeyWallet;
 import foundation.icon.icx.Wallet;
 import foundation.icon.icx.data.Address;
+import foundation.icon.icx.data.Block;
 import foundation.icon.icx.data.Bytes;
 import foundation.icon.icx.transport.http.HttpProvider;
 import foundation.icon.test.common.Env;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import score.Context;
 
 import javax.imageio.IIOException;
 import java.io.IOException;
@@ -30,6 +32,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 @Tag(Constants.TAG_HAVAH)
 public class HavahBasicTest extends TestBase {
     private static TransactionHandler txHandler;
+
+    private static IconService iconService;
 
     private static GovScore govScore;
 
@@ -45,7 +49,7 @@ public class HavahBasicTest extends TestBase {
         Env.Node node = Env.nodes[0];
         Env.Channel channel = node.channels[0];
         Env.Chain chain = channel.chain;
-        IconService iconService = new IconService(new HttpProvider(channel.getAPIUrl(Env.testApiVer)));
+        iconService = new IconService(new HttpProvider(channel.getAPIUrl(Env.testApiVer)));
         txHandler = new TransactionHandler(iconService, chain);
 
         govScore = new GovScore(txHandler);
@@ -71,6 +75,11 @@ public class HavahBasicTest extends TestBase {
     @AfterAll
     public static void clean() {
 
+    }
+
+    public BigInteger _getHeight() throws IOException {
+        Block lastBlk = iconService.getLastBlock().execute();
+        return lastBlk.getHeight();
     }
 
     public void _checkPlanetManager(Wallet wallet) throws Exception {
@@ -117,13 +126,17 @@ public class HavahBasicTest extends TestBase {
 
     public void _startRewardIssue() throws IOException, ResultTimeoutException {
         LOG.infoEntering("startRewardIssue");
-        assertFailure(govScore.startRewardIssue(testWallets[0], BigInteger.valueOf(1)));
-        assertSuccess(govScore.startRewardIssue(governorWallet, BigInteger.valueOf(1)));
+        var height = _getHeight();
+        var reward = height.add(BigInteger.valueOf(10));
+        LOG.info("cur height : " + height);
+        LOG.info("reward height : " + reward);
+        assertFailure(govScore.startRewardIssue(testWallets[0], reward));
+        assertSuccess(govScore.startRewardIssue(governorWallet, reward));
         LOG.infoExiting();
     }
 
     public BigInteger _tokenIdsOf(Address address) throws Exception {
-        LOG.infoEntering("reportPlanetWork");
+        LOG.infoEntering("_tokenIdsOf");
         PlanetNFTScore.TokenIds ids = planetNFTScore.tokenIdsOf(address, 0, 1);
         assertEquals(1, ids.tokenIds.size());
         assertEquals(BigInteger.ONE, ids.balance);
@@ -158,11 +171,15 @@ public class HavahBasicTest extends TestBase {
     public void test() throws Exception {
         _checkPlanetManager(testWallets[1]);
         _checkAndMintPlanetNFT(testWallets[2].getAddress());
-        _startRewardIssue();
         BigInteger planetId = _tokenIdsOf(testWallets[2].getAddress());
+        _startRewardIssue();
+        //TODO: getrewardinfo
+        _reportPlanetWork(governorWallet, planetId, false);
+        LOG.info("waiting 11 sec....");
+        Thread.sleep(11000);
+        LOG.info("cur Height" + _getHeight());
         //TODO: getrewardinfo
         _reportPlanetWork(governorWallet, planetId, true);
-        //TODO: getrewardinfo
         _reportPlanetWork(governorWallet, planetId, false);
         //TODO: getrewardinfo
         _checkAndClaimPlanetReward(testWallets[2], planetId);
