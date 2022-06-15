@@ -124,4 +124,24 @@ public class ChainScore extends Score {
                 .build();
         return invokeAndWaitResult(wallet, "claimPlanetReward", params);
     }
+
+    public RpcObject getPlanetInfo(BigInteger planetId) throws IOException {
+        RpcObject params = new RpcObject.Builder()
+                .put("id", new RpcValue(planetId))
+                .build();
+        return call("getPlanetInfo", params).asObject();
+    }
+
+    public RpcObject getIssueInfo() throws IOException {
+        RpcObject params = new RpcObject.Builder()
+                .build();
+        return call("getIssueInfo", params).asObject();
+    }
+
+    public RpcObject getRewardInfo(BigInteger planetId) throws IOException {
+        RpcObject params = new RpcObject.Builder()
+                .put("id", new RpcValue(planetId))
+                .build();
+        return call("getRewardInfo", params).asObject();
+    }
 }
