@@ -372,6 +372,9 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 		}
 	}
 
+	if err = es.state.IncrementWorkingPlanet(); err != nil {
+		return err
+	}
 	onRewardOfferedEvent(cc, termSeq, id, rewardWithHoover, hooverRequest)
 	es.Logger().Debugf("ReportPlanetWork() end: height=%d id=%d", height, id)
 	return nil

@@ -305,3 +305,18 @@ func TestState_GetPlanetReward(t *testing.T) {
 		t.Errorf("setPlanetReward() error")
 	}
 }
+
+func TestState_IncrementWorkingPlanet(t *testing.T) {
+	state := newDummyState()
+
+	ov := state.GetInt64(hvhmodule.VarWorkingPlanet)
+	err := state.IncrementWorkingPlanet()
+	if err != nil {
+		t.Errorf("IncrementWorkingPlanet() error")
+	}
+
+	nv := state.GetInt64(hvhmodule.VarWorkingPlanet)
+	if nv != ov+1 {
+		t.Errorf("IncrementWorkingPlanet() error")
+	}
+}

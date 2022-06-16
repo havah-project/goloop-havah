@@ -363,6 +363,11 @@ func (s *State) OfferReward(tn, id int64, pr *planetReward, amount *big.Int) err
 	return s.setPlanetReward(id, pr)
 }
 
+func (s *State) IncrementWorkingPlanet() error {
+	varDB := s.getVarDB(hvhmodule.VarWorkingPlanet)
+	return varDB.Set(varDB.Int64() + 1)
+}
+
 func (s *State) IncreaseEcoSystemReward(amount *big.Int) error {
 	varDB := s.getVarDB(hvhmodule.VarEcoReward)
 	reward := varDB.BigInt()
