@@ -14,4 +14,5 @@ public class Constants extends foundation.icon.test.common.Constants {
     public static final Address PLANETNFT_ADDRESS
             = new Address("cx8000000000000000000000000000000000000000");
 
+    public static final int RPC_ERROR_INVALID_ID = -30032;
 }
