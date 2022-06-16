@@ -70,6 +70,10 @@ func (s *State) SetUSDTPrice(price *big.Int) error {
 	return s.getVarDB(hvhmodule.VarUSDTPrice).Set(price)
 }
 
+func IsIssueStarted(height, issueStart int64) bool {
+	return issueStart > 0 && height >= issueStart
+}
+
 func (s *State) GetIssueStart() int64 {
 	return s.GetInt64(hvhmodule.VarIssueStart)
 }

@@ -3,17 +3,17 @@ package havah
 import (
 	"encoding/json"
 
-	"github.com/icon-project/goloop/common/errors"
-	"github.com/icon-project/goloop/havah/hvh"
-	"github.com/icon-project/goloop/havah/hvhutils"
-
 	"github.com/icon-project/goloop/chain/base"
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/db"
+	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/log"
 	"github.com/icon-project/goloop/common/merkle"
 	"github.com/icon-project/goloop/consensus"
+	"github.com/icon-project/goloop/havah/hvh"
+	"github.com/icon-project/goloop/havah/hvh/hvhstate"
 	"github.com/icon-project/goloop/havah/hvhmodule"
+	"github.com/icon-project/goloop/havah/hvhutils"
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/contract"
 	"github.com/icon-project/goloop/service/platform/basic"
@@ -57,7 +57,7 @@ func (p *platform) NewBaseTransaction(wc state.WorldContext) (module.Transaction
 		return nil, nil
 	}
 	issueStart := es.GetIssueStart()
-	if !hvh.IsIssueStarted(height, issueStart) {
+	if !hvhstate.IsIssueStarted(height, issueStart) {
 		return nil, nil
 	}
 
@@ -97,7 +97,7 @@ func (p *platform) OnValidateTransactions(wc state.WorldContext, patches, txs mo
 	needBaseTX := false
 	es := p.getExtensionState(wc, nil)
 	if es != nil {
-		needBaseTX = hvh.IsIssueStarted(wc.BlockHeight(), es.GetIssueStart())
+		needBaseTX = hvhstate.IsIssueStarted(wc.BlockHeight(), es.GetIssueStart())
 	}
 	if hasBaseTX := checkBaseTX(txs); needBaseTX == hasBaseTX {
 		return nil

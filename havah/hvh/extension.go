@@ -189,10 +189,6 @@ func (es *ExtensionStateImpl) InitPlatformConfig(cfg *PlatformConfig) error {
 	return nil
 }
 
-func IsIssueStarted(height, issueStart int64) bool {
-	return issueStart > 0 && height >= issueStart
-}
-
 func (es *ExtensionStateImpl) GetIssueStart() int64 {
 	return es.state.GetIssueStart()
 }

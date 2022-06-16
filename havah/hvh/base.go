@@ -27,6 +27,7 @@ import (
 	"github.com/icon-project/goloop/common/codec"
 	"github.com/icon-project/goloop/common/crypto"
 	"github.com/icon-project/goloop/common/errors"
+	"github.com/icon-project/goloop/havah/hvh/hvhstate"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/contract"
@@ -296,8 +297,9 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 	height := cc.BlockHeight()
 	issueStart := es.state.GetIssueStart()
 
-	if !(issueStart > 0 && height >= issueStart) {
-		panic("This method MUST NOT be called in this case")
+	if !hvhstate.IsIssueStarted(height, issueStart) {
+		return errors.InvalidStateError.Errorf(
+			"IssueDoesntStarted(height=%d,issueStart=%d)", height, issueStart)
 	}
 
 	baseData, err := parseBaseData(data)
