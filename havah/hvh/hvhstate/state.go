@@ -67,7 +67,11 @@ func (s *State) SetUSDTPrice(price *big.Int) error {
 	if price == nil || price.Sign() < 0 {
 		return scoreresult.RevertedError.New("Invalid USDTPrice")
 	}
-	return s.getVarDB(hvhmodule.VarUSDTPrice).Set(price)
+	return s.SetBigInt(hvhmodule.VarUSDTPrice, price)
+}
+
+func (s *State) GetActiveUSDTPrice() *big.Int {
+	return s.GetBigInt(hvhmodule.VarActiveUSDTPrice)
 }
 
 func IsIssueStarted(height, issueStart int64) bool {
@@ -288,7 +292,7 @@ func (s *State) setPlanet(dictDB *containerdb.DictDB, id int64, p *Planet) error
 func (s *State) GetBigInt(key string) *big.Int {
 	value := s.getVarDB(key).BigInt()
 	if value == nil {
-		return new(big.Int)
+		return hvhmodule.BigIntZero
 	}
 	return value
 }
@@ -296,7 +300,7 @@ func (s *State) GetBigInt(key string) *big.Int {
 func (s *State) GetBigIntOrDefault(key string, defValue *big.Int) *big.Int {
 	value := s.getVarDB(key).BigInt()
 	if value == nil {
-		return new(big.Int).Set(defValue)
+		return defValue
 	}
 	return value
 }
@@ -335,9 +339,10 @@ func (s *State) DecreaseRewardRemain(amount *big.Int) error {
 	varDB := s.getVarDB(hvhmodule.VarRewardRemain)
 	rewardRemain := varDB.BigInt()
 	if rewardRemain == nil {
-		rewardRemain = new(big.Int)
+		rewardRemain = new(big.Int).Neg(amount)
+	} else {
+		rewardRemain = new(big.Int).Sub(rewardRemain, amount)
 	}
-	rewardRemain.Sub(rewardRemain, amount)
 	if rewardRemain.Sign() < 0 {
 		return scoreresult.Errorf(
 			hvhmodule.StatusRewardError,
@@ -362,9 +367,11 @@ func (s *State) IncreaseEcoSystemReward(amount *big.Int) error {
 	varDB := s.getVarDB(hvhmodule.VarEcoReward)
 	reward := varDB.BigInt()
 	if reward == nil {
-		reward = new(big.Int)
+		reward = amount
+	} else {
+		reward = new(big.Int).Add(reward, amount)
 	}
-	return varDB.Set(reward.Add(reward, amount))
+	return varDB.Set(reward)
 }
 
 func (s *State) GetPlanetReward(id int64) (*planetReward, error) {
@@ -390,7 +397,7 @@ func (s *State) ClaimEcoSystemReward() (*big.Int, error) {
 	}
 
 	if reward.Sign() > 0 {
-		if err := s.SetBigInt(hvhmodule.VarEcoReward, new(big.Int)); err != nil {
+		if err := s.SetBigInt(hvhmodule.VarEcoReward, hvhmodule.BigIntZero); err != nil {
 			return nil, err
 		}
 	}
@@ -502,7 +509,7 @@ func (s *State) OnTermEnd() error {
 	if err := s.SetInt64(hvhmodule.VarActivePlanet, 0); err != nil {
 		return err
 	}
-	if err := s.SetBigInt(hvhmodule.VarActiveUSDTPrice, new(big.Int)); err != nil {
+	if err := s.SetBigInt(hvhmodule.VarActiveUSDTPrice, hvhmodule.BigIntZero); err != nil {
 		return err
 	}
 	s.logger.Debugf("OnTermEnd() end")
@@ -560,6 +567,13 @@ func (s *State) GetRewardInfo(height, id int64) (map[string]interface{}, error) 
 		"remain":    pr.Current(),
 		"claimable": claimable,
 	}, nil
+}
+
+func (s *State) GetActivePlanetReward() *big.Int {
+	return new(big.Int).Div(
+		s.GetBigInt(hvhmodule.VarRewardTotal),
+		s.GetBigInt(hvhmodule.VarActivePlanet),
+	)
 }
 
 func validatePlanetId(id int64) error {

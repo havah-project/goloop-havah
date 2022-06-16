@@ -322,9 +322,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 			"Duplicate reportPlanetWork: tn=%d id=%d", termNumber, id)
 	}
 
-	reward := new(big.Int).Div(
-		es.state.GetBigInt(hvhmodule.VarRewardTotal),
-		es.state.GetBigInt(hvhmodule.VarActivePlanet))
+	reward := es.state.GetActivePlanetReward()
 	rewardWithHoover := reward
 
 	if err = es.state.DecreaseRewardRemain(reward); err != nil {
@@ -382,11 +380,13 @@ func calcHooverLimit(total, rewardPerPlanet, planetPrice *big.Int) *big.Int {
 	return hooverLimit.Sub(hooverLimit, planetPrice)
 }
 
+var DividerFor10Percent = big.NewInt(10)
+
 func (es *ExtensionStateImpl) calcHooverGuide(p *hvhstate.Planet) *big.Int {
-	hooverGuide := new(big.Int).Mul(p.USDT(), es.state.GetBigInt(hvhmodule.VarActiveUSDTPrice))
+	hooverGuide := new(big.Int).Mul(p.USDT(), es.state.GetActiveUSDTPrice())
 	hooverGuide.Div(hooverGuide, hvhmodule.BigIntUSDTDecimal)
-	hooverGuide.Div(hooverGuide, big.NewInt(10))
-	hooverGuide.Div(hooverGuide, es.state.GetBigInt(hvhmodule.VarIssueReductionCycle))
+	hooverGuide.Div(hooverGuide, DividerFor10Percent)
+	hooverGuide.Div(hooverGuide, big.NewInt(es.state.GetIssueReductionCycle()))
 	return hooverGuide
 }
 
@@ -395,11 +395,11 @@ func (es *ExtensionStateImpl) calcSubsidyFromHooverFund(
 	hooverRequest := new(big.Int).Sub(hooverGuide, reward)
 	// if hooverRequest > hooverLimit
 	if hooverRequest.Cmp(hooverLimit) > 0 {
-		hooverRequest.Set(hooverLimit)
+		hooverRequest = hooverLimit
 	}
 	// if hoooverRequest > hooverBalance
 	if hooverRequest.Cmp(hooverBalance) > 0 {
-		hooverRequest.Set(hooverBalance)
+		hooverRequest = hooverBalance
 	}
 
 	return hooverRequest

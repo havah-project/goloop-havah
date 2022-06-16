@@ -40,7 +40,7 @@ func (pr *planetReward) RLPEncodeSelf(e codec.Encoder) error {
 }
 
 func (pr *planetReward) Total() *big.Int {
-	return new(big.Int).Set(pr.total)
+	return pr.total
 }
 
 func (pr *planetReward) LastTermNumber() int64 {
@@ -48,7 +48,7 @@ func (pr *planetReward) LastTermNumber() int64 {
 }
 
 func (pr *planetReward) Current() *big.Int {
-	return new(big.Int).Set(pr.current)
+	return pr.current
 }
 
 func (pr *planetReward) Bytes() []byte {
@@ -79,8 +79,8 @@ func (pr *planetReward) increment(tn int64, amount *big.Int) error {
 		return scoreresult.Errorf(
 			hvhmodule.StatusIllegalArgument, "Invalid termNumber: tn=%d lastTN=%d", tn, pr.lastTN)
 	}
-	pr.total.Add(pr.total, amount)
-	pr.current.Add(pr.current, amount)
+	pr.total = new (big.Int).Add(pr.total, amount)
+	pr.current = new (big.Int).Add(pr.current, amount)
 	pr.lastTN = tn
 	return nil
 }
@@ -95,6 +95,6 @@ func (pr *planetReward) claim(amount *big.Int) error {
 			hvhmodule.StatusIllegalArgument,
 			"Not enough reward to claim: cur=%s amount=%s", pr.current, amount)
 	}
-	pr.current.Sub(pr.current, amount)
+	pr.current = new(big.Int).Sub(pr.current, amount)
 	return nil
 }
