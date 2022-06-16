@@ -155,13 +155,8 @@ public class HavahBasicTest extends TestBase {
     }
 
     public void _claimPlanetReward(Wallet wallet, BigInteger planetId, boolean success) throws Exception {
-        try {
-            TransactionResult result = chainScore.claimPlanetReward(wallet, new BigInteger[]{planetId});
-            assertEquals(success ? 1 : 0, result.getStatus().intValue(), "failure result(" + result + ")");
-        } catch (RpcError e) {
-            assertEquals(Constants.RPC_ERROR_PENDING, e.getCode());
-            LOG.info("Expected RpcError: code=" + e.getCode() + ", msg=" + e.getMessage());
-        }
+        TransactionResult result = chainScore.claimPlanetReward(wallet, new BigInteger[]{planetId});
+        assertEquals(success ? 1 : 0, result.getStatus().intValue(), "failure result(" + result + ")");
     }
 
     public void _getPlanetInfo(BigInteger planetId) throws IOException {
