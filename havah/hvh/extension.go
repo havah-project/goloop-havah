@@ -198,7 +198,9 @@ func (es *ExtensionStateImpl) NewBaseTransactionData(height, issueStart int64) m
 	es.Logger().Debugf("NewBaseTransactionData() start: height=%d istart=%d", height, issueStart)
 
 	issueAmount := es.state.GetIssueAmount(height)
-	jso := map[string]interface{}{"issueAmount": issueAmount}
+	jso := map[string]interface{}{
+		"issueAmount": new(common.HexInt).SetValue(issueAmount),
+	}
 
 	es.Logger().Debugf("NewBaseTransactionData() end: issue=%s", issueAmount)
 	return jso
