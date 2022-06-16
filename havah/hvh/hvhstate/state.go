@@ -127,7 +127,7 @@ func (s *State) GetIssueAmountByTS(termSeq int64) (*big.Int, bool) {
 	if termSeq > 0  && termSeq%reductionCycle == 0 {
 		reductionRate := s.GetIssueReductionRate()
 		reduction := new(big.Int).Mul(issue, reductionRate.Num())
-		reduction = reduction.Div(issue, reductionRate.Denom())
+		reduction = reduction.Div(reduction, reductionRate.Denom())
 		if reduction.Sign() > 0 {
 			issue = new(big.Int).Sub(issue, reduction)
 			return issue, true
