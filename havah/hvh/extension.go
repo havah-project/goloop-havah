@@ -195,9 +195,13 @@ func (es *ExtensionStateImpl) GetIssueStart() int64 {
 
 // NewBaseTransactionData creates data part of a baseTransaction
 func (es *ExtensionStateImpl) NewBaseTransactionData(height, issueStart int64) map[string]interface{} {
-	return map[string]interface{}{
-		"issueAmount": es.state.GetIssueAmount(height),
-	}
+	es.Logger().Debugf("NewBaseTransactionData() start: height=%d istart=%d", height, issueStart)
+
+	issueAmount := es.state.GetIssueAmount(height)
+	jso := map[string]interface{}{"issueAmount": issueAmount}
+
+	es.Logger().Debugf("NewBaseTransactionData() end: issue=%s", issueAmount)
+	return jso
 }
 
 func (es *ExtensionStateImpl) GetUSDTPrice() (*big.Int, error) {
@@ -230,7 +234,11 @@ func (es *ExtensionStateImpl) GetIssueInfo(cc hvhmodule.CallContext) (map[string
 }
 
 func (es *ExtensionStateImpl) StartRewardIssue(cc hvhmodule.CallContext, startBH int64) error {
-	return es.state.SetIssueStart(cc.BlockHeight(), startBH)
+	height := cc.BlockHeight()
+	es.Logger().Debugf("StartRewardIssue() start: height=%d startBH=%d", height, startBH)
+	err := es.state.SetIssueStart(height, startBH)
+	es.Logger().Debugf("StartRewardIssue() end")
+	return err
 }
 
 func (es *ExtensionStateImpl) AddPlanetManager(address module.Address) error {
@@ -256,11 +264,18 @@ func (es *ExtensionStateImpl) RegisterPlanet(
 }
 
 func (es *ExtensionStateImpl) UnregisterPlanet(cc hvhmodule.CallContext, id int64) error {
-	return es.state.UnregisterPlanet(id)
+	es.Logger().Debugf("UnregisterPlanet() start: height=%d id=%d", id, cc.BlockHeight())
+	err := es.state.UnregisterPlanet(id)
+	es.Logger().Debugf("UnregisterPlanet() end: err=%#v", err)
+	return err
 }
 
 func (es *ExtensionStateImpl) SetPlanetOwner(cc hvhmodule.CallContext, id int64, owner module.Address) error {
-	return es.state.SetPlanetOwner(id, owner)
+	height := cc.BlockHeight()
+	es.Logger().Debugf("SetPlanetOwner() start: height=%d id=%d owner=%s", height, id, owner)
+	err := es.state.SetPlanetOwner(id, owner)
+	es.Logger().Debugf("SetPlanetOwner() end: err=%#v", err)
+	return err
 }
 
 func (es *ExtensionStateImpl) GetPlanetInfo(cc hvhmodule.CallContext, id int64) (map[string]interface{}, error) {
@@ -272,7 +287,8 @@ func (es *ExtensionStateImpl) GetPlanetInfo(cc hvhmodule.CallContext, id int64) 
 }
 
 func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int64) error {
-	es.Logger().Tracef("ReportPlanetWork() start: id=%d", id)
+	height := cc.BlockHeight()
+	es.Logger().Debugf("ReportPlanetWork() start: height=%d id=%d", height, id)
 
 	// Check if a planet exists
 	p, err := es.state.GetPlanet(id)
@@ -280,14 +296,13 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 		return err
 	}
 
-	height := cc.BlockHeight()
 	issueStart := es.state.GetIssueStart()
 	termPeriod := es.state.GetTermPeriod()
 	termSeq := (height - issueStart) / termPeriod
 	termStart := termSeq*termPeriod + issueStart
 	termNumber := termSeq + 1
 
-	es.Logger().Tracef(
+	es.Logger().Debugf(
 		"planet=%#v height=%d istart=%d tp=%d tseq=%d tstart=%d",
 		p, height, issueStart, termPeriod, termSeq, termStart)
 
@@ -357,7 +372,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 	}
 
 	onRewardOfferedEvent(cc, termSeq, id, rewardWithHoover, hooverRequest)
-	es.Logger().Tracef("ReportPlanetWork() end: id=%d", id)
+	es.Logger().Debugf("ReportPlanetWork() end: height=%d id=%d", height, id)
 	return nil
 }
 
@@ -393,6 +408,9 @@ func (es *ExtensionStateImpl) calcSubsidyFromHooverFund(
 // ClaimPlanetReward is used by a planet owner
 // who wants to transfer a reward from system treasury to owner account
 func (es *ExtensionStateImpl) ClaimPlanetReward(cc hvhmodule.CallContext, ids []int64) error {
+	height := cc.BlockHeight()
+	es.Logger().Debugf("ClaimPlanetReward() start: height=%d ids=%v", height, ids)
+
 	if len(ids) > hvhmodule.MaxCountToClaim {
 		return scoreresult.Errorf(
 			hvhmodule.StatusIllegalArgument,
@@ -400,7 +418,6 @@ func (es *ExtensionStateImpl) ClaimPlanetReward(cc hvhmodule.CallContext, ids []
 	}
 
 	owner := cc.From()
-	height := cc.BlockHeight()
 	for _, id := range ids {
 		reward, err := es.state.ClaimPlanetReward(id, height, owner)
 		if err != nil {
@@ -412,7 +429,10 @@ func (es *ExtensionStateImpl) ClaimPlanetReward(cc hvhmodule.CallContext, ids []
 			}
 			onRewardClaimedEvent(cc, id, owner, reward)
 		}
+		es.Logger().Debugf("id=%d owner=%s reward=%s", id, owner, reward)
 	}
+
+	es.Logger().Debugf("ClaimPlanetReward() end")
 	return nil
 }
 

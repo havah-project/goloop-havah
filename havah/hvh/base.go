@@ -292,11 +292,10 @@ func RegisterBaseTx() {
 }
 
 func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) error {
-	es.Logger().Debugf("OnBaseTx() start")
-
 	height := cc.BlockHeight()
-	issueStart := es.state.GetIssueStart()
+	es.Logger().Debugf("OnBaseTx() start: height=%d", height)
 
+	issueStart := es.state.GetIssueStart()
 	if !hvhstate.IsIssueStarted(height, issueStart) {
 		return errors.InvalidStateError.Errorf(
 			"IssueDoesntStarted(height=%d,issueStart=%d)", height, issueStart)
@@ -311,7 +310,7 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 	baseTxCount := height - issueStart
 	termSeq := baseTxCount / termPeriod
 	es.Logger().Debugf(
-		"height=%d issueStart=%d tp=%d btc=%d tseq=%d issue=%v",
+		"height=%d istart=%d tperiod=%d basetx=%d tseq=%d issue=%v",
 		height, issueStart, termPeriod, baseTxCount, termSeq, baseData.IssueAmount.Value())
 
 	if (baseTxCount % termPeriod) != 0 {
@@ -332,11 +331,14 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 			return err
 		}
 	}
-	es.Logger().Debugf("OnBaseTx() end")
+	es.Logger().Debugf("OnBaseTx() end: height=%d", height)
 	return nil
 }
 
 func (es *ExtensionStateImpl) onTermEnd(cc hvhmodule.CallContext) error {
+	height := cc.BlockHeight()
+	es.logger.Debugf("onTermEnd() start: height=%d", height)
+
 	var err error
 	if err = es.TransferEcoSystemReward(cc); err != nil {
 		return err
@@ -356,6 +358,8 @@ func (es *ExtensionStateImpl) onTermEnd(cc hvhmodule.CallContext) error {
 	if err = es.state.OnTermEnd(); err != nil {
 		return err
 	}
+
+	es.logger.Debugf("onTermEnd() end: height=%d", height)
 	return nil
 }
 

@@ -117,14 +117,14 @@ func (s *State) GetIssueAmount(height int64) *big.Int {
 	if baseCount%termPeriod != 0 {
 		return hvhmodule.BigIntZero
 	}
-	issue, _ :=  s.GetIssueAmountByTS(baseCount/termPeriod)
+	issue, _ := s.GetIssueAmountByTS(baseCount / termPeriod)
 	return issue
 }
 
 func (s *State) GetIssueAmountByTS(termSeq int64) (*big.Int, bool) {
 	issue := s.GetBigIntOrDefault(hvhmodule.VarIssueAmount, hvhmodule.BigIntInitIssueAmount)
 	reductionCycle := s.GetIssueReductionCycle()
-	if termSeq > 0  && termSeq%reductionCycle == 0 {
+	if termSeq > 0 && termSeq%reductionCycle == 0 {
 		reductionRate := s.GetIssueReductionRate()
 		reduction := new(big.Int).Mul(issue, reductionRate.Num())
 		reduction = reduction.Div(reduction, reductionRate.Denom())
@@ -495,6 +495,7 @@ func (s *State) ClaimMissedReward() (*big.Int, error) {
 }
 
 func (s *State) OnTermEnd() error {
+	s.logger.Debugf("OnTermEnd() start")
 	if err := s.SetInt64(hvhmodule.VarWorkingPlanet, 0); err != nil {
 		return err
 	}
@@ -504,14 +505,19 @@ func (s *State) OnTermEnd() error {
 	if err := s.SetBigInt(hvhmodule.VarActiveUSDTPrice, new(big.Int)); err != nil {
 		return err
 	}
+	s.logger.Debugf("OnTermEnd() end")
 	return nil
 }
 
 func (s *State) OnTermStart(issueAmount *big.Int) error {
-	if err := s.SetInt64(hvhmodule.VarActivePlanet, s.GetInt64(hvhmodule.VarAllPlanet)); err != nil {
+	s.logger.Debugf("OnTermStart() start: issue=%s", issueAmount)
+	allPlanet := s.GetInt64(hvhmodule.VarAllPlanet)
+	usdtPrice := s.GetUSDTPrice()
+
+	if err := s.SetInt64(hvhmodule.VarActivePlanet, allPlanet); err != nil {
 		return err
 	}
-	if err := s.SetBigInt(hvhmodule.VarActiveUSDTPrice, s.GetUSDTPrice()); err != nil {
+	if err := s.SetBigInt(hvhmodule.VarActiveUSDTPrice, usdtPrice); err != nil {
 		return err
 	}
 	rewardRemain := new(big.Int).Add(s.GetBigInt(hvhmodule.VarRewardRemain), issueAmount)
@@ -521,6 +527,11 @@ func (s *State) OnTermStart(issueAmount *big.Int) error {
 	if err := s.SetBigInt(hvhmodule.VarRewardTotal, rewardRemain); err != nil {
 		return err
 	}
+
+	s.logger.Debugf(
+		"OnTermStart() end: ap=%d aup=%s rr=%s rt=%s",
+		allPlanet, usdtPrice, rewardRemain, rewardRemain,
+	)
 	return nil
 }
 
