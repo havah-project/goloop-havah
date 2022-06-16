@@ -51,7 +51,6 @@ type chainScore struct {
 	from  module.Address
 	value *big.Int
 	gov   bool
-	flags int
 }
 
 var chainMethods = []*chainMethod{
@@ -698,13 +697,11 @@ const (
 
 func newChainScore(cc contract.CallContext, from module.Address, value *big.Int) (contract.SystemScore, error) {
 	fromGov := cc.Governance().Equal(from)
-	flags := 0
 	return &chainScore{
 		cc:    cc,
 		from:  from,
 		value: value,
 		log:   hvhutils.NewLogger(cc.Logger()),
 		gov:   fromGov,
-		flags: flags,
 	}, nil
 }

@@ -32,11 +32,8 @@ func (s *chainScore) tryChargeCall() error {
 	if s.gov {
 		return nil
 	}
-	noCharge := (s.flags & SysNoCharge) != 0
-	if !noCharge {
-		if err := s.cc.ApplyCallSteps(); err != nil {
-			return err
-		}
+	if err := s.cc.ApplyCallSteps(); err != nil {
+		return err
 	}
 	return nil
 }
