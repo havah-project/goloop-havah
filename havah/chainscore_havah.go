@@ -168,6 +168,9 @@ func (s *chainScore) Ex_setPlanetOwner(id *common.HexInt, owner module.Address) 
 }
 
 func (s *chainScore) Ex_getPlanetInfo(id *common.HexInt) (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
 	es, err := s.getExtensionState()
 	if err != nil {
 		return nil, err
@@ -176,6 +179,9 @@ func (s *chainScore) Ex_getPlanetInfo(id *common.HexInt) (map[string]interface{}
 }
 
 func (s *chainScore) Ex_reportPlanetWork(id *common.HexInt) error {
+	if err := s.tryChargeCall(); err != nil {
+		return err
+	}
 	es, err := s.getExtensionState()
 	if err != nil {
 		return err
@@ -191,6 +197,9 @@ func (s *chainScore) Ex_reportPlanetWork(id *common.HexInt) error {
 }
 
 func (s *chainScore) Ex_claimPlanetReward(ids []interface{}) error {
+	if err := s.tryChargeCall(); err != nil {
+		return err
+	}
 	es, err := s.getExtensionState()
 	if err != nil {
 		return err
@@ -205,6 +214,9 @@ func (s *chainScore) Ex_claimPlanetReward(ids []interface{}) error {
 }
 
 func (s *chainScore) Ex_getRewardInfo(id *common.HexInt) (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
 	es, err := s.getExtensionState()
 	if err != nil {
 		return nil, err
