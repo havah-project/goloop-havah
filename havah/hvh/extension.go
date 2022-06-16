@@ -195,16 +195,8 @@ func (es *ExtensionStateImpl) GetIssueStart() int64 {
 
 // NewBaseTransactionData creates data part of a baseTransaction
 func (es *ExtensionStateImpl) NewBaseTransactionData(height, issueStart int64) map[string]interface{} {
-	termPeriod := es.state.GetTermPeriod()
-	baseTxCount := height - issueStart
-
-	issueAmount := hvhmodule.BigIntZero
-	if (baseTxCount % termPeriod) == 0 {
-		issueAmount = es.state.GetIssueAmount()
-	}
-
 	return map[string]interface{}{
-		"issueAmount": issueAmount,
+		"issueAmount": es.state.GetIssueAmount(height),
 	}
 }
 

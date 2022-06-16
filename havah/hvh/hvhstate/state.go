@@ -101,10 +101,43 @@ func (s *State) GetIssueReductionRate() *big.Rat {
 	return hvhmodule.BigRatIssueReductionRate
 }
 
-// GetIssueAmount returns the amount of coins which are issued during one term
-func (s *State) GetIssueAmount() *big.Int {
+// getIssueAmount returns the amount of coins which are issued during one term
+func (s *State) getIssueAmount() *big.Int {
 	return s.GetBigIntOrDefault(
 		hvhmodule.VarIssueAmount, hvhmodule.BigIntInitIssueAmount)
+}
+
+func (s *State) GetIssueAmount(height int64) *big.Int {
+	is := s.GetIssueStart()
+	if !IsIssueStarted(height, is) {
+		panic("CalcIssueAmount must be called after issue has started")
+	}
+	baseCount := height - is
+	termPeriod := s.GetTermPeriod()
+	if baseCount%termPeriod != 0 {
+		return hvhmodule.BigIntZero
+	}
+	issue, _ :=  s.GetIssueAmountByTS(baseCount/termPeriod)
+	return issue
+}
+
+func (s *State) GetIssueAmountByTS(termSeq int64) (*big.Int, bool) {
+	issue := s.GetBigIntOrDefault(hvhmodule.VarIssueAmount, hvhmodule.BigIntInitIssueAmount)
+	reductionCycle := s.GetIssueReductionCycle()
+	if termSeq > 0  && termSeq%reductionCycle == 0 {
+		reductionRate := s.GetIssueReductionRate()
+		reduction := new(big.Int).Mul(issue, reductionRate.Num())
+		reduction = reduction.Div(issue, reductionRate.Denom())
+		if reduction.Sign() > 0 {
+			issue = new(big.Int).Sub(issue, reduction)
+			return issue, true
+		}
+	}
+	return issue, false
+}
+
+func (s *State) SetIssueAmount(value *big.Int) error {
+	return s.SetBigInt(hvhmodule.VarIssueAmount, value)
 }
 
 func (s *State) GetHooverBudget() *big.Int {
