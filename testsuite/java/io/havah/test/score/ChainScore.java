@@ -102,7 +102,7 @@ public class ChainScore extends Score {
 
     public TransactionResult reportPlanetWork(Wallet wallet, BigInteger id) throws Exception {
         RpcObject params = new RpcObject.Builder()
-                .put("address", new RpcValue(id))
+                .put("id", new RpcValue(id))
                 .build();
         return invokeAndWaitResult(wallet, "reportPlanetWork", params, null, Constants.DEFAULT_STEPS);
     }

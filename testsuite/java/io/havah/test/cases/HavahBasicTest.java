@@ -37,9 +37,6 @@ public class HavahBasicTest extends TestBase {
     private static GovScore govScore;
     private static ChainScore chainScore;
     private static KeyWallet governorWallet;
-    private static KeyWallet planetManagerWallet;
-    private static KeyWallet planetWallet;
-    private static KeyWallet EOAWallet;
     private static PlanetNFTScore planetNFTScore;
 
     @BeforeAll
@@ -54,19 +51,14 @@ public class HavahBasicTest extends TestBase {
         governorWallet = chain.governorWallet;
 
         chainScore = new ChainScore(txHandler);
+        planetNFTScore = new PlanetNFTScore(txHandler);
 
         try {
             Bytes txHash = txHandler.transfer(chain.godWallet, governorWallet.getAddress(), ICX);
             assertSuccess(txHandler.getResult(txHash));
-
-            planetManagerWallet = KeyWallet.create();
-            planetWallet = KeyWallet.create();
-            EOAWallet = KeyWallet.create();
         } catch (Exception ex) {
             fail(ex.getMessage());
         }
-
-        planetNFTScore = new PlanetNFTScore(txHandler);
     }
 
     @AfterAll
@@ -79,15 +71,14 @@ public class HavahBasicTest extends TestBase {
         return lastBlk.getHeight();
     }
 
-    public void _checkPlanetManager(Wallet wallet) throws Exception {
+    public void _checkPlanetManager(Wallet wallet, Address address, boolean success) throws Exception {
         LOG.infoEntering("addPlanetManager");
-        Address address = wallet.getAddress();
-        assertFailure(govScore.addPlanetManager(EOAWallet, address));
-        assertSuccess(govScore.addPlanetManager(governorWallet, address));
+        TransactionResult result = govScore.addPlanetManager(wallet, address);
+        assertEquals(success ? 1 : 0, result.getStatus().intValue(), "failure result(" + result + ")");
         LOG.infoExiting();
 
         LOG.infoEntering("isPlanetManager");
-        assertEquals(chainScore.isPlanetManager(address), true);
+        assertEquals(chainScore.isPlanetManager(address), success);
         LOG.infoExiting();
     }
 
@@ -98,13 +89,13 @@ public class HavahBasicTest extends TestBase {
     }
 
     public void _checkAndMintPlanetNFT(Address to) throws Exception {
-        LOG.infoEntering("mintPlanet", "mint public PlanetNFT");
+        LOG.infoEntering("_checkAndMintPlanetNFT", "mint public PlanetNFT");
         var oldBalance = planetNFTScore.balanceOf(to).intValue();
         var oldTotalSupply = planetNFTScore.totalSupply().intValue();
         LOG.info("PlanetNFT Balance : " + oldBalance);
         LOG.info("PlanetNFT totalSupply : " + oldTotalSupply);
 
-        _mintPlanetNFT(governorWallet, to, 1, true);
+        _mintPlanetNFT(governorWallet, to, 2, true);
 
         // compare nft balance
         var balance = planetNFTScore.balanceOf(to).intValue();
@@ -118,23 +109,23 @@ public class HavahBasicTest extends TestBase {
         LOG.infoExiting();
     }
 
-    public BigInteger _startRewardIssue() throws IOException, ResultTimeoutException {
-        LOG.infoEntering("startRewardIssue");
+    public BigInteger _startRewardIssue(Wallet wallet, BigInteger addHeight, boolean success) throws IOException, ResultTimeoutException {
+        LOG.infoEntering("_startRewardIssue", "expect : " + success);
         var height = _getHeight();
-        var reward = height.add(BigInteger.valueOf(4));
+        var reward = height.add(addHeight);
         LOG.info("cur height : " + height);
         LOG.info("reward height : " + reward);
-        assertFailure(govScore.startRewardIssue(EOAWallet, reward));
-        assertSuccess(govScore.startRewardIssue(governorWallet, reward));
+        TransactionResult result = govScore.startRewardIssue(wallet, reward);
+        assertEquals(success ? 1 : 0, result.getStatus().intValue(), "failure result(" + result + ")");
         LOG.infoExiting();
         return reward;
     }
 
-    public BigInteger _tokenIdsOf(Address address) throws Exception {
+    public BigInteger _tokenIdsOf(Address address, int idCount, BigInteger balance) throws Exception {
         LOG.infoEntering("_tokenIdsOf");
         PlanetNFTScore.TokenIds ids = planetNFTScore.tokenIdsOf(address, 0, 1);
-        assertEquals(1, ids.tokenIds.size());
-        assertEquals(BigInteger.ONE, ids.balance);
+        assertEquals(idCount, ids.tokenIds.size());
+        assertEquals(balance, ids.balance);
         LOG.infoExiting();
         return ids.tokenIds.get(0);
     }
@@ -197,7 +188,7 @@ public class HavahBasicTest extends TestBase {
             RpcObject obj = chainScore.getRewardInfo(planetId);
             LOG.info("total : " + obj.getItem("total").asInteger());
             LOG.info("remain : " + obj.getItem("remain").asInteger());
-            LOG.info("claimable : " + obj.getItem("height").asInteger());
+            LOG.info("claimable : " + obj.getItem("claimable").asInteger());
             LOG.info("height : " + obj.getItem("height").asInteger());
         } catch (RpcError e) {
             assertEquals(Constants.RPC_ERROR_INVALID_ID, e.getCode());
@@ -206,54 +197,103 @@ public class HavahBasicTest extends TestBase {
         LOG.infoExiting();
     }
 
-//    @Test
+    @Test
+    public void addPlanetManagerTest() throws Exception {
+        LOG.infoEntering("getPlanetInfoTest");
+        KeyWallet planetManagerWallet = KeyWallet.create();
+        KeyWallet EOAWallet = KeyWallet.create();
+        _checkPlanetManager(EOAWallet, planetManagerWallet.getAddress(), false);
+        _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
+        LOG.infoExiting();
+    }
+
+    @Test
     public void getPlanetInfoTest() throws Exception {
         LOG.infoEntering("getPlanetInfoTest");
-        _checkPlanetManager(planetManagerWallet);
+        KeyWallet planetManagerWallet = KeyWallet.create();
+        KeyWallet planetWallet = KeyWallet.create();
+        _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
         _checkAndMintPlanetNFT(planetWallet.getAddress());
-        BigInteger planetId = _tokenIdsOf(planetWallet.getAddress());
+        BigInteger planetId = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
         _getPlanetInfo(planetId);
         _getPlanetInfo(BigInteger.valueOf(-1));
         LOG.infoExiting();
     }
 
-//    @Test
+    @Test
     public void getIssueInfoTest() throws Exception {
         LOG.infoEntering("getIssueInfoTest");
         _getIssueInfo();
         LOG.infoExiting();
     }
 
-//    @Test
+    @Test
     public void getRewardInfoTest() throws Exception {
         LOG.infoEntering("getRewardInfoTest");
-        _checkPlanetManager(planetManagerWallet);
+        KeyWallet planetManagerWallet = KeyWallet.create();
+        KeyWallet planetWallet = KeyWallet.create();
+        _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
         _checkAndMintPlanetNFT(planetWallet.getAddress());
-        BigInteger planetId = _tokenIdsOf(planetWallet.getAddress());
+        BigInteger planetId = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
         _getRewardInfo(planetId);
         _getRewardInfo(BigInteger.valueOf(-1));
         LOG.infoExiting();
     }
 
     @Test
-    public void test() throws Exception {
-        LOG.infoEntering("test");
-        _checkPlanetManager(planetManagerWallet);
+    public void setRewardIssueTest() throws Exception {
+        LOG.infoEntering("setRewardIssueTest");
+        KeyWallet EOAWallet = KeyWallet.create();
+        _startRewardIssue(EOAWallet, BigInteger.valueOf(4), false);
+        _startRewardIssue(governorWallet, BigInteger.valueOf(4), true);
+        LOG.infoExiting();
+    }
+
+    @Test
+    public void reportPlanetWorkTest() throws Exception {
+        LOG.infoEntering("reportPlanetWorkTest");
+        KeyWallet planetManagerWallet = KeyWallet.create();
+        KeyWallet planetWallet = KeyWallet.create();
+        KeyWallet EOAWallet = KeyWallet.create();
+
+        _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
         _checkAndMintPlanetNFT(planetWallet.getAddress());
-        BigInteger planetId = _tokenIdsOf(planetWallet.getAddress());
-        _startRewardIssue();
-        _getRewardInfo(planetId);
-//        _reportPlanetWork(governorWallet, planetId, false);
+        BigInteger planetId = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
+
+        _reportPlanetWork(EOAWallet, planetId, false);
+        _reportPlanetWork(planetManagerWallet, BigInteger.valueOf(-1), false);
         _reportPlanetWork(planetManagerWallet, planetId, true);
-//        LOG.info("cur Height" + _getHeight());
-        LOG.info("waiting 11 sec....");
-        Thread.sleep(11000);
-//        LOG.info("cur Height" + _getHeight());
+        LOG.infoExiting();
+    }
+
+    public void _waitUtil(BigInteger height) throws Exception {
+        var now = _getHeight();
+        while (now.compareTo(height) < 0) {
+            LOG.info("..");
+            Thread.sleep(1500);
+            now = _getHeight();
+        }
+    }
+    @Test
+    public void claimPlanetRewardTest() throws Exception {
+        LOG.infoEntering("claimPlanetRewardTest");
+        KeyWallet planetManagerWallet = KeyWallet.create();
+        KeyWallet planetWallet = KeyWallet.create();
+
+        BigInteger rewardAdd = BigInteger.valueOf(4);
+
+        _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
+        _checkAndMintPlanetNFT(planetWallet.getAddress());
+        BigInteger planetId = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
+        BigInteger waitHeight = _startRewardIssue(governorWallet, rewardAdd, true);
         _getRewardInfo(planetId);
         _reportPlanetWork(planetManagerWallet, planetId, true);
-////        _reportPlanetWork(planetManagerWallet, planetId, false);
+
+        _waitUtil(waitHeight);
+
         _getRewardInfo(planetId);
         _checkAndClaimPlanetReward(planetWallet, planetId, true);
+
         LOG.infoExiting();
     }
 }
