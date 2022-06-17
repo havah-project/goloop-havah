@@ -106,12 +106,6 @@ func (s *State) GetIssueReductionRate() *big.Rat {
 	return hvhmodule.BigRatIssueReductionRate
 }
 
-// getIssueAmount returns the amount of coins which are issued during one term
-func (s *State) getIssueAmount() *big.Int {
-	return s.GetBigIntOrDefault(
-		hvhmodule.VarIssueAmount, hvhmodule.BigIntInitIssueAmount)
-}
-
 func (s *State) GetIssueAmount(height int64) *big.Int {
 	is := s.GetIssueStart()
 	if !IsIssueStarted(height, is) {
