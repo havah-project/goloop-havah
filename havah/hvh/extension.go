@@ -141,52 +141,9 @@ func (es *ExtensionStateImpl) ClearCache() {
 }
 
 func (es *ExtensionStateImpl) InitPlatformConfig(cfg *PlatformConfig) error {
-	var err error
-
-	if cfg.TermPeriod != nil {
-		if err = es.state.SetInt64(hvhmodule.VarTermPeriod, cfg.TermPeriod.Value); err != nil {
-			return err
-		}
+	if err := es.state.InitState(&cfg.StateConfig); err != nil {
+		return err
 	}
-	if cfg.IssueReductionCycle != nil {
-		if err = es.state.SetInt64(hvhmodule.VarIssueReductionCycle, cfg.IssueReductionCycle.Value); err != nil {
-			return err
-		}
-	}
-	if cfg.PrivateReleaseCycle != nil {
-		if err = es.state.SetInt64(hvhmodule.VarPrivateReleaseCycle, cfg.PrivateReleaseCycle.Value); err != nil {
-			return err
-		}
-	}
-	if cfg.PrivateLockup != nil {
-		if err = es.state.SetInt64(hvhmodule.VarPrivateLockup, cfg.PrivateLockup.Value); err != nil {
-			return err
-		}
-	}
-	if cfg.IssueLimit != nil {
-		if err = es.state.SetInt64(hvhmodule.VarIssueLimit, cfg.IssueLimit.Value); err != nil {
-			return err
-		}
-	}
-
-	if cfg.IssueAmount != nil {
-		if err = es.state.SetBigInt(hvhmodule.VarIssueAmount, cfg.IssueAmount.Value()); err != nil {
-			return err
-		}
-	}
-	if cfg.HooverBudget != nil {
-		if err = es.state.SetBigInt(hvhmodule.VarHooverBudget, cfg.HooverBudget.Value()); err != nil {
-			return err
-		}
-	}
-	if cfg.USDTPrice != nil {
-		if err = es.state.SetBigInt(hvhmodule.VarUSDTPrice, cfg.USDTPrice.Value()); err != nil {
-			return err
-		}
-	} else {
-		return scoreresult.InvalidParameterError.New("USDTPrice not found")
-	}
-
 	return nil
 }
 

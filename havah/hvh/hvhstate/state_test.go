@@ -224,29 +224,29 @@ func TestState_GetBigInt(t *testing.T) {
 		t.Errorf("value is not nil")
 	}
 
-	value := state.GetBigInt(key)
+	value := state.getBigInt(key)
 	if value == nil {
 		t.Errorf("GetBigInt() error")
 	}
 
 	defValue := hvhmodule.BigIntHooverBudget
-	value = state.GetBigIntOrDefault(key, defValue)
+	value = state.getBigIntOrDefault(key, defValue)
 	if value == nil || value.Cmp(defValue) != 0 {
 		t.Errorf("GetBigIntOrDefault() error")
 	}
 
 	newValue := new(big.Int).Add(defValue, big.NewInt(100))
-	err := state.SetBigInt(key, newValue)
+	err := state.setBigInt(key, newValue)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
 
-	value = state.GetBigInt(key)
+	value = state.getBigInt(key)
 	if value == nil || value.Cmp(newValue) != 0 {
 		t.Errorf("GetBigIntOrDefault() error")
 	}
 
-	value = state.GetBigIntOrDefault(key, defValue)
+	value = state.getBigIntOrDefault(key, defValue)
 	if value == nil || value.Cmp(newValue) != 0 {
 		t.Errorf("GetBigIntOrDefault() error")
 	}
@@ -309,13 +309,13 @@ func TestState_GetPlanetReward(t *testing.T) {
 func TestState_IncrementWorkingPlanet(t *testing.T) {
 	state := newDummyState()
 
-	ov := state.GetInt64(hvhmodule.VarWorkingPlanet)
+	ov := state.getInt64(hvhmodule.VarWorkingPlanet)
 	err := state.IncrementWorkingPlanet()
 	if err != nil {
 		t.Errorf("IncrementWorkingPlanet() error")
 	}
 
-	nv := state.GetInt64(hvhmodule.VarWorkingPlanet)
+	nv := state.getInt64(hvhmodule.VarWorkingPlanet)
 	if nv != ov+1 {
 		t.Errorf("IncrementWorkingPlanet() error")
 	}

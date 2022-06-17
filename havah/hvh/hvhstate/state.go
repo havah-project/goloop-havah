@@ -3,6 +3,7 @@ package hvhstate
 import (
 	"math/big"
 
+	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/containerdb"
 	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/log"
@@ -60,18 +61,18 @@ func (s *State) getKeyBuilder(key string) containerdb.KeyBuilder {
 }
 
 func (s *State) GetUSDTPrice() *big.Int {
-	return s.GetBigInt(hvhmodule.VarUSDTPrice)
+	return s.getBigInt(hvhmodule.VarUSDTPrice)
 }
 
 func (s *State) SetUSDTPrice(price *big.Int) error {
 	if price == nil || price.Sign() < 0 {
 		return scoreresult.RevertedError.New("Invalid USDTPrice")
 	}
-	return s.SetBigInt(hvhmodule.VarUSDTPrice, price)
+	return s.setBigInt(hvhmodule.VarUSDTPrice, price)
 }
 
 func (s *State) GetActiveUSDTPrice() *big.Int {
-	return s.GetBigInt(hvhmodule.VarActiveUSDTPrice)
+	return s.getBigInt(hvhmodule.VarActiveUSDTPrice)
 }
 
 func IsIssueStarted(height, issueStart int64) bool {
@@ -79,7 +80,7 @@ func IsIssueStarted(height, issueStart int64) bool {
 }
 
 func (s *State) GetIssueStart() int64 {
-	return s.GetInt64(hvhmodule.VarIssueStart)
+	return s.getInt64(hvhmodule.VarIssueStart)
 }
 
 // SetIssueStart writes the issue start height to varDB in ExtensionState
@@ -94,11 +95,11 @@ func (s *State) SetIssueStart(curBH, startBH int64) error {
 }
 
 func (s *State) GetTermPeriod() int64 {
-	return s.GetInt64OrDefault(hvhmodule.VarTermPeriod, hvhmodule.TermPeriod)
+	return s.getInt64OrDefault(hvhmodule.VarTermPeriod, hvhmodule.TermPeriod)
 }
 
 func (s *State) GetIssueReductionCycle() int64 {
-	return s.GetInt64OrDefault(hvhmodule.VarIssueReductionCycle, hvhmodule.ReductionCycle)
+	return s.getInt64OrDefault(hvhmodule.VarIssueReductionCycle, hvhmodule.ReductionCycle)
 }
 
 func (s *State) GetIssueReductionRate() *big.Rat {
@@ -126,7 +127,7 @@ func (s *State) GetIssueAmount(height int64) *big.Int {
 }
 
 func (s *State) GetIssueAmountByTS(termSeq int64) (*big.Int, bool) {
-	issue := s.GetBigIntOrDefault(hvhmodule.VarIssueAmount, hvhmodule.BigIntInitIssueAmount)
+	issue := s.getBigIntOrDefault(hvhmodule.VarIssueAmount, hvhmodule.BigIntInitIssueAmount)
 	reductionCycle := s.GetIssueReductionCycle()
 	if termSeq > 0 && termSeq%reductionCycle == 0 {
 		reductionRate := s.GetIssueReductionRate()
@@ -141,11 +142,11 @@ func (s *State) GetIssueAmountByTS(termSeq int64) (*big.Int, bool) {
 }
 
 func (s *State) SetIssueAmount(value *big.Int) error {
-	return s.SetBigInt(hvhmodule.VarIssueAmount, value)
+	return s.setBigInt(hvhmodule.VarIssueAmount, value)
 }
 
 func (s *State) GetHooverBudget() *big.Int {
-	return s.GetBigIntOrDefault(
+	return s.getBigIntOrDefault(
 		hvhmodule.VarHooverBudget, hvhmodule.BigIntHooverBudget)
 }
 
@@ -289,7 +290,7 @@ func (s *State) setPlanet(dictDB *containerdb.DictDB, id int64, p *Planet) error
 	return dictDB.Set(id, p.Bytes())
 }
 
-func (s *State) GetBigInt(key string) *big.Int {
+func (s *State) getBigInt(key string) *big.Int {
 	value := s.getVarDB(key).BigInt()
 	if value == nil {
 		return hvhmodule.BigIntZero
@@ -297,7 +298,7 @@ func (s *State) GetBigInt(key string) *big.Int {
 	return value
 }
 
-func (s *State) GetBigIntOrDefault(key string, defValue *big.Int) *big.Int {
+func (s *State) getBigIntOrDefault(key string, defValue *big.Int) *big.Int {
 	value := s.getVarDB(key).BigInt()
 	if value == nil {
 		return defValue
@@ -305,18 +306,18 @@ func (s *State) GetBigIntOrDefault(key string, defValue *big.Int) *big.Int {
 	return value
 }
 
-func (s *State) SetBigInt(key string, value *big.Int) error {
+func (s *State) setBigInt(key string, value *big.Int) error {
 	if value == nil {
 		return scoreresult.New(hvhmodule.StatusIllegalArgument, "Invalid value")
 	}
 	return s.getVarDB(key).Set(value)
 }
 
-func (s *State) GetInt64(key string) int64 {
+func (s *State) getInt64(key string) int64 {
 	return s.getVarDB(key).Int64()
 }
 
-func (s *State) GetInt64OrDefault(key string, defValue int64) int64 {
+func (s *State) getInt64OrDefault(key string, defValue int64) int64 {
 	value := s.getVarDB(key).Int64()
 	if value <= 0 {
 		return defValue
@@ -324,7 +325,7 @@ func (s *State) GetInt64OrDefault(key string, defValue int64) int64 {
 	return value
 }
 
-func (s *State) SetInt64(key string, value int64) error {
+func (s *State) setInt64(key string, value int64) error {
 	return s.getVarDB(key).Set(value)
 }
 
@@ -395,14 +396,14 @@ func (s *State) setPlanetReward(id int64, pr *planetReward) error {
 }
 
 func (s *State) ClaimEcoSystemReward() (*big.Int, error) {
-	reward := s.GetBigInt(hvhmodule.VarEcoReward)
+	reward := s.getBigInt(hvhmodule.VarEcoReward)
 	if reward == nil || reward.Sign() < 0 {
 		return nil, scoreresult.Errorf(
 			hvhmodule.StatusCriticalError, "Invalid EcoSystem reward: %v", reward)
 	}
 
 	if reward.Sign() > 0 {
-		if err := s.SetBigInt(hvhmodule.VarEcoReward, hvhmodule.BigIntZero); err != nil {
+		if err := s.setBigInt(hvhmodule.VarEcoReward, hvhmodule.BigIntZero); err != nil {
 			return nil, err
 		}
 	}
@@ -454,7 +455,7 @@ func (s *State) calcClaimableReward(height int64, p *Planet, pr *planetReward) (
 	}
 
 	termPeriod := s.GetTermPeriod()
-	privateLockupTerm := s.GetInt64OrDefault(
+	privateLockupTerm := s.getInt64OrDefault(
 		hvhmodule.VarPrivateLockup, hvhmodule.PrivateLockup)
 
 	// All rewards have been locked
@@ -480,11 +481,11 @@ func (s *State) calcClaimableReward(height int64, p *Planet, pr *planetReward) (
 }
 
 func (s *State) ClaimMissedReward() (*big.Int, error) {
-	activePlanet := s.GetBigInt(hvhmodule.VarActivePlanet)
-	workingPlanet := s.GetBigInt(hvhmodule.VarWorkingPlanet)
+	activePlanet := s.getBigInt(hvhmodule.VarActivePlanet)
+	workingPlanet := s.getBigInt(hvhmodule.VarWorkingPlanet)
 	missedPlanet := new(big.Int).Sub(activePlanet, workingPlanet)
 
-	rewardTotal := s.GetBigInt(hvhmodule.VarRewardTotal)
+	rewardTotal := s.getBigInt(hvhmodule.VarRewardTotal)
 	missedReward := rewardTotal
 
 	if activePlanet.Sign() > 0 {
@@ -492,7 +493,7 @@ func (s *State) ClaimMissedReward() (*big.Int, error) {
 		missedReward = missedReward.Mul(missedReward, missedPlanet)
 	}
 
-	rewardRemain := s.GetBigInt(hvhmodule.VarRewardRemain)
+	rewardRemain := s.getBigInt(hvhmodule.VarRewardRemain)
 	rewardRemain = new(big.Int).Sub(rewardRemain, missedReward)
 	if rewardRemain.Sign() < 0 {
 		return nil, errors.InvalidStateError.Errorf(
@@ -500,7 +501,7 @@ func (s *State) ClaimMissedReward() (*big.Int, error) {
 			rewardRemain, missedReward)
 	}
 
-	if err := s.SetBigInt(hvhmodule.VarRewardRemain, rewardRemain); err != nil {
+	if err := s.setBigInt(hvhmodule.VarRewardRemain, rewardRemain); err != nil {
 		return nil, err
 	}
 	return missedReward, nil
@@ -508,13 +509,13 @@ func (s *State) ClaimMissedReward() (*big.Int, error) {
 
 func (s *State) OnTermEnd() error {
 	s.logger.Debugf("OnTermEnd() start")
-	if err := s.SetInt64(hvhmodule.VarWorkingPlanet, 0); err != nil {
+	if err := s.setInt64(hvhmodule.VarWorkingPlanet, 0); err != nil {
 		return err
 	}
-	if err := s.SetInt64(hvhmodule.VarActivePlanet, 0); err != nil {
+	if err := s.setInt64(hvhmodule.VarActivePlanet, 0); err != nil {
 		return err
 	}
-	if err := s.SetBigInt(hvhmodule.VarActiveUSDTPrice, hvhmodule.BigIntZero); err != nil {
+	if err := s.setBigInt(hvhmodule.VarActiveUSDTPrice, hvhmodule.BigIntZero); err != nil {
 		return err
 	}
 	s.logger.Debugf("OnTermEnd() end")
@@ -523,20 +524,20 @@ func (s *State) OnTermEnd() error {
 
 func (s *State) OnTermStart(issueAmount *big.Int) error {
 	s.logger.Debugf("OnTermStart() start: issue=%s", issueAmount)
-	allPlanet := s.GetInt64(hvhmodule.VarAllPlanet)
+	allPlanet := s.getInt64(hvhmodule.VarAllPlanet)
 	usdtPrice := s.GetUSDTPrice()
 
-	if err := s.SetInt64(hvhmodule.VarActivePlanet, allPlanet); err != nil {
+	if err := s.setInt64(hvhmodule.VarActivePlanet, allPlanet); err != nil {
 		return err
 	}
-	if err := s.SetBigInt(hvhmodule.VarActiveUSDTPrice, usdtPrice); err != nil {
+	if err := s.setBigInt(hvhmodule.VarActiveUSDTPrice, usdtPrice); err != nil {
 		return err
 	}
-	rewardRemain := new(big.Int).Add(s.GetBigInt(hvhmodule.VarRewardRemain), issueAmount)
-	if err := s.SetBigInt(hvhmodule.VarRewardRemain, rewardRemain); err != nil {
+	rewardRemain := new(big.Int).Add(s.getBigInt(hvhmodule.VarRewardRemain), issueAmount)
+	if err := s.setBigInt(hvhmodule.VarRewardRemain, rewardRemain); err != nil {
 		return err
 	}
-	if err := s.SetBigInt(hvhmodule.VarRewardTotal, rewardRemain); err != nil {
+	if err := s.setBigInt(hvhmodule.VarRewardTotal, rewardRemain); err != nil {
 		return err
 	}
 
@@ -548,7 +549,7 @@ func (s *State) OnTermStart(issueAmount *big.Int) error {
 }
 
 func (s *State) GetIssueLimit() int64 {
-	return s.GetInt64OrDefault(hvhmodule.VarIssueLimit, hvhmodule.IssueLimit)
+	return s.getInt64OrDefault(hvhmodule.VarIssueLimit, hvhmodule.IssueLimit)
 }
 
 func (s *State) GetRewardInfo(height, id int64) (map[string]interface{}, error) {
@@ -576,9 +577,72 @@ func (s *State) GetRewardInfo(height, id int64) (map[string]interface{}, error) 
 
 func (s *State) GetActivePlanetReward() *big.Int {
 	return new(big.Int).Div(
-		s.GetBigInt(hvhmodule.VarRewardTotal),
-		s.GetBigInt(hvhmodule.VarActivePlanet),
+		s.getBigInt(hvhmodule.VarRewardTotal),
+		s.getBigInt(hvhmodule.VarActivePlanet),
 	)
+}
+
+type StateConfig struct {
+	TermPeriod          *common.HexInt64 `json:"termPeriod,omitempty"`          // 43200 in block
+	IssueReductionCycle *common.HexInt64 `json:"reductionCycle,omitempty"`      // 360 in term
+	PrivateReleaseCycle *common.HexInt64 `json:"privateReleaseCycle,omitempty"` // 30 in term (1 month)
+	PrivateLockup       *common.HexInt64 `json:"privateLockup,omitempty"`       // 360 in term
+	IssueLimit          *common.HexInt64 `json:"issueLimit,omitempty"`
+
+	IssueAmount  *common.HexInt `json:"issueAmount,omitempty"`  // 5M in HVH
+	HooverBudget *common.HexInt `json:"hooverBudget,omitempty"` // unit: HVH
+	USDTPrice    *common.HexInt `json:"usdtPrice"`              // unit: HVH
+}
+
+
+func (s *State) InitState(cfg *StateConfig) error {
+	var err error
+
+	if cfg.TermPeriod != nil {
+		if err = s.setInt64(hvhmodule.VarTermPeriod, cfg.TermPeriod.Value); err != nil {
+			return err
+		}
+	}
+	if cfg.IssueReductionCycle != nil {
+		if err = s.setInt64(hvhmodule.VarIssueReductionCycle, cfg.IssueReductionCycle.Value); err != nil {
+			return err
+		}
+	}
+	if cfg.PrivateReleaseCycle != nil {
+		if err = s.setInt64(hvhmodule.VarPrivateReleaseCycle, cfg.PrivateReleaseCycle.Value); err != nil {
+			return err
+		}
+	}
+	if cfg.PrivateLockup != nil {
+		if err = s.setInt64(hvhmodule.VarPrivateLockup, cfg.PrivateLockup.Value); err != nil {
+			return err
+		}
+	}
+	if cfg.IssueLimit != nil {
+		if err = s.setInt64(hvhmodule.VarIssueLimit, cfg.IssueLimit.Value); err != nil {
+			return err
+		}
+	}
+
+	if cfg.IssueAmount != nil {
+		if err = s.setBigInt(hvhmodule.VarIssueAmount, cfg.IssueAmount.Value()); err != nil {
+			return err
+		}
+	}
+	if cfg.HooverBudget != nil {
+		if err = s.setBigInt(hvhmodule.VarHooverBudget, cfg.HooverBudget.Value()); err != nil {
+			return err
+		}
+	}
+	if cfg.USDTPrice != nil {
+		if err = s.setBigInt(hvhmodule.VarUSDTPrice, cfg.USDTPrice.Value()); err != nil {
+			return err
+		}
+	} else {
+		return scoreresult.InvalidParameterError.New("USDTPrice not found")
+	}
+
+	return nil
 }
 
 func validatePlanetId(id int64) error {
