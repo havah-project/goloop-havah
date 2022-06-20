@@ -73,6 +73,8 @@
         "platform": "havah",
         "havah": {
             "termPeriod": "0x4",
+            "privateLockup": "0x8",
+            "privateReleaseCycle": "0x4",
             "usdtPrice": "0x10"
         },
         "validators": [
