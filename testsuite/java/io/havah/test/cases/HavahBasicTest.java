@@ -87,14 +87,14 @@ public class HavahBasicTest extends TestBase {
         assertEquals(success ? 1 : 0, result.getStatus().intValue(), "failure result(" + result + ")");
     }
 
-    public void _checkAndMintPlanetNFT(Address to) throws Exception {
+    public void _checkAndMintPlanetNFT(Address to, int type) throws Exception {
         LOG.infoEntering("_checkAndMintPlanetNFT", "mint public PlanetNFT");
         var oldBalance = planetNFTScore.balanceOf(to).intValue();
         var oldTotalSupply = planetNFTScore.totalSupply().intValue();
         LOG.info("PlanetNFT Balance : " + oldBalance);
         LOG.info("PlanetNFT totalSupply : " + oldTotalSupply);
 
-        _mintPlanetNFT(governorWallet, to, 2, true);
+        _mintPlanetNFT(governorWallet, to, type, true);
 
         // compare nft balance
         var balance = planetNFTScore.balanceOf(to).intValue();
@@ -181,7 +181,8 @@ public class HavahBasicTest extends TestBase {
         LOG.infoExiting();
     }
 
-    public void _getRewardInfo(BigInteger planetId) throws Exception {
+    public int _getRewardInfo(BigInteger planetId) throws Exception {
+        int claimable = 0;
         LOG.infoEntering("_getRewardInfo", "planetId : " + planetId);
         try {
             RpcObject obj = chainScore.getRewardInfo(planetId);
@@ -189,11 +190,25 @@ public class HavahBasicTest extends TestBase {
             LOG.info("remain : " + obj.getItem("remain").asInteger());
             LOG.info("claimable : " + obj.getItem("claimable").asInteger());
             LOG.info("height : " + obj.getItem("height").asInteger());
+            claimable = obj.getItem("claimable").asInteger().intValue();
         } catch (RpcError e) {
             assertEquals(Constants.RPC_ERROR_INVALID_ID, e.getCode());
             LOG.info("Expected RpcError: code=" + e.getCode() + ", msg=" + e.getMessage());
         }
         LOG.infoExiting();
+        return claimable;
+    }
+
+    public int _getClaimable(BigInteger planetId) throws Exception {
+        int ret = 0;
+        try {
+            RpcObject obj = chainScore.getRewardInfo(planetId);
+            ret = obj.getItem("claimable").asInteger().intValue();
+        } catch (RpcError e) {
+            assertEquals(Constants.RPC_ERROR_INVALID_ID, e.getCode());
+            LOG.info("Expected RpcError: code=" + e.getCode() + ", msg=" + e.getMessage());
+        }
+        return ret;
     }
 
     public void _waitUtil(BigInteger height) throws Exception {
@@ -206,8 +221,21 @@ public class HavahBasicTest extends TestBase {
     }
 
     public BigInteger _getTermPeriod() throws IOException {
+        // termPeriod : 주기당 블록 수 (Blocks) 기본 : 43200 (하루)
         RpcObject obj = chainScore.getIssueInfo();
         return obj.getItem("termPeriod").asInteger();
+    }
+
+    public BigInteger _getPrivateLockup() throws IOException {
+        // privateLockup : 초기판매 보상 잠금기간 (텀단위) 기본 : 360 (1년)
+        RpcObject obj = chainScore.getIssueInfo();
+        return obj.getItem("privateLockup").asInteger();
+    }
+
+    public BigInteger _getPrivateReleaseCycle() throws IOException {
+        // privateReleaseCycle : 초기판매 보상 분배주기 (텀단위) 기본 : 30 (1달)
+        RpcObject obj = chainScore.getIssueInfo();
+        return obj.getItem("privateReleaseCycle").asInteger();
     }
 
     @Test
@@ -228,7 +256,7 @@ public class HavahBasicTest extends TestBase {
         KeyWallet planetManagerWallet = KeyWallet.create();
         KeyWallet planetWallet = KeyWallet.create();
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress());
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), 2);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
         _getPlanetInfo(planetIds.get(0));
         _getPlanetInfo(BigInteger.valueOf(-1));
@@ -250,7 +278,7 @@ public class HavahBasicTest extends TestBase {
         KeyWallet planetManagerWallet = KeyWallet.create();
         KeyWallet planetWallet = KeyWallet.create();
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress());
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), 2);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
         _getRewardInfo(planetIds.get(0));
         _getRewardInfo(BigInteger.valueOf(-1));
@@ -286,7 +314,7 @@ public class HavahBasicTest extends TestBase {
         BigInteger termPeriod = _getTermPeriod();
 
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress());
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), 2);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
 
         _startRewardIssue(governorWallet, termPeriod.multiply(BigInteger.TEN), true);
@@ -303,14 +331,14 @@ public class HavahBasicTest extends TestBase {
 
     @Test
     @Order(7)
-    public void claimPlanetRewardTest() throws Exception {
-        LOG.infoEntering("claimPlanetRewardTest");
+    public void claimPublicPlanetRewardTest() throws Exception {
+        LOG.infoEntering("claimPublicPlanetRewardTest");
         KeyWallet planetManagerWallet = KeyWallet.create();
         KeyWallet planetWallet = KeyWallet.create();
         BigInteger termPeriod = _getTermPeriod();
 
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress());
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), 2);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
 
         BigInteger reward = _startRewardIssue(governorWallet, termPeriod, true);
@@ -320,7 +348,7 @@ public class HavahBasicTest extends TestBase {
         _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true);
 
         // mint second planet nft
-        _checkAndMintPlanetNFT(planetWallet.getAddress());
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), 2);
         planetIds = _tokenIdsOf(planetWallet.getAddress(), 2, BigInteger.TWO);
 
         _waitUtil(_getHeight().add(termPeriod));
@@ -331,6 +359,42 @@ public class HavahBasicTest extends TestBase {
         _getRewardInfo(planetIds.get(0));
         _getRewardInfo(planetIds.get(1));
         _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0), planetIds.get(1)}, true);
+
+        LOG.infoExiting();
+    }
+
+    @Test
+    @Order(8)
+    public void claimPrivatePlanetRewardTest() throws Exception {
+        LOG.infoEntering("claimPrivatePlanetRewardTest");
+        KeyWallet planetManagerWallet = KeyWallet.create();
+        KeyWallet planetWallet = KeyWallet.create();
+        BigInteger termPeriod = _getTermPeriod();
+//        int privateLockup = _getPrivateLockup().intValue();
+//        int privateReleaseCycle = _getPrivateReleaseCycle().intValue();
+        int privateLockup = 8;
+        BigInteger privateReleaseCycle = BigInteger.valueOf(4);
+        LOG.info("termPeriod : " + termPeriod);
+        LOG.info("privateLockup : " + privateLockup);
+        LOG.info("privateReleaseCycle : " + privateReleaseCycle);
+
+        _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), 1);
+        List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
+
+        BigInteger rewardHeight = _startRewardIssue(governorWallet, termPeriod, true);
+        _waitUtil(rewardHeight);
+
+        int count = 24; // 임시값
+        for(int i = 0; i < count; i++) {
+            BigInteger curHeight = _getHeight();
+            LOG.info("term : " + curHeight.subtract(rewardHeight).divide(termPeriod));
+            _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
+            if(_getRewardInfo(planetIds.get(0)) > 0) {
+                _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true);
+            }
+            _waitUtil(curHeight.add(termPeriod));
+        }
 
         LOG.infoExiting();
     }

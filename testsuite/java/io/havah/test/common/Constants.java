@@ -9,10 +9,17 @@ public class Constants extends foundation.icon.test.common.Constants {
             = new Address("cx0000000000000000000000000000000000000000");
     public static final Address GOV_ADDRESS
             = new Address("cx0000000000000000000000000000000000000001");
+
     public static final Address TREASURY_ADDRESS
             = new Address("hx1000000000000000000000000000000000000000");
     public static final Address PLANETNFT_ADDRESS
             = new Address("cx8000000000000000000000000000000000000000");
+
+    public static final Address ECOSYSTEM_ADDRESS
+            = new Address("cx7000000000000000000000000000000000000000");
+
+    public static final Address SUSTAINABLEFUND_ADDRESS
+            = new Address("cx4000000000000000000000000000000000000000");
 
     public static final int RPC_ERROR_INVALID_ID = -30032;
 }
