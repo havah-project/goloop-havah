@@ -459,11 +459,13 @@ func (s *State) calcClaimableReward(height int64, p *Planet, pr *planetReward) (
 	}
 
 	releaseCycle := (lockupTerm-privateLockupTerm)/hvhmodule.DayPerMonth + 1
+	maxPrivateReleaseCycle := s.getInt64OrDefault(
+		hvhmodule.VarPrivateReleaseCycle, hvhmodule.MaxPrivateReleaseCycle)
 
-	if releaseCycle < hvhmodule.MaxPrivateReleaseCycle {
-		lockedReward := big.NewInt(hvhmodule.MaxPrivateReleaseCycle - releaseCycle)
+	if releaseCycle < maxPrivateReleaseCycle {
+		lockedReward := big.NewInt(maxPrivateReleaseCycle - releaseCycle)
 		lockedReward.Mul(lockedReward, pr.Total())
-		lockedReward.Div(lockedReward, big.NewInt(hvhmodule.MaxPrivateReleaseCycle))
+		lockedReward.Div(lockedReward, big.NewInt(maxPrivateReleaseCycle))
 
 		claimableReward.Sub(claimableReward, lockedReward)
 		if claimableReward.Sign() < 0 {
@@ -587,7 +589,6 @@ type StateConfig struct {
 	HooverBudget *common.HexInt `json:"hooverBudget,omitempty"` // unit: HVH
 	USDTPrice    *common.HexInt `json:"usdtPrice"`              // unit: HVH
 }
-
 
 func (s *State) InitState(cfg *StateConfig) error {
 	var err error
