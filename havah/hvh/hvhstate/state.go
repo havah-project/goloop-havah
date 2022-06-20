@@ -637,6 +637,22 @@ func (s *State) InitState(cfg *StateConfig) error {
 		return scoreresult.InvalidParameterError.New("USDTPrice not found")
 	}
 
+	s.logger.Infof("Initial platform configuration\n"+
+		"TermPeriod: %d\n"+
+		"IssueReductionCycle: %d\n"+
+		"MaxPrivateReleaseCycle: %d\n"+
+		"PrivateLockup: %d\n"+
+		"IssueAmount: %d\n"+
+		"HooverBudget: %d\n"+
+		"USDTPrice: %d\n",
+		s.GetTermPeriod(),
+		s.GetIssueReductionCycle(),
+		s.getInt64OrDefault(hvhmodule.VarPrivateReleaseCycle, hvhmodule.MaxPrivateReleaseCycle),
+		s.getInt64OrDefault(hvhmodule.VarPrivateLockup, hvhmodule.PrivateLockup),
+		s.getBigIntOrDefault(hvhmodule.VarIssueAmount, hvhmodule.BigIntInitIssueAmount),
+		s.GetHooverBudget(),
+		s.GetUSDTPrice())
+
 	return nil
 }
 
