@@ -467,7 +467,7 @@ func (s *State) calcClaimableReward(height int64, p *Planet, pr *planetReward) (
 		lockedReward.Mul(lockedReward, pr.Total())
 		lockedReward.Div(lockedReward, big.NewInt(maxPrivateReleaseCycle))
 
-		claimableReward.Sub(claimableReward, lockedReward)
+		claimableReward = new(big.Int).Sub(claimableReward, lockedReward)
 		if claimableReward.Sign() < 0 {
 			claimableReward.SetInt64(0)
 		}
