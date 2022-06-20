@@ -499,15 +499,13 @@ func (s *chainScore) initPlatformConfig(cfg *hvh.PlatformConfig) error {
 	// Initialize ExtensionState
 	s.cc.GetExtensionState().Reset(hvh.NewExtensionSnapshot(s.cc.Database(), nil))
 
-	esi, err := s.getExtensionState()
+	es, err := s.getExtensionState()
 	if err != nil {
 		return err
 	}
-	if err = esi.InitPlatformConfig(cfg); err != nil {
+	if err = es.InitPlatformConfig(cfg); err != nil {
 		return err
 	}
-	esi.SetLogger(hvhutils.NewLogger(s.cc.Logger()))
-
 	return nil
 }
 
