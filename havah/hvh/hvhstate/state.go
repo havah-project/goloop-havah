@@ -580,7 +580,7 @@ func (s *State) GetActivePlanetReward() *big.Int {
 
 type StateConfig struct {
 	TermPeriod          *common.HexInt64 `json:"termPeriod,omitempty"`          // 43200 in block
-	IssueReductionCycle *common.HexInt64 `json:"reductionCycle,omitempty"`      // 360 in term
+	IssueReductionCycle *common.HexInt64 `json:"issueReductionCycle,omitempty"` // 360 in term
 	PrivateReleaseCycle *common.HexInt64 `json:"privateReleaseCycle,omitempty"` // 30 in term (1 month)
 	PrivateLockup       *common.HexInt64 `json:"privateLockup,omitempty"`       // 360 in term
 	IssueLimit          *common.HexInt64 `json:"issueLimit,omitempty"`
