@@ -38,6 +38,10 @@ public class HavahBasicTest extends TestBase {
     private static KeyWallet governorWallet;
     private static PlanetNFTScore planetNFTScore;
 
+    private static final int PLANETTYPE_PULBIC = 2;
+    private static final int PLANETTYPE_PRIVATE = 1;
+    private static final int PLANETTYPE_COMPANY = 4;
+
     @BeforeAll
     public static void setup() throws Exception {
         Env.Node node = Env.nodes[0];
@@ -88,7 +92,7 @@ public class HavahBasicTest extends TestBase {
     }
 
     public void _checkAndMintPlanetNFT(Address to, int type) throws Exception {
-        LOG.infoEntering("_checkAndMintPlanetNFT", "mint public PlanetNFT");
+        LOG.infoEntering("_checkAndMintPlanetNFT", "mint PlanetNFT type : " + type);
         var oldBalance = planetNFTScore.balanceOf(to).intValue();
         var oldTotalSupply = planetNFTScore.totalSupply().intValue();
         LOG.info("PlanetNFT Balance : " + oldBalance);
@@ -256,7 +260,7 @@ public class HavahBasicTest extends TestBase {
         KeyWallet planetManagerWallet = KeyWallet.create();
         KeyWallet planetWallet = KeyWallet.create();
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), 2);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PULBIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
         _getPlanetInfo(planetIds.get(0));
         _getPlanetInfo(BigInteger.valueOf(-1));
@@ -278,7 +282,7 @@ public class HavahBasicTest extends TestBase {
         KeyWallet planetManagerWallet = KeyWallet.create();
         KeyWallet planetWallet = KeyWallet.create();
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), 2);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PULBIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
         _getRewardInfo(planetIds.get(0));
         _getRewardInfo(BigInteger.valueOf(-1));
@@ -314,7 +318,7 @@ public class HavahBasicTest extends TestBase {
         BigInteger termPeriod = _getTermPeriod();
 
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), 2);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PULBIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
 
         _startRewardIssue(governorWallet, termPeriod.multiply(BigInteger.TEN), true);
@@ -338,7 +342,7 @@ public class HavahBasicTest extends TestBase {
         BigInteger termPeriod = _getTermPeriod();
 
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), 2);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PULBIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
 
         BigInteger reward = _startRewardIssue(governorWallet, termPeriod, true);
@@ -348,7 +352,7 @@ public class HavahBasicTest extends TestBase {
         _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true);
 
         // mint second planet nft
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), 2);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PULBIC);
         planetIds = _tokenIdsOf(planetWallet.getAddress(), 2, BigInteger.TWO);
 
         _waitUtil(_getHeight().add(termPeriod));
@@ -379,7 +383,7 @@ public class HavahBasicTest extends TestBase {
         LOG.info("privateReleaseCycle : " + privateReleaseCycle);
 
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), 1);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PRIVATE);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
 
         BigInteger rewardHeight = _startRewardIssue(governorWallet, termPeriod, true);
@@ -395,6 +399,38 @@ public class HavahBasicTest extends TestBase {
             }
             _waitUtil(curHeight.add(termPeriod));
         }
+
+        LOG.infoExiting();
+    }
+
+    @Test
+    @Order(9)
+    public void claimCompanyPlanetRewardTest() throws Exception {
+        LOG.infoEntering("claimPrivatePlanetRewardTest");
+        KeyWallet planetManagerWallet = KeyWallet.create();
+        KeyWallet planetWallet = KeyWallet.create();
+        BigInteger termPeriod = _getTermPeriod();
+        LOG.info("termPeriod : " + termPeriod);
+
+        _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_COMPANY);
+        List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
+
+        BigInteger rewardHeight = _startRewardIssue(governorWallet, termPeriod, true);
+        _waitUtil(rewardHeight);
+
+        LOG.info("ecosystem balance (before report) : " + txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS));
+        LOG.info("sustainable fund balance (before report) : " + txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS));
+        _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
+        LOG.info("ecosystem balance (after report) : " + txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS));
+        LOG.info("sustainable fund balance (after report) : " + txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS));
+        _getRewardInfo(planetIds.get(0));
+        LOG.info("ecosystem balance (before claim) : " + txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS));
+        LOG.info("sustainable fund balance (before claim) : " + txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS));
+        _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true);
+        LOG.info("ecosystem balance (after claim) : " + txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS));
+        LOG.info("sustainable fund balance (after claim) : " + txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS));
+        _getRewardInfo(planetIds.get(0));
 
         LOG.infoExiting();
     }
