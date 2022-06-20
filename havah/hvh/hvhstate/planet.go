@@ -92,6 +92,17 @@ func (p *Planet) equal(p2 *Planet) bool {
 		p.height == p2.height
 }
 
+func (p *Planet) clone() *Planet {
+	return &Planet{
+		p.dirty,
+		p.flags,
+		p.owner,
+		p.usdt,
+		p.price,
+		p.height,
+	}
+}
+
 func (p *Planet) setOwner(owner module.Address) error {
 	if owner == nil {
 		return scoreresult.New(hvhmodule.StatusIllegalArgument, "Invalid owner")

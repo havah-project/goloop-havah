@@ -63,9 +63,9 @@ func (pr *planetReward) equal(other *planetReward) bool {
 
 func (pr *planetReward) clone() *planetReward {
 	return &planetReward{
-		pr.Total(),
-		pr.LastTermNumber(),
-		pr.Current(),
+		pr.total,
+		pr.lastTN,
+		pr.current,
 	}
 }
 
@@ -79,8 +79,8 @@ func (pr *planetReward) increment(tn int64, amount *big.Int) error {
 		return scoreresult.Errorf(
 			hvhmodule.StatusIllegalArgument, "Invalid termNumber: tn=%d lastTN=%d", tn, pr.lastTN)
 	}
-	pr.total = new (big.Int).Add(pr.total, amount)
-	pr.current = new (big.Int).Add(pr.current, amount)
+	pr.total = new(big.Int).Add(pr.total, amount)
+	pr.current = new(big.Int).Add(pr.current, amount)
 	pr.lastTN = tn
 	return nil
 }

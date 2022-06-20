@@ -30,6 +30,46 @@ func checkAllPlanet(t *testing.T, state *State, expected int64) {
 	}
 }
 
+func safeSetBigInt(t *testing.T, state *State, key string, value *big.Int) {
+	var err error
+	orgValue := new(big.Int).Set(value)
+
+	if err = state.setBigInt(key, value); err != nil {
+		t.Errorf(err.Error())
+	}
+	value = state.getBigInt(key)
+	if orgValue.Cmp(value) != 0 {
+		t.Errorf("state.setBigInt() error")
+	}
+}
+
+func deepCopyPlanet(t *testing.T, p *Planet) *Planet {
+	p2 := &Planet{
+		p.dirty,
+		p.flags,
+		p.owner,
+		new(big.Int).Set(p.usdt),
+		new(big.Int).Set(p.price),
+		p.height,
+	}
+	if !p2.equal(p) {
+		t.Errorf("deepCopyPlanet() error")
+	}
+	return p2
+}
+
+func deepCopyPlanetReward(t *testing.T, pr *planetReward) *planetReward {
+	pr2 := &planetReward{
+		new(big.Int).Set(pr.Total()),
+		pr.LastTermNumber(),
+		new(big.Int).Set(pr.Current()),
+	}
+	if !pr2.equal(pr) {
+		t.Errorf("deepCopyPlanetReward() error")
+	}
+	return pr2
+}
+
 func TestState_SetUSDTPrice(t *testing.T) {
 	var price *big.Int
 	state := newDummyState()
@@ -320,3 +360,72 @@ func TestState_IncrementWorkingPlanet(t *testing.T) {
 		t.Errorf("IncrementWorkingPlanet() error")
 	}
 }
+
+func TestState_DecreaseRewardRemain(t *testing.T) {
+	const initRewardRemain = 1_000_000
+	const key = hvhmodule.VarRewardRemain
+	state := newDummyState()
+
+	safeSetBigInt(t, state, key, big.NewInt(initRewardRemain))
+
+	amount := int64(1000)
+	if err := state.DecreaseRewardRemain(big.NewInt(amount)); err != nil {
+		t.Errorf(err.Error())
+	}
+
+	newRewardRemain := state.getBigInt(key)
+	if big.NewInt(initRewardRemain).Cmp(new(big.Int).Add(newRewardRemain, big.NewInt(amount))) != 0 {
+		t.Errorf("DecreaseRewardRemain() error")
+	}
+}
+
+func TestState_calcClaimableReward(t *testing.T) {
+	height := int64(100)
+	owner := common.MustNewAddressFromString("hx12345")
+	usdt := new(big.Int).Mul(big.NewInt(5000), hvhmodule.BigIntUSDTDecimal)   // $5000
+	price := new(big.Int).Mul(big.NewInt(50000), hvhmodule.BigIntCoinDecimal) // 50000 HVH
+	p := newPlanet(false, false, owner, usdt, price, 100)
+	pr := newEmpyPlanetReward()
+	state := newDummyState()
+
+	amount := big.NewInt(1000)
+	if err := pr.increment(1, new(big.Int).Set(amount)); err != nil {
+		t.Errorf("planetReward.increment() error")
+	}
+
+	p2 := deepCopyPlanet(t, p)
+	pr2 := deepCopyPlanetReward(t, pr)
+
+	reward, err := state.calcClaimableReward(height, p, pr)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if reward.Cmp(amount) != 0 {
+		t.Errorf("calcClaimableReward() error")
+	}
+	if !p.equal(p2) {
+		t.Errorf("calcClaimableReward() MUST NOT change the Planet state")
+	}
+	if !pr.equal(pr2) {
+		t.Errorf("calcClaimableReward() MUST NOT change the planetReward state")
+	}
+}
+
+/*
+func TestState_ClaimPlanetReward(t *testing.T) {
+	const id = 1
+	const height = 100
+	planet := newDummyPlanet(height)
+	state := newDummyState()
+
+	planetDictDB := state.getDictDB(hvhmodule.DictPlanet, 1)
+	if err := state.setPlanet(planetDictDB, id, deepCopyPlanet(t, planet)); err != nil {
+		t.Errorf(err.Error())
+	}
+
+	reward, err := state.ClaimPlanetReward(id, 200, planet.Owner())
+	if reward == nil && err != nil {
+
+	}
+}
+*/
