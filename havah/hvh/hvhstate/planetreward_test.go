@@ -23,7 +23,7 @@ func TestPlanetReward_RLPEncodeSelf(t *testing.T) {
 	reward := big.NewInt(1000)
 
 	pr := newEmpyPlanetReward()
-	if err := pr.increment(tn, reward); err != nil {
+	if err := pr.increment(tn, reward, reward); err != nil {
 		t.Errorf(err.Error())
 	}
 
@@ -64,7 +64,7 @@ func TestPlanetReward_Increment(t *testing.T) {
 		total.Add(total, reward)
 		tn++
 
-		if err := pr.increment(tn, reward); err != nil {
+		if err := pr.increment(tn, reward, reward); err != nil {
 			t.Errorf(err.Error())
 		}
 
@@ -84,7 +84,7 @@ func TestPlanetReward_Increment(t *testing.T) {
 
 	// Check for multiple rewards during the same term
 	pr2 := pr.clone()
-	if err := pr.increment(tn, reward); err == nil {
+	if err := pr.increment(tn, reward, nil); err == nil {
 		t.Errorf("Duplicate reportPlanetWork")
 	}
 	if !pr.equal(pr2) {
@@ -98,7 +98,7 @@ func TestPlanetReward_Claim(t *testing.T) {
 	amount := big.NewInt(700)
 
 	pr := newEmpyPlanetReward()
-	if err := pr.increment(tn, reward); err != nil {
+	if err := pr.increment(tn, reward, reward); err != nil {
 		t.Errorf(err.Error())
 	}
 

@@ -347,12 +347,12 @@ func (s *State) DecreaseRewardRemain(amount *big.Int) error {
 	return varDB.Set(rewardRemain)
 }
 
-func (s *State) OfferReward(tn, id int64, pr *planetReward, amount *big.Int) error {
+func (s *State) OfferReward(tn, id int64, pr *planetReward, amount, total *big.Int) error {
 	if pr == nil {
 		return scoreresult.New(
 			hvhmodule.StatusIllegalArgument, "Invalid planetReward")
 	}
-	if err := pr.increment(tn, amount); err != nil {
+	if err := pr.increment(tn, amount, total); err != nil {
 		return err
 	}
 	return s.setPlanetReward(id, pr)

@@ -69,8 +69,8 @@ func (pr *planetReward) clone() *planetReward {
 	}
 }
 
-func (pr *planetReward) increment(tn int64, amount *big.Int) error {
-	if amount == nil || amount.Sign() < 0 {
+func (pr *planetReward) increment(tn int64, amount *big.Int, total *big.Int) error {
+	if amount == nil || amount.Sign() < 0 || total == nil || total.Sign() < 0 {
 		return scoreresult.New(
 			hvhmodule.StatusIllegalArgument, "Invalid amount")
 	}
@@ -79,7 +79,7 @@ func (pr *planetReward) increment(tn int64, amount *big.Int) error {
 		return scoreresult.Errorf(
 			hvhmodule.StatusIllegalArgument, "Invalid termNumber: tn=%d lastTN=%d", tn, pr.lastTN)
 	}
-	pr.total = new(big.Int).Add(pr.total, amount)
+	pr.total = new(big.Int).Add(pr.total, total)
 	pr.current = new(big.Int).Add(pr.current, amount)
 	pr.lastTN = tn
 	return nil

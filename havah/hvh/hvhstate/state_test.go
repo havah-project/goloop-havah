@@ -351,7 +351,7 @@ func TestState_GetPlanetReward(t *testing.T) {
 		t.Errorf("Unexpected PlanetReward")
 	}
 
-	if err = pr.increment(10, reward); err != nil {
+	if err = pr.increment(10, reward, reward); err != nil {
 		t.Errorf(err.Error())
 	}
 	if err = state.setPlanetReward(id, pr); err != nil {
@@ -461,7 +461,7 @@ func TestState_calcClaimableReward(t *testing.T) {
 	state := newDummyState()
 
 	amount := toHVH(1)
-	if err := pr.increment(1, new(big.Int).Set(amount)); err != nil {
+	if err := pr.increment(1, amount, amount); err != nil {
 		t.Errorf("planetReward.increment() error")
 	}
 

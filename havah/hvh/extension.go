@@ -317,7 +317,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 		ecoReward.Div(ecoReward, proportion.Denom())
 		planetReward := new(big.Int).Sub(rewardWithHoover, ecoReward)
 
-		if err = es.state.OfferReward(termNumber, id, pr, planetReward); err != nil {
+		if err = es.state.OfferReward(termNumber, id, pr, planetReward, rewardWithHoover); err != nil {
 			return err
 		}
 		if err = es.state.IncreaseEcoSystemReward(ecoReward); err != nil {
@@ -325,7 +325,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 		}
 	} else {
 		if err = es.state.OfferReward(
-			termNumber, id, pr, rewardWithHoover); err != nil {
+			termNumber, id, pr, rewardWithHoover, rewardWithHoover); err != nil {
 			return err
 		}
 	}
