@@ -11,7 +11,7 @@ import (
 
 const (
 	SigRewardOffered  = "RewardOffered(int,int,int,int)"
-	SigRewardClaimed  = "RewardClaimed(int,Address,int)"
+	SigRewardClaimed  = "RewardClaimed(int,int,Address,int)"
 	SigTermStarted    = "TermStarted(int)"
 	SigICXIssued      = "ICXIssued(int,int,int)"
 	SigHooverRefilled = "HooverRefilled(int,int,int)"
@@ -19,12 +19,12 @@ const (
 
 func onRewardOfferedEvent(
 	cc hvhmodule.CallContext,
-	termSequence, id int64, reward, hoover *big.Int) {
+	termSeq, id int64, reward, hoover *big.Int) {
 	cc.OnEvent(
 		state.SystemAddress,
 		[][]byte{[]byte(SigRewardOffered)},
 		[][]byte{
-			intconv.Int64ToBytes(termSequence),
+			intconv.Int64ToBytes(termSeq),
 			intconv.Int64ToBytes(id),
 			intconv.BigIntToBytes(reward),
 			intconv.BigIntToBytes(hoover),
@@ -33,11 +33,12 @@ func onRewardOfferedEvent(
 }
 
 func onRewardClaimedEvent(
-	cc hvhmodule.CallContext, id int64, owner module.Address, amount *big.Int) {
+	cc hvhmodule.CallContext, termSeq, id int64, owner module.Address, amount *big.Int) {
 	cc.OnEvent(
 		state.SystemAddress,
 		[][]byte{[]byte(SigRewardClaimed)},
 		[][]byte{
+			intconv.Int64ToBytes(termSeq),
 			intconv.Int64ToBytes(id),
 			owner.Bytes(),
 			intconv.BigIntToBytes(amount),

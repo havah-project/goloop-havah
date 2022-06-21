@@ -22,6 +22,7 @@ import (
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/codec"
 	"github.com/icon-project/goloop/common/db"
+	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/log"
 	"github.com/icon-project/goloop/common/merkle"
 	"github.com/icon-project/goloop/havah/hvh/hvhstate"
@@ -380,6 +381,14 @@ func (es *ExtensionStateImpl) ClaimPlanetReward(cc hvhmodule.CallContext, ids []
 			"Too many ids to claim: %d > max(%d)", len(ids), hvhmodule.MaxCountToClaim)
 	}
 
+	issueStart := es.state.GetIssueStart()
+	if !hvhstate.IsIssueStarted(height, issueStart) {
+		return errors.InvalidStateError.Errorf(
+			"IssueDoesntStarted(height=%d,issueStart=%d)", height, issueStart)
+	}
+	termPeriod := es.state.GetTermPeriod()
+	termSeq := (height - issueStart) / termPeriod
+
 	owner := cc.From()
 	for _, id := range ids {
 		reward, err := es.state.ClaimPlanetReward(id, height, owner)
@@ -390,9 +399,9 @@ func (es *ExtensionStateImpl) ClaimPlanetReward(cc hvhmodule.CallContext, ids []
 			if err = cc.Transfer(hvhmodule.PublicTreasury, owner, reward); err != nil {
 				return nil
 			}
-			onRewardClaimedEvent(cc, id, owner, reward)
+			onRewardClaimedEvent(cc, termSeq, id, owner, reward)
+			es.Logger().Debugf("termSeq=%d id=%d owner=%s reward=%s", termSeq, id, owner, reward)
 		}
-		es.Logger().Debugf("id=%d owner=%s reward=%s", id, owner, reward)
 	}
 
 	es.Logger().Debugf("ClaimPlanetReward() end")
