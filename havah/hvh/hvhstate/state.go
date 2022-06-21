@@ -415,11 +415,6 @@ func (s *State) ClaimPlanetReward(id, height int64, owner module.Address) (*big.
 		return nil, scoreresult.AccessDeniedError.Errorf(
 			"NoPermission: id=%d owner=%s from=%s", id, p.Owner(), owner)
 	}
-	if p.IsCompany() {
-		return nil, scoreresult.Errorf(
-			hvhmodule.StatusRewardError,
-			"Claim is not allowed for company Planet")
-	}
 
 	pr, err := s.GetPlanetReward(id)
 	if err != nil {
