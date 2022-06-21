@@ -187,6 +187,9 @@ func TestState_SetIssueStart(t *testing.T) {
 	if height != startBH {
 		t.Errorf("SetIssueStart() is failed")
 	}
+	if state.GetIssueStart() != startBH {
+		t.Errorf("SetIssueStart() is failed")
+	}
 
 	// Failure case: startBH <= 0 || startBH <= curBH
 	curBH = 1000
@@ -358,6 +361,57 @@ func TestState_IncrementWorkingPlanet(t *testing.T) {
 	nv := state.getInt64(hvhmodule.VarWorkingPlanet)
 	if nv != ov+1 {
 		t.Errorf("IncrementWorkingPlanet() error")
+	}
+}
+
+func TestState_InitState(t *testing.T) {
+	state := newDummyState()
+
+	if state.GetTermPeriod() != hvhmodule.TermPeriod {
+		t.Errorf("GetTermPeriod() error")
+	}
+	if state.GetHooverBudget().Cmp(hvhmodule.BigIntHooverBudget) != 0 {
+		t.Errorf("GetHooverBudget() error")
+	}
+	if state.GetIssueReductionCycle() != hvhmodule.IssueReductionCycle {
+		t.Errorf("GetIssueReductionCycle() error")
+	}
+	if state.GetIssueStart() != 0 {
+		t.Errorf("GetIssueStart() error")
+	}
+	if state.GetIssueReductionRate().Cmp(hvhmodule.BigRatIssueReductionRate) != 0 {
+		t.Errorf("GetIssueReductionRate() error")
+	}
+
+	cfg := &StateConfig{}
+	cfg.TermPeriod = &common.HexInt64{Value: 100}
+	cfg.HooverBudget = common.NewHexInt(1_000_000)
+	cfg.IssueReductionCycle = &common.HexInt64{Value: 180}
+	cfg.PrivateLockup = &common.HexInt64{Value: 100}
+	cfg.PrivateReleaseCycle = &common.HexInt64{Value: 12}
+	cfg.USDTPrice = common.NewHexInt(200_000)
+
+	if err := state.InitState(cfg); err != nil {
+		t.Errorf(err.Error())
+	}
+
+	if state.GetTermPeriod() != cfg.TermPeriod.Value {
+		t.Errorf("GetTermPeriod() error")
+	}
+	if state.GetHooverBudget().Cmp(cfg.HooverBudget.Value()) != 0 {
+		t.Errorf("GetHooverBudget() error")
+	}
+	if state.GetIssueReductionCycle() != cfg.IssueReductionCycle.Value {
+		t.Errorf("GetIssueReductionCycle() error")
+	}
+	if state.getInt64(hvhmodule.VarPrivateLockup) != cfg.PrivateLockup.Value {
+		t.Errorf("VarPrivateLockup error")
+	}
+	if state.getInt64(hvhmodule.VarPrivateReleaseCycle) != cfg.PrivateReleaseCycle.Value {
+		t.Errorf("VarPrivateReleaseCycle error")
+	}
+	if state.GetIssueReductionRate().Cmp(hvhmodule.BigRatIssueReductionRate) != 0 {
+		t.Errorf("GetIssueReductionRate() error")
 	}
 }
 

@@ -99,7 +99,7 @@ func (s *State) GetTermPeriod() int64 {
 }
 
 func (s *State) GetIssueReductionCycle() int64 {
-	return s.getInt64OrDefault(hvhmodule.VarIssueReductionCycle, hvhmodule.ReductionCycle)
+	return s.getInt64OrDefault(hvhmodule.VarIssueReductionCycle, hvhmodule.IssueReductionCycle)
 }
 
 func (s *State) GetIssueReductionRate() *big.Rat {
@@ -632,6 +632,14 @@ func (s *State) InitState(cfg *StateConfig) error {
 		return scoreresult.InvalidParameterError.New("USDTPrice not found")
 	}
 
+	s.printInitState()
+	return nil
+}
+
+func (s *State) printInitState() {
+	if s.logger == nil {
+		return
+	}
 	s.logger.Infof("Initial platform configuration\n"+
 		"TermPeriod: %d\n"+
 		"IssueReductionCycle: %d\n"+
@@ -647,8 +655,6 @@ func (s *State) InitState(cfg *StateConfig) error {
 		s.getBigIntOrDefault(hvhmodule.VarIssueAmount, hvhmodule.BigIntInitIssueAmount),
 		s.GetHooverBudget(),
 		s.GetUSDTPrice())
-
-	return nil
 }
 
 func validatePlanetId(id int64) error {

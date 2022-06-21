@@ -66,12 +66,12 @@ const (
 
 // PlatformConfig default values
 const (
-	TermPeriod     = DayBlock
-	IssueAmount    = 5_000_000                  // unit: HVH
-	ReductionCycle = MonthPerYear * DayPerMonth // 1 year (360) in term
-	PrivateLockup  = MonthPerYear * DayPerMonth // 1 year (360) in term
-	HooverBudget   = 5_000_000                  // unit: HVH
-	IssueLimit     = 50 * ReductionCycle        // unit: term
+	TermPeriod          = DayBlock
+	IssueAmount         = 5_000_000                  // unit: HVH
+	IssueReductionCycle = MonthPerYear * DayPerMonth // 1 year (360) in term
+	PrivateLockup       = MonthPerYear * DayPerMonth // 1 year (360) in term
+	HooverBudget        = 5_000_000                  // unit: HVH
+	IssueLimit          = 50 * IssueReductionCycle   // unit: term
 )
 
 // VarDB, DictDB, ArrayDB keys
@@ -81,7 +81,7 @@ const (
 	VarIssueLimit          = "issue_limit"           // unit: term
 	VarTermPeriod          = "term_period"           // unit: block
 	VarIssueReductionCycle = "issue_reduction_cycle" // unit: term
-	VarPrivateReleaseCycle = "private_release_cycle" // unit: term
+	VarPrivateReleaseCycle = "private_release_cycle" // unit: month
 	VarPrivateLockup       = "private_lockup"        // unit: term
 	VarHooverBudget        = "hoover_budget"         // unit: hvh
 	VarUSDTPrice           = "usdt_price"            // unit: hvh
