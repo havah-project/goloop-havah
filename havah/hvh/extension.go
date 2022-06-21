@@ -290,7 +290,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 		return err
 	}
 
-	// hooverLimit = planetReward.total + reward - planet.price
+	// hooverLimit = planet.price - planetReward.total - reward
 	hooverLimit := calcHooverLimit(pr.Total(), reward, p.Price())
 
 	hooverRequest := hvhmodule.BigIntZero
@@ -339,9 +339,9 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 }
 
 func calcHooverLimit(total, rewardPerPlanet, planetPrice *big.Int) *big.Int {
-	// hooverLimit = planetReward.total + reward - planet.price
-	hooverLimit := new(big.Int).Add(total, rewardPerPlanet)
-	return hooverLimit.Sub(hooverLimit, planetPrice)
+	// hooverLimit = planet.price - planetReward.total - reward)
+	hooverLimit := new(big.Int).Sub(planetPrice, total)
+	return hooverLimit.Sub(hooverLimit, rewardPerPlanet)
 }
 
 var DividerFor10Percent = big.NewInt(10)
