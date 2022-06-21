@@ -85,7 +85,7 @@ func toUSDT(value int64) *big.Int {
 
 func toHVH(value int64) *big.Int {
 	hvh := big.NewInt(value)
-	return hvh.Mul(hvh, hvhmodule.BigIntUSDTDecimal)
+	return hvh.Mul(hvh, hvhmodule.BigIntCoinDecimal)
 }
 
 func TestState_SetUSDTPrice(t *testing.T) {
