@@ -390,6 +390,8 @@ func (s *State) setPlanetReward(id int64, pr *planetReward) error {
 }
 
 func (s *State) ClaimEcoSystemReward() (*big.Int, error) {
+	s.logger.Debugf("ClaimEcoSystemReward() start")
+
 	reward := s.getBigInt(hvhmodule.VarEcoReward)
 	if reward == nil || reward.Sign() < 0 {
 		return nil, scoreresult.Errorf(
@@ -402,10 +404,13 @@ func (s *State) ClaimEcoSystemReward() (*big.Int, error) {
 		}
 	}
 
+	s.logger.Debugf("ClaimEcoSystemReward() end: reward=%d", reward)
 	return reward, nil
 }
 
 func (s *State) ClaimPlanetReward(id, height int64, owner module.Address) (*big.Int, error) {
+	s.logger.Debugf("ClaimPlanetReward() start: id=%d height=%d owner=%s", id, height, owner)
+
 	p, err := s.GetPlanet(id)
 	if err != nil {
 		return nil, err
@@ -434,6 +439,8 @@ func (s *State) ClaimPlanetReward(id, height int64, owner module.Address) (*big.
 			return nil, err
 		}
 	}
+
+	s.logger.Debugf("ClaimPlanetReward() end: claimableReward=%d", claimableReward)
 	return claimableReward, nil
 }
 

@@ -337,14 +337,14 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 
 func (es *ExtensionStateImpl) onTermEnd(cc hvhmodule.CallContext) error {
 	height := cc.BlockHeight()
-	es.logger.Debugf("onTermEnd() start: height=%d", height)
+	es.Logger().Debugf("onTermEnd() start: height=%d", height)
 
 	var err error
 	if err = es.TransferEcoSystemReward(cc); err != nil {
 		return err
 	}
 
-	if err = distributeFees(cc); err != nil {
+	if err = es.distributeFees(cc); err != nil {
 		return err
 	}
 
@@ -359,11 +359,13 @@ func (es *ExtensionStateImpl) onTermEnd(cc hvhmodule.CallContext) error {
 		return err
 	}
 
-	es.logger.Debugf("onTermEnd() end: height=%d", height)
+	es.Logger().Debugf("onTermEnd() end: height=%d", height)
 	return nil
 }
 
 func (es *ExtensionStateImpl) TransferEcoSystemReward(cc hvhmodule.CallContext) error {
+	es.Logger().Debugf("TransferEcoSystemReward() start")
+
 	reward, err := es.state.ClaimEcoSystemReward()
 	if err != nil {
 		return err
@@ -371,10 +373,14 @@ func (es *ExtensionStateImpl) TransferEcoSystemReward(cc hvhmodule.CallContext) 
 	if err = cc.Transfer(hvhmodule.PublicTreasury, hvhmodule.EcoSystem, reward); err != nil {
 		return err
 	}
+
+	es.Logger().Debugf("TransferEcoSystemReward() end: reward=%d", reward)
 	return nil
 }
 
 func (es *ExtensionStateImpl) TransferMissedReward(cc hvhmodule.CallContext) error {
+	es.Logger().Debugf("TransferMissedReward() start")
+
 	missed, err := es.state.ClaimMissedReward()
 	if err != nil {
 		return err
@@ -391,18 +397,22 @@ func (es *ExtensionStateImpl) TransferMissedReward(cc hvhmodule.CallContext) err
 	if err = increaseVarDBInSustainableFund(cc, hvhmodule.VarMissingReward, balance); err != nil {
 		return err
 	}
+
+	es.Logger().Debugf(
+		"TransferMissedReward() end: missed=%d publicTreasury=%d",
+		missed, cc.GetBalance(hvhmodule.PublicTreasury))
 	return nil
 }
 
-func distributeFees(cc hvhmodule.CallContext) error {
+func (es *ExtensionStateImpl) distributeFees(cc hvhmodule.CallContext) error {
 	var err error
 
 	// TxFee Distribution
-	if err = distributeTxFee(cc, hvhmodule.BigRatEcoSystemToFee); err != nil {
+	if err = es.distributeTxFee(cc, hvhmodule.BigRatEcoSystemToFee); err != nil {
 		return err
 	}
 	// ServiceFee Distribution
-	if err = distributeServiceFee(cc, hvhmodule.BigRatEcoSystemToFee); err != nil {
+	if err = es.distributeServiceFee(cc, hvhmodule.BigRatEcoSystemToFee); err != nil {
 		return err
 	}
 
@@ -410,6 +420,8 @@ func distributeFees(cc hvhmodule.CallContext) error {
 }
 
 func (es *ExtensionStateImpl) refillHooverFund(cc hvhmodule.CallContext) error {
+	es.Logger().Debugf("refillHooverFund() start")
+
 	sf := hvhmodule.SustainableFund
 	hf := hvhmodule.HooverFund
 	hooverBudget := es.state.GetHooverBudget() // unit: hvh
@@ -429,18 +441,27 @@ func (es *ExtensionStateImpl) refillHooverFund(cc hvhmodule.CallContext) error {
 		if err := increaseVarDBInSustainableFund(cc, hvhmodule.VarHooverRefill, amount); err != nil {
 			return err
 		}
-		onHooverRefilledEvent(cc, amount, cc.GetBalance(hf), cc.GetBalance(sf))
+
+		hfBalance = cc.GetBalance(hf)
+		sfBalance = cc.GetBalance(sf)
+		es.Logger().Debugf(
+			"onHooverRefilledEvent(): amount=%d hfBalance=%d sfBalance=%d",
+			amount, hfBalance, sfBalance)
+		onHooverRefilledEvent(cc, amount, hfBalance, sfBalance)
 	}
+
+	es.Logger().Debugf("refillHooverFund() end")
 	return nil
 }
 
 func (es *ExtensionStateImpl) onTermStart(cc hvhmodule.CallContext, termSeq int64, baseTx *baseDataJSON) error {
 	var err error
+	es.Logger().Debugf("onTermStart() start: termSeq=%d", termSeq)
 
 	issueAmount, update := es.state.GetIssueAmountByTS(termSeq)
 	if update {
-		es.logger.Infof("IssueAmount is reduced to=%d", issueAmount)
-		if err := es.state.SetIssueAmount(issueAmount); err != nil {
+		es.Logger().Infof("IssueAmount is reduced to=%d", issueAmount)
+		if err = es.state.SetIssueAmount(issueAmount); err != nil {
 			return err
 		}
 	}
@@ -451,7 +472,7 @@ func (es *ExtensionStateImpl) onTermStart(cc hvhmodule.CallContext, termSeq int6
 			issueAmount, baseTx.IssueAmount.Value())
 	}
 
-	if err = issueCoin(cc, termSeq, issueAmount); err != nil {
+	if err = es.issueCoin(cc, termSeq, issueAmount); err != nil {
 		return err
 	}
 
@@ -460,10 +481,13 @@ func (es *ExtensionStateImpl) onTermStart(cc hvhmodule.CallContext, termSeq int6
 		return err
 	}
 
+	es.Logger().Debugf("onTermStart() end: termSeq=%d", termSeq)
 	return nil
 }
 
-func issueCoin(cc hvhmodule.CallContext, termSeq int64, amount *big.Int) error {
+func (es *ExtensionStateImpl) issueCoin(cc hvhmodule.CallContext, termSeq int64, amount *big.Int) error {
+	es.Logger().Debugf("issueCoin() start: termSeq=%d amount=%d", termSeq, amount)
+
 	if amount != nil && amount.Sign() > 0 {
 		newTotalSupply, err := cc.AddTotalSupply(amount)
 		if err != nil {
@@ -474,36 +498,48 @@ func issueCoin(cc hvhmodule.CallContext, termSeq int64, amount *big.Int) error {
 		}
 		onICXIssuedEvent(cc, termSeq, amount, newTotalSupply)
 	}
+
+	es.Logger().Debugf("issueCoin() end: termSeq=%d", termSeq)
 	return nil
 }
 
-func distributeServiceFee(cc hvhmodule.CallContext, proportion *big.Rat) error {
+func (es *ExtensionStateImpl) distributeServiceFee(cc hvhmodule.CallContext, proportion *big.Rat) error {
+	es.Logger().Debugf("distributeServiceFee() start: proportion: %#v", proportion)
+
 	from := hvhmodule.ServiceTreasury
-	_, sfAmount, err := distributeFee(cc, from, proportion)
+	_, sfAmount, err := es.distributeFee(cc, from, proportion)
 	if err != nil {
 		return err
 	}
 	if err = increaseVarDBInSustainableFund(cc, hvhmodule.VarServiceFee, sfAmount); err != nil {
 		return err
 	}
+
+	es.Logger().Debugf("distributeServiceFee() end: from=%s sfAmount=%d", from, sfAmount)
 	return nil
 }
 
-func distributeTxFee(cc hvhmodule.CallContext, proportion *big.Rat) error {
+func (es *ExtensionStateImpl) distributeTxFee(cc hvhmodule.CallContext, proportion *big.Rat) error {
+	es.Logger().Debugf("distributeTxFee() start: proportion=%#v", proportion)
+
 	from := cc.Treasury()
-	_, sfAmount, err := distributeFee(cc, from, proportion)
+	_, sfAmount, err := es.distributeFee(cc, from, proportion)
 	if err != nil {
 		return err
 	}
 	if err = increaseVarDBInSustainableFund(cc, hvhmodule.VarTxFee, sfAmount); err != nil {
 		return err
 	}
+
+	es.Logger().Debugf("distributeTxFee() end: from=%s sfAmount=%d", from, sfAmount)
 	return nil
 }
 
-func distributeFee(
+func (es *ExtensionStateImpl) distributeFee(
 	cc hvhmodule.CallContext, from module.Address, proportion *big.Rat,
 ) (*big.Int, *big.Int, error) {
+	es.Logger().Debugf("distributeFee() start: from=%s proportion=%#v", from, proportion)
+
 	var err error
 	balance := cc.GetBalance(from)
 	ecoAmount := hvhmodule.BigIntZero
@@ -521,15 +557,9 @@ func distributeFee(
 			return nil, nil, err
 		}
 	}
-	return ecoAmount, susAmount, nil
-}
 
-func calcIssueAmount(curIssueAmount *big.Int, reductionRate *big.Rat) *big.Int {
-	amount := new(big.Int).Set(curIssueAmount)
-	numerator := new(big.Int).Sub(reductionRate.Denom(), reductionRate.Num())
-	amount = new(big.Int).Mul(amount, numerator)
-	amount.Div(amount, reductionRate.Denom())
-	return amount
+	es.Logger().Debugf("distributeFee() end: from=%s ecoAmount=%d susAmount=%d", from, ecoAmount, susAmount)
+	return ecoAmount, susAmount, nil
 }
 
 func increaseVarDBInSustainableFund(cc hvhmodule.CallContext, key string, amount *big.Int) error {

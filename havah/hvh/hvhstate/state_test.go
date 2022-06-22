@@ -7,13 +7,15 @@ import (
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/db"
 	"github.com/icon-project/goloop/havah/hvhmodule"
+	"github.com/icon-project/goloop/havah/hvhutils"
 	"github.com/icon-project/goloop/module"
 )
 
 func newDummyState() *State {
 	mdb := db.NewMapDB()
 	snapshot := NewSnapshot(mdb, nil)
-	return NewStateFromSnapshot(snapshot, false, nil)
+	logger := hvhutils.NewLogger(nil)
+	return NewStateFromSnapshot(snapshot, false, logger)
 }
 
 func newDummyPlanet(isPrivate, isCompany bool, height int64) *Planet {
