@@ -229,7 +229,18 @@ public class HavahBasicTest extends TestBase {
         }
     }
 
-    public BigInteger _getTermPeriod() throws IOException {
+    private static void _waitUtilNextHeight() throws Exception {
+        var now = _getHeight();
+        var termPeriod = _getTermPeriod();
+        var height = now.add(termPeriod.subtract(now.mod(termPeriod)));
+        while (now.compareTo(height) < 0) {
+            LOG.info("now(" + now + ") wait(" + height + ")");
+            Thread.sleep(1500);
+            now = _getHeight();
+        }
+    }
+
+    public static BigInteger _getTermPeriod() throws IOException {
         // termPeriod : 주기당 블록 수 (Blocks) 기본 : 43200 (하루)
         RpcObject obj = chainScore.getIssueInfo();
         return obj.getItem("termPeriod").asInteger();
@@ -406,6 +417,8 @@ public class HavahBasicTest extends TestBase {
         _getPlanetInfo(planetIds.get(0));
         LOG.info("planetWallet : " + planetWallet.getAddress());
 
+        _waitUtil(_getHeight().add(termPeriod));
+
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
         BigInteger claimable = _getRewardInfo(planetIds.get(0));
         BigInteger reward = _getCurrentPublicReward();
@@ -420,6 +433,9 @@ public class HavahBasicTest extends TestBase {
         BigInteger beforeEco = txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS);
         LOG.info("ecosystem balance (before claim) : " + beforeEco);
         _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true);
+
+        _waitUtilNextHeight();
+
         BigInteger afterEco = txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS);
         LOG.info("ecosystem balance (after claim) : " + afterEco);
         assertEquals(0, afterEco.subtract(beforeEco).compareTo(expectedEco), "ecosystem reward is not expected");
