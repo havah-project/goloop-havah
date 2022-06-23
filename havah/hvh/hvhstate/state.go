@@ -191,6 +191,10 @@ func (s *State) IsPlanetManager(address module.Address) (bool, error) {
 func (s *State) RegisterPlanet(
 	id int64, isPrivate, isCompany bool, owner module.Address, usdt, price *big.Int, height int64,
 ) error {
+	s.logger.Debugf(
+		"RegisterPlanet() start: height=%d id=%d private=%t company=%t owner=%s usdt=%d price=%d",
+		height, id, isPrivate, isCompany, owner, usdt, price)
+
 	if id < 0 {
 		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid id: %d", id)
 	}
@@ -216,6 +220,9 @@ func (s *State) RegisterPlanet(
 	if err := allPlanetVarDB.Set(planetCount + 1); err != nil {
 		return err
 	}
+
+	s.logger.Debugf(
+		"RegisterPlanet() end: height=%d planetCount=%d", height, planetCount+1)
 	return nil
 }
 

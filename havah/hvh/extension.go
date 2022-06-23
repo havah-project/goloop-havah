@@ -221,7 +221,8 @@ func (es *ExtensionStateImpl) RegisterPlanet(
 	owner module.Address,
 	usdt *big.Int, price *big.Int,
 ) error {
-	return es.state.RegisterPlanet(id, isPrivate, isCompany, owner, usdt, price, cc.BlockHeight())
+	height := cc.BlockHeight()
+	return es.state.RegisterPlanet(id, isPrivate, isCompany, owner, usdt, price, height)
 }
 
 func (es *ExtensionStateImpl) UnregisterPlanet(cc hvhmodule.CallContext, id int64) error {
