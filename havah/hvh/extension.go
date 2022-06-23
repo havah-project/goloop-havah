@@ -346,6 +346,8 @@ func calcHooverLimit(total, rewardPerPlanet, planetPrice *big.Int) *big.Int {
 
 var DividerFor10Percent = big.NewInt(10)
 
+// calcHooverGuide returns the rewards
+// that a planet should receive every term to get 10% of its price in usdt as a reward
 func (es *ExtensionStateImpl) calcHooverGuide(p *hvhstate.Planet) *big.Int {
 	hooverGuide := new(big.Int).Mul(p.USDT(), es.state.GetActiveUSDTPrice())
 	hooverGuide.Div(hooverGuide, hvhmodule.BigIntUSDTDecimal)

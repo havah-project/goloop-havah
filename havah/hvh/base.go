@@ -488,16 +488,11 @@ func (es *ExtensionStateImpl) onTermStart(cc hvhmodule.CallContext, termSeq int6
 func (es *ExtensionStateImpl) issueCoin(cc hvhmodule.CallContext, termSeq int64, amount *big.Int) error {
 	es.Logger().Debugf("issueCoin() start: termSeq=%d amount=%d", termSeq, amount)
 
-	if amount != nil && amount.Sign() > 0 {
-		newTotalSupply, err := cc.AddTotalSupply(amount)
-		if err != nil {
-			return err
-		}
-		if err = cc.Deposit(hvhmodule.PublicTreasury, amount); err != nil {
-			return err
-		}
-		onICXIssuedEvent(cc, termSeq, amount, newTotalSupply)
+	totalSupply, err := cc.Issue(hvhmodule.PublicTreasury, amount)
+	if err != nil {
+		return err
 	}
+	onICXIssuedEvent(cc, termSeq, amount, totalSupply)
 
 	es.Logger().Debugf("issueCoin() end: termSeq=%d", termSeq)
 	return nil

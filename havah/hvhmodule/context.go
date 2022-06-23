@@ -16,8 +16,7 @@ type WorldContext interface {
 	TransactionID() []byte
 	ConsensusInfo() module.ConsensusInfo
 	GetBalance(address module.Address) *big.Int
-	Deposit(address module.Address, amount *big.Int) error
-	Withdraw(address module.Address, amount *big.Int) error
+	Issue(address module.Address, amount *big.Int) (*big.Int, error)
 	Transfer(from module.Address, to module.Address, amount *big.Int) error
 	GetTotalSupply() *big.Int
 	AddTotalSupply(amount *big.Int) (*big.Int, error)

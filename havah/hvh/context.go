@@ -47,7 +47,7 @@ func (ctx *callContextImpl) GetBalance(address module.Address) *big.Int {
 	return account.GetBalance()
 }
 
-func (ctx *callContextImpl) Deposit(address module.Address, amount *big.Int) error {
+func (ctx *callContextImpl) deposit(address module.Address, amount *big.Int) error {
 	if err := validateAmount(amount); err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func (ctx *callContextImpl) Deposit(address module.Address, amount *big.Int) err
 	return ctx.addBalance(address, amount)
 }
 
-func (ctx *callContextImpl) Withdraw(address module.Address, amount *big.Int) error {
+func (ctx *callContextImpl) withdraw(address module.Address, amount *big.Int) error {
 	if err := validateAmount(amount); err != nil {
 		return err
 	}
@@ -65,6 +65,30 @@ func (ctx *callContextImpl) Withdraw(address module.Address, amount *big.Int) er
 		return nil
 	}
 	return ctx.addBalance(address, new(big.Int).Neg(amount))
+}
+
+func (ctx *callContextImpl) Issue(address module.Address, amount *big.Int) (*big.Int, error) {
+	if address == nil {
+		return nil, errors.IllegalArgumentError.New("Invalid address")
+	}
+	if amount == nil || amount.Sign() < 0 {
+		return nil, errors.IllegalArgumentError.Errorf("Invalid issueAmount: %v", amount)
+	}
+
+	var err error
+	var totalSupply *big.Int
+	if amount.Sign() > 0 {
+		totalSupply, err = ctx.AddTotalSupply(amount)
+		if err != nil {
+			return nil, err
+		}
+		if err = ctx.deposit(address, amount); err != nil {
+			return nil, err
+		}
+	} else {
+		totalSupply = ctx.GetTotalSupply()
+	}
+	return totalSupply, nil
 }
 
 func (ctx *callContextImpl) Transfer(from module.Address, to module.Address, amount *big.Int) (err error) {
