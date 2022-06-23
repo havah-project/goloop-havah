@@ -38,7 +38,7 @@ public class HavahBasicTest extends TestBase {
     private static KeyWallet governorWallet;
     private static PlanetNFTScore planetNFTScore;
 
-    private static final int PLANETTYPE_PULBIC = 2;
+    private static final int PLANETTYPE_PUBLIC = 2;
     private static final int PLANETTYPE_PRIVATE = 1;
     private static final int PLANETTYPE_COMPANY = 4;
 
@@ -62,6 +62,8 @@ public class HavahBasicTest extends TestBase {
         } catch (Exception ex) {
             fail(ex.getMessage());
         }
+
+        _waitUtil(_startRewardIssue(governorWallet, BigInteger.valueOf(5), true));
     }
 
     @AfterAll
@@ -69,9 +71,13 @@ public class HavahBasicTest extends TestBase {
 
     }
 
-    public BigInteger _getHeight() throws IOException {
+    private static BigInteger _getHeight() throws IOException {
         Block lastBlk = iconService.getLastBlock().execute();
         return lastBlk.getHeight();
+    }
+
+    private static BigInteger _getStartHeightOfTerm(BigInteger term, BigInteger termPeriod, BigInteger rewardStartHeight) {
+        return term.subtract(BigInteger.ONE).multiply(termPeriod).add(rewardStartHeight);
     }
 
     public void _checkPlanetManager(Wallet wallet, Address address, boolean success) throws Exception {
@@ -112,7 +118,7 @@ public class HavahBasicTest extends TestBase {
         LOG.infoExiting();
     }
 
-    public BigInteger _startRewardIssue(Wallet wallet, BigInteger addHeight, boolean success) throws IOException, ResultTimeoutException {
+    private static BigInteger _startRewardIssue(Wallet wallet, BigInteger addHeight, boolean success) throws IOException, ResultTimeoutException {
         LOG.infoEntering("_startRewardIssue", "expect : " + success);
         var height = _getHeight();
         var reward = height.add(addHeight);
@@ -153,7 +159,8 @@ public class HavahBasicTest extends TestBase {
         assertEquals(success ? 1 : 0, result.getStatus().intValue(), "failure result(" + result + ")");
     }
 
-    public void _getPlanetInfo(BigInteger planetId) throws IOException {
+    public BigInteger _getPlanetInfo(BigInteger planetId) throws IOException {
+        BigInteger regHeight = BigInteger.ZERO;
         LOG.infoEntering("_getPlanetInfo", "planetId : " + planetId);
         try {
             RpcObject obj = chainScore.getPlanetInfo(planetId);
@@ -163,14 +170,17 @@ public class HavahBasicTest extends TestBase {
             LOG.info("isCompany : " + obj.getItem("isCompany").asBoolean());
             LOG.info("isPrivate : " + obj.getItem("isPrivate").asBoolean());
             LOG.info("height : " + obj.getItem("height").asInteger());
+            regHeight = obj.getItem("height").asInteger();
         } catch (RpcError e) {
             assertEquals(Constants.RPC_ERROR_INVALID_ID, e.getCode());
             LOG.info("Expected RpcError: code=" + e.getCode() + ", msg=" + e.getMessage());
         }
         LOG.infoExiting();
+        return regHeight;
     }
 
-    public void _getIssueInfo() throws IOException {
+    public BigInteger _getIssueInfo() throws IOException {
+        BigInteger issueStart = BigInteger.ZERO;
         LOG.infoEntering("_getPlanetInfo");
         RpcObject obj = chainScore.getIssueInfo();
         LOG.info("termPeriod : " + obj.getItem("termPeriod").asInteger());
@@ -178,15 +188,17 @@ public class HavahBasicTest extends TestBase {
         LOG.info("height : " + obj.getItem("height").asInteger());
         try {
             LOG.info("termSequence : " + obj.getItem("termSequence").asInteger());
-            LOG.info("issueStart : " + obj.getItem("issueStart").asInteger());
+            issueStart = obj.getItem("issueStart").asInteger();
+            LOG.info("issueStart : " + issueStart);
         } catch (NullPointerException e) {
             LOG.info("startRewardIssue not called. termSequence and issueStart is null.");
         }
         LOG.infoExiting();
+        return issueStart;
     }
 
-    public int _getRewardInfo(BigInteger planetId) throws Exception {
-        int claimable = 0;
+    public BigInteger _getRewardInfo(BigInteger planetId) throws Exception {
+        BigInteger claimable = BigInteger.ZERO;
         LOG.infoEntering("_getRewardInfo", "planetId : " + planetId);
         try {
             RpcObject obj = chainScore.getRewardInfo(planetId);
@@ -194,7 +206,7 @@ public class HavahBasicTest extends TestBase {
             LOG.info("remain : " + obj.getItem("remain").asInteger());
             LOG.info("claimable : " + obj.getItem("claimable").asInteger());
             LOG.info("height : " + obj.getItem("height").asInteger());
-            claimable = obj.getItem("claimable").asInteger().intValue();
+            claimable = obj.getItem("claimable").asInteger();
         } catch (RpcError e) {
             assertEquals(Constants.RPC_ERROR_INVALID_ID, e.getCode());
             LOG.info("Expected RpcError: code=" + e.getCode() + ", msg=" + e.getMessage());
@@ -203,19 +215,12 @@ public class HavahBasicTest extends TestBase {
         return claimable;
     }
 
-    public int _getClaimable(BigInteger planetId) throws Exception {
-        int ret = 0;
-        try {
-            RpcObject obj = chainScore.getRewardInfo(planetId);
-            ret = obj.getItem("claimable").asInteger().intValue();
-        } catch (RpcError e) {
-            assertEquals(Constants.RPC_ERROR_INVALID_ID, e.getCode());
-            LOG.info("Expected RpcError: code=" + e.getCode() + ", msg=" + e.getMessage());
-        }
-        return ret;
+    public BigInteger _getIssueReductionCycle() throws Exception {
+        RpcObject obj = chainScore.getIssueInfo();
+        return obj.getItem("issueReductionCycle").asInteger();
     }
 
-    public void _waitUtil(BigInteger height) throws Exception {
+    private static void _waitUtil(BigInteger height) throws Exception {
         var now = _getHeight();
         while (now.compareTo(height) < 0) {
             LOG.info("now(" + now + ") wait(" + height + ")");
@@ -230,17 +235,26 @@ public class HavahBasicTest extends TestBase {
         return obj.getItem("termPeriod").asInteger();
     }
 
-    public BigInteger _getPrivateLockup() throws IOException {
-        // privateLockup : 초기판매 보상 잠금기간 (텀단위) 기본 : 360 (1년)
-        RpcObject obj = chainScore.getIssueInfo();
-        return obj.getItem("privateLockup").asInteger();
+    public BigInteger _getCurrentPublicReward() throws IOException {
+        //BigInteger reward = Constants.INITIAL_ISSUE_AMOUNT.divide(BigInteger.valueOf(100));
+        BigInteger reward = Constants.INITIAL_ISSUE_AMOUNT;
+        try {
+            RpcObject obj = chainScore.getIssueInfo();
+            BigInteger termSequence = obj.getItem("termSequence").asInteger();
+            BigInteger issueReductionCycle = obj.getItem("issueReductionCycle").asInteger();
+
+            int count = termSequence.divide(issueReductionCycle).intValue();
+            for(int i=0; i<count; i++) {
+                reward = reward.multiply(BigInteger.valueOf(7)).divide(BigInteger.TEN);
+            }
+        } catch (NullPointerException e) {
+            LOG.info("startRewardIssue not called. termSequence and issueStart is null.");
+            return BigInteger.ZERO;
+        }
+
+        return reward.divide(planetNFTScore.totalSupply());
     }
 
-    public BigInteger _getPrivateReleaseCycle() throws IOException {
-        // privateReleaseCycle : 초기판매 보상 분배주기 (텀단위) 기본 : 30 (1달)
-        RpcObject obj = chainScore.getIssueInfo();
-        return obj.getItem("privateReleaseCycle").asInteger();
-    }
 
     @Test
     @Order(1)
@@ -260,7 +274,7 @@ public class HavahBasicTest extends TestBase {
         KeyWallet planetManagerWallet = KeyWallet.create();
         KeyWallet planetWallet = KeyWallet.create();
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PULBIC);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PUBLIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
         _getPlanetInfo(planetIds.get(0));
         _getPlanetInfo(BigInteger.valueOf(-1));
@@ -282,31 +296,31 @@ public class HavahBasicTest extends TestBase {
         KeyWallet planetManagerWallet = KeyWallet.create();
         KeyWallet planetWallet = KeyWallet.create();
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PULBIC);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PUBLIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
         _getRewardInfo(planetIds.get(0));
         _getRewardInfo(BigInteger.valueOf(-1));
         LOG.infoExiting();
     }
 
-    @Test
-    @Order(5)
-    public void setRewardIssueTest() throws Exception {
-        LOG.infoEntering("setRewardIssueTest");
-        KeyWallet EOAWallet = KeyWallet.create();
-        BigInteger termPeriod = _getTermPeriod();
-        _startRewardIssue(EOAWallet, termPeriod, false);
-        BigInteger reward = _startRewardIssue(governorWallet, termPeriod, true);
-        if(_getHeight().compareTo(reward) < 0)
-            _startRewardIssue(governorWallet, termPeriod, true); // 리워드가 시작되기 전 호출은 성공해야함.
-        else
-            LOG.info("reward already started. ignore continuous call test.");
-
-        _waitUtil(reward);
-
-        _startRewardIssue(governorWallet, termPeriod, false); // 리워드가 시작되면 실패해야 한다고 함.
-        LOG.infoExiting();
-    }
+//    @Test
+//    @Order(5)
+//    public void setRewardIssueTest() throws Exception {
+//        LOG.infoEntering("setRewardIssueTest");
+//        KeyWallet EOAWallet = KeyWallet.create();
+//        BigInteger startReward = BigInteger.valueOf(5);
+//        _startRewardIssue(EOAWallet, startReward, false);
+//        BigInteger reward = _startRewardIssue(governorWallet, startReward, true);
+//        if(_getHeight().compareTo(reward) < 0)
+//            _startRewardIssue(governorWallet, startReward, true); // 리워드가 시작되기 전 호출은 성공해야함.
+//        else
+//            LOG.info("reward already started. ignore continuous call test.");
+//
+//        _waitUtil(reward);
+//
+//        _startRewardIssue(governorWallet, startReward, false); // 리워드가 시작되면 실패해야 한다고 함.
+//        LOG.infoExiting();
+//    }
 
     @Test
     @Order(6)
@@ -318,17 +332,14 @@ public class HavahBasicTest extends TestBase {
         BigInteger termPeriod = _getTermPeriod();
 
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PULBIC);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PUBLIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
-
-        _startRewardIssue(governorWallet, termPeriod.multiply(BigInteger.TEN), true);
 
         _reportPlanetWork(EOAWallet, planetIds.get(0), false);
         _reportPlanetWork(planetManagerWallet, BigInteger.valueOf(-1), false);
-        _reportPlanetWork(planetManagerWallet, planetIds.get(0), false);
 
-        BigInteger reward = _startRewardIssue(governorWallet, termPeriod, true);
-        _waitUtil(reward);
+        _waitUtil(_getHeight().add(termPeriod));
+
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
         LOG.infoExiting();
     }
@@ -342,17 +353,22 @@ public class HavahBasicTest extends TestBase {
         BigInteger termPeriod = _getTermPeriod();
 
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PULBIC);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PUBLIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
 
-        BigInteger reward = _startRewardIssue(governorWallet, termPeriod, true);
-        _waitUtil(reward);
+        _waitUtil(_getHeight().add(termPeriod));
+        _getPlanetInfo(planetIds.get(0));
+
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
-        _getRewardInfo(planetIds.get(0));
+        BigInteger claimable = _getRewardInfo(planetIds.get(0));
+        BigInteger expected = _getCurrentPublicReward();
+        LOG.info("expected = " + expected);
+        assertEquals(0, claimable.compareTo(expected), "claimable is not expected");
         _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true);
+        _getRewardInfo(planetIds.get(0));
 
         // mint second planet nft
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PULBIC);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PUBLIC);
         planetIds = _tokenIdsOf(planetWallet.getAddress(), 2, BigInteger.TWO);
 
         _waitUtil(_getHeight().add(termPeriod));
@@ -360,63 +376,24 @@ public class HavahBasicTest extends TestBase {
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
         _reportPlanetWork(planetManagerWallet, planetIds.get(1), true);
 
-        _getRewardInfo(planetIds.get(0));
-        _getRewardInfo(planetIds.get(1));
+        claimable = _getRewardInfo(planetIds.get(0));
+        expected = _getCurrentPublicReward();
+        LOG.info("expected = " + expected);
+        assertEquals(0, claimable.compareTo(expected), "claimable is not expected");
+
+        claimable = _getRewardInfo(planetIds.get(1));
+        LOG.info("expected = " + expected);
+        assertEquals(0, claimable.compareTo(expected), "claimable is not expected");
+
         _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0), planetIds.get(1)}, true);
 
         LOG.infoExiting();
     }
 
-    BigInteger _getStartHeightOfTerm(BigInteger term, BigInteger termPeriod, BigInteger rewardStartHeight) {
-        return term.subtract(BigInteger.ONE).multiply(termPeriod).add(rewardStartHeight);
-    }
-
-    @Test
-    @Order(8)
-    public void claimPrivatePlanetRewardTest() throws Exception {
-        LOG.infoEntering("claimPrivatePlanetRewardTest");
-        KeyWallet planetManagerWallet = KeyWallet.create();
-        KeyWallet planetWallet = KeyWallet.create();
-        BigInteger termPeriod = _getTermPeriod();
-        int privateLockup = 8;
-        BigInteger privateReleaseCycle = BigInteger.valueOf(4);
-        LOG.info("termPeriod : " + termPeriod);
-        LOG.info("privateLockup : " + privateLockup);
-        LOG.info("privateReleaseCycle : " + privateReleaseCycle);
-
-        _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PRIVATE);
-        List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
-
-        BigInteger rewardHeight = _startRewardIssue(governorWallet, BigInteger.valueOf(5), true);
-        var lockupHeight = _getStartHeightOfTerm(BigInteger.valueOf(privateLockup), termPeriod, rewardHeight);
-        _waitUtil(lockupHeight);
-
-        int testTermCycle = 4;
-        for (int i = 0; i < testTermCycle; i++) {
-            var nextCycle = lockupHeight.add(termPeriod.multiply(privateReleaseCycle).multiply(BigInteger.valueOf(i + 1)));
-            LOG.info("nextCycle : " + nextCycle);
-            var curHeight = _getHeight();
-            while (nextCycle.compareTo(curHeight) > 0) {
-                var curTerm = curHeight.subtract(rewardHeight).divide(termPeriod).add(BigInteger.ONE);
-                LOG.info("term : " + curTerm);
-                _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
-                var nextTerm = _getStartHeightOfTerm(curTerm.add(BigInteger.ONE), termPeriod, rewardHeight);
-               _waitUtil(nextTerm);
-                curHeight = _getHeight();
-            }
-            // check claima[d
-            _getRewardInfo(planetIds.get(0));
-        }
-
-        LOG.infoExiting();
-    }
-
-
     @Test
     @Order(9)
     public void claimCompanyPlanetRewardTest() throws Exception {
-        LOG.infoEntering("claimPrivatePlanetRewardTest");
+        LOG.infoEntering("claimCompanyPlanetRewardTest");
         KeyWallet planetManagerWallet = KeyWallet.create();
         KeyWallet planetWallet = KeyWallet.create();
         BigInteger termPeriod = _getTermPeriod();
@@ -426,21 +403,63 @@ public class HavahBasicTest extends TestBase {
         _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_COMPANY);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
 
-        BigInteger rewardHeight = _startRewardIssue(governorWallet, termPeriod, true);
-        _waitUtil(rewardHeight);
+        _getPlanetInfo(planetIds.get(0));
+        LOG.info("planetWallet : " + planetWallet.getAddress());
 
-        LOG.info("ecosystem balance (before report) : " + txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS));
-        LOG.info("sustainable fund balance (before report) : " + txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS));
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
-        LOG.info("ecosystem balance (after report) : " + txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS));
-        LOG.info("sustainable fund balance (after report) : " + txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS));
-        _getRewardInfo(planetIds.get(0));
-        LOG.info("ecosystem balance (before claim) : " + txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS));
-        LOG.info("sustainable fund balance (before claim) : " + txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS));
+        BigInteger claimable = _getRewardInfo(planetIds.get(0));
+        BigInteger reward = _getCurrentPublicReward();
+        BigInteger expectedPlanet = reward.multiply(BigInteger.valueOf(4)).divide(BigInteger.TEN);
+        BigInteger expectedEco = reward.multiply(BigInteger.valueOf(6)).divide(BigInteger.TEN);
+        LOG.info("reward = " + reward);
+        LOG.info("Planet = " + expectedPlanet);
+        LOG.info("Eco = " + expectedEco);
+
+        assertEquals(0, claimable.compareTo(expectedPlanet), "claimable is not expected");
+
+        BigInteger beforeEco = txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS);
+        LOG.info("ecosystem balance (before claim) : " + beforeEco);
         _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true);
-        LOG.info("ecosystem balance (after claim) : " + txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS));
-        LOG.info("sustainable fund balance (after claim) : " + txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS));
-        _getRewardInfo(planetIds.get(0));
+        BigInteger afterEco = txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS);
+        LOG.info("ecosystem balance (after claim) : " + afterEco);
+        assertEquals(0, afterEco.subtract(beforeEco).compareTo(expectedEco), "ecosystem reward is not expected");
+
+        LOG.infoExiting();
+    }
+
+    @Test
+    @Order(10)
+    public void issueReductionCycleTest() throws Exception {
+        LOG.infoEntering("issueReductionCycleTest");
+        KeyWallet planetManagerWallet = KeyWallet.create();
+        KeyWallet planetWallet = KeyWallet.create();
+        BigInteger termPeriod = _getTermPeriod();
+        BigInteger issueReductionCycle = _getIssueReductionCycle();
+
+        LOG.info("termPeriod : " + termPeriod);
+        LOG.info("issueReductionCycle : " + issueReductionCycle);
+
+        _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PUBLIC);
+        List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
+
+        _getPlanetInfo(planetIds.get(0));
+
+        _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
+        BigInteger claimable = _getRewardInfo(planetIds.get(0));
+        BigInteger termReward = _getCurrentPublicReward();
+        LOG.info("termReward : " + termReward);
+        assertEquals(claimable.compareTo(termReward), 0, "term reward is not equals to claimable");
+        _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true);
+
+        _waitUtil(_getIssueInfo().add(termPeriod.multiply(issueReductionCycle)));
+
+        _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
+        claimable = _getRewardInfo(planetIds.get(0));
+        termReward = _getCurrentPublicReward();
+        LOG.info("reduction termReward : " + termReward);
+        assertEquals(claimable.compareTo(termReward), 0, "reduction term reward is not equals to claimable");
+        _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true);
 
         LOG.infoExiting();
     }

@@ -2,6 +2,8 @@ package io.havah.test.common;
 
 import foundation.icon.icx.data.Address;
 
+import java.math.BigInteger;
+
 public class Constants extends foundation.icon.test.common.Constants {
     public static final String TAG_HAVAH = "havah";
 
@@ -22,4 +24,6 @@ public class Constants extends foundation.icon.test.common.Constants {
             = new Address("cx4000000000000000000000000000000000000000");
 
     public static final int RPC_ERROR_INVALID_ID = -30032;
+
+    public static final BigInteger INITIAL_ISSUE_AMOUNT = new BigInteger("5000000000000000000000000", 10); // 초기 발행량
 }
