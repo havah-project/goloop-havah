@@ -293,10 +293,14 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 
 	// hooverLimit = planet.price - planetReward.total - reward
 	hooverLimit := calcHooverLimit(pr.Total(), reward, p.Price())
+	es.Logger().Debugf(
+		"total=%d reward=%d price=%d hooverLimit=%d",
+		pr.Total(), reward, p.Price(), hooverLimit)
 
 	hooverRequest := hvhmodule.BigIntZero
 	if hooverLimit.Sign() > 0 {
 		hooverGuide := es.calcHooverGuide(p)
+		es.Logger().Debugf("hooverGuide=%d", hooverGuide)
 		if reward.Cmp(hooverGuide) < 0 {
 			hooverBalance := cc.GetBalance(hvhmodule.HooverFund)
 			if hooverBalance.Sign() > 0 {
@@ -335,7 +339,9 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 		return err
 	}
 	onRewardOfferedEvent(cc, termSeq, id, rewardWithHoover, hooverRequest)
-	es.Logger().Debugf("ReportPlanetWork() end: height=%d id=%d", height, id)
+	es.Logger().Debugf(
+		"ReportPlanetWork() end: height=%d id=%d rewardWithHoover=%d hooverRequest=%d",
+		height, id, rewardWithHoover, hooverRequest)
 	return nil
 }
 

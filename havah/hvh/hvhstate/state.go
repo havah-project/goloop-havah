@@ -355,6 +355,10 @@ func (s *State) DecreaseRewardRemain(amount *big.Int) error {
 }
 
 func (s *State) OfferReward(tn, id int64, pr *planetReward, amount, total *big.Int) error {
+	s.logger.Debugf(
+		"OfferReward() start: tn=%d id=%d amount=%d total=%d",
+		tn, id, amount, total)
+
 	if pr == nil {
 		return scoreresult.New(
 			hvhmodule.StatusIllegalArgument, "Invalid planetReward")
@@ -362,15 +366,24 @@ func (s *State) OfferReward(tn, id int64, pr *planetReward, amount, total *big.I
 	if err := pr.increment(tn, amount, total); err != nil {
 		return err
 	}
-	return s.setPlanetReward(id, pr)
+	err := s.setPlanetReward(id, pr)
+
+	s.logger.Debugf("OfferReward() end: tn=%d id=%d", tn, id)
+	return err
 }
 
 func (s *State) IncrementWorkingPlanet() error {
+	s.logger.Debugf("IncrementWorkingPlanet() start")
 	varDB := s.getVarDB(hvhmodule.VarWorkingPlanet)
-	return varDB.Set(varDB.Int64() + 1)
+	planets := varDB.Int64() + 1
+	err := varDB.Set(planets)
+	s.logger.Debugf("IncrementWorkingPlanet() end: workingPlanet=%d err=%v", planets, err)
+	return err
 }
 
 func (s *State) IncreaseEcoSystemReward(amount *big.Int) error {
+	s.logger.Debugf("IncreaseEcoSystemReward() start: amount=%d", amount)
+
 	varDB := s.getVarDB(hvhmodule.VarEcoReward)
 	reward := varDB.BigInt()
 	if reward == nil {
@@ -378,7 +391,10 @@ func (s *State) IncreaseEcoSystemReward(amount *big.Int) error {
 	} else {
 		reward = new(big.Int).Add(reward, amount)
 	}
-	return varDB.Set(reward)
+	err := varDB.Set(reward)
+
+	s.logger.Debugf("IncreaseEcoSystemReward() end: amount=%d reward=%d", amount, reward)
+	return err
 }
 
 func (s *State) GetPlanetReward(id int64) (*planetReward, error) {
