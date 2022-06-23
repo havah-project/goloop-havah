@@ -30,6 +30,7 @@ const (
 	MonthBlock   = DayBlock * DayPerMonth
 	MonthPerYear = 12
 	YearBlock    = MonthBlock * MonthPerYear
+	DayPerYear   = DayPerMonth * MonthPerYear
 )
 
 const (
@@ -67,11 +68,11 @@ const (
 // PlatformConfig default values
 const (
 	TermPeriod          = DayBlock
-	IssueAmount         = 5_000_000                  // unit: HVH
-	IssueReductionCycle = MonthPerYear * DayPerMonth // 1 year (360) in term
-	PrivateLockup       = MonthPerYear * DayPerMonth // 1 year (360) in term
-	HooverBudget        = 5_000_000                  // unit: HVH
-	IssueLimit          = 50 * IssueReductionCycle   // unit: term
+	IssueAmount         = 5_000_000                // unit: HVH
+	IssueReductionCycle = DayPerYear               // 1 year (360) in term
+	PrivateLockup       = DayPerYear               // 1 year (360) in term
+	HooverBudget        = 5_000_000                // unit: HVH
+	IssueLimit          = 50 * IssueReductionCycle // unit: term
 )
 
 // VarDB, DictDB, ArrayDB keys
@@ -120,6 +121,7 @@ var (
 	BigIntUSDTDecimal        = big.NewInt(1_000_000)
 	BigIntInitIssueAmount    = new(big.Int).Mul(big.NewInt(IssueAmount), BigIntCoinDecimal)
 	BigIntHooverBudget       = new(big.Int).Mul(big.NewInt(HooverBudget), BigIntCoinDecimal)
+	BigIntDayPerYear         = big.NewInt(DayPerYear)
 	BigRatIssueReductionRate = big.NewRat(3, 10) // 30%
 	BigRatEcoSystemToFee     = big.NewRat(1, 5)  // 20%
 	// BigRatEcoSystemToCompanyReward is the EcoSystem proportion to company planet reward

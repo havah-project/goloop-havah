@@ -359,7 +359,7 @@ func (es *ExtensionStateImpl) calcHooverGuide(p *hvhstate.Planet) *big.Int {
 	hooverGuide := new(big.Int).Mul(p.USDT(), es.state.GetActiveUSDTPrice())
 	hooverGuide.Div(hooverGuide, hvhmodule.BigIntUSDTDecimal)
 	hooverGuide.Div(hooverGuide, DividerFor10Percent)
-	hooverGuide.Div(hooverGuide, big.NewInt(es.state.GetIssueReductionCycle()))
+	hooverGuide.Div(hooverGuide, hvhmodule.BigIntDayPerYear)
 	return hooverGuide
 }
 
