@@ -106,14 +106,14 @@ func (s *State) GetIssueReductionRate() *big.Rat {
 	return hvhmodule.BigRatIssueReductionRate
 }
 
-func (s *State) GetIssueAmount(height int64) *big.Int {
-	is := s.GetIssueStart()
+func (s *State) GetIssueAmount(height, is int64) *big.Int {
 	if !IsIssueStarted(height, is) {
 		panic("CalcIssueAmount must be called after issue has started")
 	}
 	baseCount := height - is
 	termPeriod := s.GetTermPeriod()
 	if baseCount%termPeriod != 0 {
+		// Coin is issued at the beginning of every term
 		return hvhmodule.BigIntZero
 	}
 	issue, _ := s.GetIssueAmountByTS(baseCount / termPeriod)
