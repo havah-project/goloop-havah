@@ -118,10 +118,6 @@ func (es *ExtensionStateImpl) SetLogger(logger log.Logger) {
 	}
 }
 
-func (es *ExtensionStateImpl) State() *hvhstate.State {
-	return es.state
-}
-
 func (es *ExtensionStateImpl) GetSnapshot() state.ExtensionSnapshot {
 	return &ExtensionSnapshotImpl{
 		dbase: es.dbase,
