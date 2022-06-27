@@ -3,19 +3,15 @@ package hvhstate
 import (
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPlanetReward_newEmptyPlanetReward(t *testing.T) {
 	pr := newEmpyPlanetReward()
-	if pr.total == nil || pr.total.Sign() != 0 {
-		t.Errorf("Incorrect initial total value")
-	}
-	if pr.lastTN != 0 {
-		t.Errorf("Incorrect initial lastTN")
-	}
-	if pr.current == nil || pr.current.Sign() != 0 {
-		t.Errorf("Incorrect initial current")
-	}
+	assert.Zero(t, pr.Total().Sign())
+	assert.Zero(t, pr.LastTermNumber())
+	assert.Zero(t, pr.Current().Sign())
 }
 
 func TestPlanetReward_RLPEncodeSelf(t *testing.T) {
@@ -23,34 +19,20 @@ func TestPlanetReward_RLPEncodeSelf(t *testing.T) {
 	reward := big.NewInt(1000)
 
 	pr := newEmpyPlanetReward()
-	if err := pr.increment(tn, reward, reward); err != nil {
-		t.Errorf(err.Error())
-	}
+	assert.NoError(t, pr.increment(tn, reward, reward))
+	assert.Zero(t, pr.Total().Cmp(reward))
+	assert.Zero(t, pr.Current().Cmp(reward))
+	assert.Equal(t, tn, pr.LastTermNumber())
 
-	err := pr.claim(reward)
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	if pr.Total().Cmp(reward) != 0 {
-		t.Errorf("Incorrect total")
-	}
-	if pr.Current().Sign() != 0 {
-		t.Errorf("Incorrect current")
-	}
-	if pr.lastTN != tn {
-		t.Errorf(
-			"Incorrect termNumber: lastTN(%d) != tn(%d",
-			pr.LastTermNumber(), tn)
-	}
+	assert.NoError(t, pr.claim(reward))
+	assert.Zero(t, pr.Total().Cmp(reward))
+	assert.Zero(t, pr.Current().Sign())
+	assert.Equal(t, tn, pr.LastTermNumber())
 
 	b := pr.Bytes()
 	pr2, err := newPlanetRewardFromBytes(b)
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-	if !pr.equal(pr2) {
-		t.Errorf("planetReward.Bytes() or newPlanetRewardFromBytes() error")
-	}
+	assert.NoError(t, err)
+	assert.True(t, pr.equal(pr2))
 }
 
 func TestPlanetReward_Increment(t *testing.T) {
@@ -64,32 +46,17 @@ func TestPlanetReward_Increment(t *testing.T) {
 		total.Add(total, reward)
 		tn++
 
-		if err := pr.increment(tn, reward, reward); err != nil {
-			t.Errorf(err.Error())
-		}
-
-		if pr.LastTermNumber() != tn {
-			t.Errorf("lastTermNumber error")
-		}
-		if pr.Current().Cmp(reward) != 0 {
-			t.Errorf("current error")
-		}
-		if pr.Total().Cmp(total) != 0 {
-			t.Errorf("total error")
-		}
-		if err := pr.claim(reward); err != nil {
-			t.Errorf(err.Error())
-		}
+		assert.NoError(t, pr.increment(tn, reward, reward))
+		assert.Equal(t, tn, pr.LastTermNumber())
+		assert.Zero(t, pr.Current().Cmp(reward))
+		assert.Zero(t, pr.Total().Cmp(total))
+		assert.NoError(t, pr.claim(reward))
 	}
 
 	// Check for multiple rewards during the same term
 	pr2 := pr.clone()
-	if err := pr.increment(tn, reward, nil); err == nil {
-		t.Errorf("Duplicate reportPlanetWork")
-	}
-	if !pr.equal(pr2) {
-		t.Errorf("increment() error")
-	}
+	assert.Error(t, pr.increment(tn, reward, reward))
+	assert.True(t, pr.equal(pr2))
 }
 
 func TestPlanetReward_Claim(t *testing.T) {
@@ -98,19 +65,11 @@ func TestPlanetReward_Claim(t *testing.T) {
 	amount := big.NewInt(700)
 
 	pr := newEmpyPlanetReward()
-	if err := pr.increment(tn, reward, reward); err != nil {
-		t.Errorf(err.Error())
-	}
+	assert.NoError(t, pr.increment(tn, reward, reward))
 
-	if err := pr.claim(amount); err != nil {
-		t.Errorf(err.Error())
-	}
+	assert.NoError(t, pr.claim(amount))
 
 	pr2 := pr.clone()
-	if err := pr.claim(amount); err == nil {
-		t.Errorf("Over claimed")
-	}
-	if !pr.equal(pr2) {
-		t.Errorf("claim() error")
-	}
+	assert.Error(t, pr.claim(amount))
+	assert.True(t, pr.equal(pr2))
 }
