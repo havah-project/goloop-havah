@@ -2,6 +2,7 @@ package hvh
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -190,6 +191,13 @@ func checkRewardInfo(t *testing.T,
 	}
 }
 
+func calcNewIssueAmount(issueAmount *big.Int, rate *big.Rat) *big.Int {
+	reduction := new(big.Int).Set(issueAmount)
+	reduction.Mul(reduction, rate.Num())
+	reduction.Div(reduction, rate.Denom())
+	return new(big.Int).Sub(issueAmount, reduction)
+}
+
 func TestExtensionStateImpl_StartRewardIssueInvalid(t *testing.T) {
 	termPeriod := int64(hvhmodule.TermPeriod)
 	mcc, es := newMockContextAndExtensionState(t, newSimplePlatformConfig(termPeriod, 1))
@@ -301,4 +309,66 @@ func TestExtensionStateImpl_Reward0(t *testing.T) {
 	assert.Zero(t, balance.Sign())
 	balance = cc.GetBalance(hvhmodule.HooverFund)
 	assert.Zero(t, balance.Sign())
+}
+
+func TestExtensionStateImpl_IssueReduction(t *testing.T) {
+	var balance *big.Int
+	issueStart := int64(10)
+	termPeriod := int64(10)
+	issueReductionCycle := int64(10)
+	issueAmount := toHVH(100)
+	usdtPrice := toHVH(1) // 1 USDT == 1 HVH
+
+	// pm := common.MustNewAddressFromString("hx1111")
+	owner := common.MustNewAddressFromString("hx2222")
+
+	stateCfg := hvhstate.StateConfig{
+		TermPeriod:          &common.HexInt64{Value: termPeriod},
+		USDTPrice:           new(common.HexInt).SetValue(usdtPrice),
+		IssueAmount:         new(common.HexInt).SetValue(issueAmount),
+		IssueReductionCycle: &common.HexInt64{Value: issueReductionCycle},
+	}
+	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
+	mcc.height = 1
+	cc := NewCallContext(mcc, owner)
+
+	err := es.StartRewardIssue(cc, issueStart)
+	assert.NoError(t, err)
+	balance = cc.GetBalance(hvhmodule.PublicTreasury)
+	assert.Zero(t, balance.Sign())
+
+	height := issueStart
+	for i := int64(0); i < issueReductionCycle; i++ {
+		goByHeight(t, height, es, mcc, owner)
+		assert.Zero(t, (mcc.height-issueStart)%termPeriod)
+
+		balance = mcc.GetBalance(hvhmodule.PublicTreasury)
+		assert.Zero(t, balance.Cmp(issueAmount))
+
+		height += termPeriod
+		fmt.Println(height)
+	}
+
+	// The first term start of the 2nd issueReductionCycle
+	issueAmount = calcNewIssueAmount(issueAmount, hvhmodule.BigRatIssueReductionRate)
+	goByHeight(t, height, es, mcc, owner)
+	balance = mcc.GetBalance(hvhmodule.PublicTreasury)
+	assert.Zero(t, balance.Cmp(issueAmount))
+
+	for i := int64(0); i < issueReductionCycle; i++ {
+		goByHeight(t, height, es, mcc, owner)
+		assert.Zero(t, (mcc.height-issueStart)%termPeriod)
+
+		balance = mcc.GetBalance(hvhmodule.PublicTreasury)
+		assert.Zero(t, balance.Cmp(issueAmount))
+
+		height += termPeriod
+		fmt.Println(height)
+	}
+
+	// The first term start of the 3rd issueReductionCycle
+	issueAmount = calcNewIssueAmount(issueAmount, hvhmodule.BigRatIssueReductionRate)
+	goByHeight(t, height, es, mcc, owner)
+	balance = mcc.GetBalance(hvhmodule.PublicTreasury)
+	assert.Zero(t, balance.Cmp(issueAmount))
 }
