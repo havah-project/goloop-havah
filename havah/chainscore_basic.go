@@ -19,6 +19,7 @@ package havah
 import (
 	"fmt"
 
+	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 
 	"github.com/icon-project/goloop/common"
@@ -557,3 +558,81 @@ func (s *chainScore) Ex_getTimestampThreshold() (int64, error) {
 	return db.Int64(), nil
 }
 
+func (s *chainScore) Ex_grantValidator(address module.Address) error {
+	if err := s.tryChargeCall(); err != nil {
+		return err
+	}
+	if address == nil {
+		return scoreresult.ErrInvalidParameter
+	}
+	if err := s.checkGovernance(false); err != nil {
+		return err
+	}
+	if address.IsContract() {
+		return scoreresult.New(StatusIllegalArgument, "address should be EOA")
+	}
+
+	if s.cc.MembershipEnabled() {
+		found := false
+		as := s.cc.GetAccountState(state.SystemID)
+		db := scoredb.NewArrayDB(as, state.VarMembers)
+		for i := 0; i < db.Size(); i++ {
+			if db.Get(i).Address().Equal(address) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return scoreresult.New(StatusIllegalArgument, "NotInMembers")
+		}
+	}
+
+	if v, err := state.ValidatorFromAddress(address); err == nil {
+		return s.cc.GetValidatorState().Add(v)
+	} else {
+		return err
+	}
+}
+
+func (s *chainScore) Ex_revokeValidator(address module.Address) error {
+	if err := s.tryChargeCall(); err != nil {
+		return err
+	}
+	if address == nil {
+		return scoreresult.ErrInvalidParameter
+	}
+	if err := s.checkGovernance(false); err != nil {
+		return err
+	}
+	if address.IsContract() {
+		return scoreresult.New(StatusIllegalArgument, "AddressIsContract")
+	}
+	if v, err := state.ValidatorFromAddress(address); err == nil {
+		vl := s.cc.GetValidatorState()
+		if ok := vl.Remove(v); !ok {
+			return scoreresult.New(StatusNotFound, "NotFound")
+		}
+		if vl.Len() == 0 {
+			return scoreresult.New(StatusIllegalArgument, "OnlyValidator")
+		}
+		return nil
+	} else {
+		return err
+	}
+}
+
+func (s *chainScore) Ex_getValidators() ([]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	vs := s.cc.GetValidatorState()
+	validators := make([]interface{}, vs.Len())
+	for i := 0; i < vs.Len(); i++ {
+		if v, ok := vs.Get(i); ok {
+			validators[i] = v.Address()
+		} else {
+			return nil, errors.CriticalUnknownError.New("Unexpected access failure")
+		}
+	}
+	return validators, nil
+}

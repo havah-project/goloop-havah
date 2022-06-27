@@ -410,6 +410,27 @@ var chainMethods = []*chainMethod{
 			scoreapi.Integer,
 		},
 	}, 0, 0},
+	{scoreapi.Method{scoreapi.Function, "grantValidator",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"address", scoreapi.Address, nil, nil},
+		},
+		nil,
+	}, 0, 0},
+	{scoreapi.Method{scoreapi.Function, "revokeValidator",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"address", scoreapi.Address, nil, nil},
+		},
+		nil,
+	}, 0, 0},
+	{scoreapi.Method{scoreapi.Function, "getValidators",
+		scoreapi.FlagReadOnly, 0,
+		nil,
+		[]scoreapi.DataType{
+			scoreapi.List,
+		},
+	}, 0, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {
