@@ -396,6 +396,81 @@ func TestExtensionStateImpl_Reward1(t *testing.T) {
 		ri0["total"].(*big.Int), hvhmodule.BigIntZero, hvhmodule.BigIntZero)
 }
 
+// Case 2
+// private planet reward
+// privateLockup
+// privateReleaseCycle
+func TestExtensionStateImpl_Reward2(t *testing.T) {
+	id := int64(1)
+	issueStart := int64(10)
+	termPeriod := int64(10)
+	issueAmount := toHVH(1)
+	usdtPrice := toHVH(1) // 1 USDT == 1 HVH
+
+	owner := common.MustNewAddressFromString("hx1111")
+	pm := common.MustNewAddressFromString("hx2222")
+
+	stateCfg := hvhstate.StateConfig{
+		TermPeriod:  &common.HexInt64{Value: termPeriod},
+		USDTPrice:   new(common.HexInt).SetValue(usdtPrice),
+		IssueAmount: new(common.HexInt).SetValue(issueAmount),
+	}
+	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
+	mcc.height = 5
+	cc := NewCallContext(mcc, pm)
+
+	err := es.StartRewardIssue(cc, issueStart)
+	assert.NoError(t, err)
+
+	// Register a Planet
+	priceInUSDT := toUSDT(1)
+	priceInHVH := toHVH(1)
+	err = es.RegisterPlanet(
+		cc, id, true, false, owner, priceInUSDT, priceInHVH)
+	assert.NoError(t, err)
+
+	// termSeq 0 has just started
+	goByHeight(t, issueStart, es, mcc, owner)
+	assert.Zero(t, mcc.GetBalance(hvhmodule.PublicTreasury).Cmp(issueAmount))
+
+	// height = issueStart + 5
+	goByCount(t, 5, es, mcc, owner)
+	assert.Equal(t, issueStart+5, mcc.BlockHeight())
+
+	for i := 0; i < hvhmodule.DayPerYear; i++ {
+		ri0, err := es.GetRewardInfo(cc, id)
+		assert.NoError(t, err)
+
+		assert.NoError(t, es.ReportPlanetWork(cc, id))
+
+		ri1, err := es.GetRewardInfo(cc, id)
+		reward := new(big.Int).Sub(ri1["total"].(*big.Int), ri0["total"].(*big.Int))
+		assert.Zero(t, issueAmount.Cmp(reward))
+		assert.Zero(t, ri1["claimable"].(*big.Int).Sign())
+
+		goByCount(t, termPeriod, es, mcc, pm)
+	}
+
+	ri2, err := es.GetRewardInfo(cc, id)
+	total := ri2["total"].(*big.Int)
+	claimable := ri2["claimable"].(*big.Int)
+	locked := new(big.Int).Mul(total, big.NewInt(23))
+	locked.Div(locked, big.NewInt(24))
+	expected := new(big.Int).Sub(total, locked)
+	assert.NoError(t, err)
+	assert.Zero(t, claimable.Cmp(expected))
+	assert.True(t, claimable.Sign() > 0)
+
+	// goByCount(t, termPeriod, es, mcc, pm)
+	// assert.NoError(t, es.ReportPlanetWork(cc, id))
+	//
+	// ri3, err := es.GetRewardInfo(cc, id)
+	// assert.NoError(t, err)
+	// claimable = ri3["claimable"].(*big.Int)
+	// total := ri3["total"].(*big.Int)
+	// es.Logger().Infof("total=%d claimable=%s", total, hex.EncodeToString(claimable.Bytes()))
+}
+
 func TestExtensionStateImpl_IssueReduction(t *testing.T) {
 	var balance *big.Int
 	issueStart := int64(10)
