@@ -111,6 +111,11 @@ func (cc *mockCallContext) GetBalance(address module.Address) *big.Int {
 	return as.GetBalance()
 }
 
+func (cc *mockCallContext) SetBalance(address module.Address, amount *big.Int) {
+	as := cc.GetAccountState(address.ID())
+	as.SetBalance(amount)
+}
+
 func newMockCallContext() *mockCallContext {
 	return &mockCallContext{
 		accounts: make(map[string]*mockAccount),
@@ -309,6 +314,86 @@ func TestExtensionStateImpl_Reward0(t *testing.T) {
 	assert.Zero(t, balance.Sign())
 	balance = cc.GetBalance(hvhmodule.HooverFund)
 	assert.Zero(t, balance.Sign())
+}
+
+// Case 1
+// Not enough hoover budget
+// pubic planet reward
+func TestExtensionStateImpl_Reward1(t *testing.T) {
+	id := int64(1)
+	issueStart := int64(10)
+	termPeriod := int64(100)
+	issueAmount := toHVH(2)
+	usdtPrice := toHVH(1) // 1 USDT == 1 HVH
+
+	owner := common.MustNewAddressFromString("hx1111")
+	pm := common.MustNewAddressFromString("hx2222")
+
+	stateCfg := hvhstate.StateConfig{
+		TermPeriod:  &common.HexInt64{Value: termPeriod},
+		USDTPrice:   new(common.HexInt).SetValue(usdtPrice),
+		IssueAmount: new(common.HexInt).SetValue(issueAmount),
+	}
+	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
+	mcc.height = 1
+	cc := NewCallContext(mcc, owner)
+
+	err := es.StartRewardIssue(cc, issueStart)
+	assert.NoError(t, err)
+
+	// Register a Planet
+	priceInUSDT := toUSDT(36_000)
+	priceInHVH := toHVH(36_000)
+	err = es.RegisterPlanet(
+		cc, id, false, false, owner, priceInUSDT, priceInHVH)
+	assert.NoError(t, err)
+
+	// termSeq 0 has just started
+	goByHeight(t, issueStart, es, mcc, owner)
+	assert.Zero(t, mcc.GetBalance(hvhmodule.PublicTreasury).Cmp(issueAmount))
+
+	// height = issueStart + 10
+	goByCount(t, 10, es, mcc, owner)
+	assert.Equal(t, issueStart+10, mcc.BlockHeight())
+
+	// Make the case where hooverBudget is not enough to support planet rewards
+	balance := toHVH(3)
+	mcc.SetBalance(hvhmodule.HooverFund, balance)
+	assert.Zero(t, mcc.GetBalance(hvhmodule.HooverFund).Cmp(balance))
+
+	balance = mcc.GetBalance(hvhmodule.PublicTreasury)
+	assert.Zero(t, balance.Cmp(issueAmount))
+
+	// ReportPlanetWork
+	cc = NewCallContext(mcc, pm)
+	assert.NoError(t, es.ReportPlanetWork(cc, id))
+
+	// Check if hooverFund is transferred to public treasury
+	assert.Zero(t, mcc.GetBalance(hvhmodule.HooverFund).Sign())
+	assert.Zero(t, mcc.GetBalance(hvhmodule.PublicTreasury).Cmp(toHVH(5)))
+
+	ri0, err := es.GetRewardInfo(cc, id)
+	assert.NoError(t, err)
+	checkRewardInfo(t, ri0, mcc.height, toHVH(5), toHVH(5), toHVH(5))
+
+	goByCount(t, 1, es, mcc, owner)
+
+	// Before claiming rewards
+	assert.Zero(t, cc.GetBalance(owner).Sign())
+
+	// Claim rewards
+	cc = NewCallContext(mcc, owner)
+	err = es.ClaimPlanetReward(cc, []int64{id})
+	assert.NoError(t, err)
+
+	// After claiming rewards
+	balance = cc.GetBalance(owner)
+	assert.Zero(t, ri0["claimable"].(*big.Int).Cmp(balance))
+
+	ri1, err := es.GetRewardInfo(cc, id)
+	assert.NoError(t, err)
+	checkRewardInfo(t, ri1, mcc.height,
+		ri0["total"].(*big.Int), hvhmodule.BigIntZero, hvhmodule.BigIntZero)
 }
 
 func TestExtensionStateImpl_IssueReduction(t *testing.T) {

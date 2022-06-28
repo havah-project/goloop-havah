@@ -134,7 +134,7 @@ func (es *ExtensionStateImpl) Reset(ess state.ExtensionSnapshot) {
 
 // ClearCache is called before executing the first transaction in a block and at the end of base transaction
 func (es *ExtensionStateImpl) ClearCache() {
-	//es.state.ClearCache()
+	// es.state.ClearCache()
 }
 
 func (es *ExtensionStateImpl) InitPlatformConfig(cfg *PlatformConfig) error {
@@ -290,7 +290,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 	// hooverLimit = planet.price - planetReward.total - reward
 	hooverLimit := calcHooverLimit(pr.Total(), reward, p.Price())
 	es.Logger().Debugf(
-		"total=%d reward=%d price=%d hooverLimit=%d",
+		"pr.total=%d reward=%d price=%d hooverLimit=%d",
 		pr.Total(), reward, p.Price(), hooverLimit)
 
 	hooverRequest := hvhmodule.BigIntZero
