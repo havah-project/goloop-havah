@@ -563,7 +563,7 @@ func (s *State) OnTermStart(issueAmount *big.Int) error {
 	}
 
 	s.logger.Debugf(
-		"OnTermStart() end: ap=%d aup=%s rr=%s rt=%s",
+		"OnTermStart() end: allPlanet=%d activeUSDT=%s rwdRemain=%s rwdTotal=%s",
 		allPlanet, usdtPrice, rewardRemain, rewardRemain,
 	)
 	return nil
