@@ -54,7 +54,7 @@ public class HavahBasicTest extends TestBase {
         governorWallet = chain.governorWallet;
 
         chainScore = new ChainScore(txHandler);
-        planetNFTScore = new PlanetNFTScore(txHandler);
+        planetNFTScore = new PlanetNFTScore(governorWallet, txHandler);
 
         try {
             Bytes txHash = txHandler.transfer(chain.godWallet, governorWallet.getAddress(), ICX);

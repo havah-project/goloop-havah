@@ -20,9 +20,11 @@ import static foundation.icon.test.common.Env.LOG;
 public class PlanetNFTScore extends Score {
     public static final String name = "HAVAH Planet";
     public static final String symbol = "HAPL";
+    private final Wallet deployer;
 
-    public PlanetNFTScore(TransactionHandler txHandler) {
+    public PlanetNFTScore(Wallet deployer, TransactionHandler txHandler) {
         super(txHandler, Constants.PLANETNFT_ADDRESS);
+        this.deployer = deployer;
     }
 
     public Address ownerOf(BigInteger tokenId) throws IOException {
@@ -65,6 +67,10 @@ public class PlanetNFTScore extends Score {
         return call("tokenOfOwnerByIndex", params).asInteger();
     }
 
+    public Bytes mintPlanet(Address _to, int _type, BigInteger _priceInUSDT, BigInteger _priceInHVH) throws IOException {
+        return mintPlanet(deployer, _to, _type, _priceInUSDT, _priceInHVH);
+    }
+
     public Bytes mintPlanet(Wallet wallet, Address _to, int _type, BigInteger _priceInUSDT, BigInteger _priceInHVH) throws IOException {
         RpcObject params = new RpcObject.Builder()
                 .put("_to", new RpcValue(_to))
@@ -73,6 +79,13 @@ public class PlanetNFTScore extends Score {
                 .put("_priceInHVH", new RpcValue(_priceInHVH))
                 .build();
         return invoke(wallet, "mintPlanet", params);
+    }
+
+    public Bytes burn(BigInteger tokenId) throws IOException {
+        RpcObject params = new RpcObject.Builder()
+                .put("_tokenId", new RpcValue(tokenId))
+                .build();
+        return invoke(deployer, "burn", params);
     }
 
     public Bytes burn(Wallet wallet, BigInteger tokenId) throws IOException {
@@ -135,7 +148,7 @@ public class PlanetNFTScore extends Score {
     public Bytes requestStartOp(Wallet wallet, BigInteger tokenId, Address agentAddr) throws Exception {
         RpcObject params = new RpcObject.Builder()
                 .put("_tokenId", new RpcValue(tokenId))
-                .put("_agentAddr", new RpcValue(agentAddr))
+                .put("_agent", new RpcValue(agentAddr))
                 .build();
         return invoke(wallet, "requestStartOp", params);
     }

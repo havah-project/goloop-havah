@@ -24,6 +24,7 @@
         },
         {
             "address": "cx4000000000000000000000000000000000000000",
+            "balance": "0x422CA8B0A00A425000000",
             "name": "sustainable_fund",
             "score": {
                 "contentId": "hash:{{hash:sustainable-fund-optimized.jar}}",
@@ -36,7 +37,7 @@
         },
         {
             "address": "hx6000000000000000000000000000000000000000",
-            "balance": "0x0",
+            "balance": "0x422CA8B0A00A425000000",
             "name": "hoover_fund"
         },
         {
@@ -72,10 +73,36 @@
     "chain": {
         "platform": "havah",
         "havah": {
-            "termPeriod": "0x4",
-            "privateLockup": "0x8",
+            "termPeriod": "0x8",
+            "privateLockup": "0x2",
             "privateReleaseCycle": "0x4",
-            "usdtPrice": "0x10"
+            "usdtPrice": "0xDE0B6B3A7640000",
+            "issueReductionCycle" : "0x8000"
+        },
+        "fee": {
+            "stepPrice": "0x2e90edd00",
+            "stepLimit": {
+                "invoke": "0x9502f900",
+                "query": "0x2faf080"
+            },
+            "stepCosts": {
+                "apiCall": "0x2710",
+                "contractCall": "0x61a8",
+                "contractCreate": "0x3b9aca00",
+                "contractSet": "0x3a98",
+                "contractUpdate": "0x3b9aca00",
+                "default": "0x186a0",
+                "delete": "-0xf0",
+                "deleteBase": "0xc8",
+                "get": "0x19",
+                "getBase": "0xbb8",
+                "input": "0xc8",
+                "log": "0x64",
+                "logBase": "0x1388",
+                "schema": "0x1",
+                "set": "0x140",
+                "setBase": "0x2710"
+            }
         },
         "validators": [
             "hxb6b5791be0b5ef67063b3c10b840fb81514db2fd"
