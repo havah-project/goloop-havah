@@ -349,6 +349,18 @@ func TestExtensionStateImpl_IssueReduction(t *testing.T) {
 		fmt.Println(height)
 	}
 
+	totalIssued := new(big.Int).Mul(issueAmount, big.NewInt(issueReductionCycle))
+	totalSupply := cc.GetTotalSupply()
+	assert.Zero(t, totalSupply.Cmp(totalIssued))
+
+	hfBalance := mcc.GetBalance(hvhmodule.HooverFund)
+	assert.Zero(t, hfBalance.Cmp(new(big.Int).Mul(issueAmount, big.NewInt(issueReductionCycle-1))))
+
+	sfBalance := mcc.GetBalance(hvhmodule.SustainableFund)
+	assert.Zero(t, sfBalance.Sign())
+
+	es.Logger().Errorf("hf=%d sf=%d", hfBalance, sfBalance)
+
 	// The first term start of the 2nd issueReductionCycle
 	issueAmount = calcNewIssueAmount(issueAmount, hvhmodule.BigRatIssueReductionRate)
 	goByHeight(t, height, es, mcc, owner)
@@ -371,4 +383,73 @@ func TestExtensionStateImpl_IssueReduction(t *testing.T) {
 	goByHeight(t, height, es, mcc, owner)
 	balance = mcc.GetBalance(hvhmodule.PublicTreasury)
 	assert.Zero(t, balance.Cmp(issueAmount))
+}
+
+func TestExtensionStateImpl_SetPlanetOwner(t *testing.T) {
+	issueStart := int64(10)
+	termPeriod := int64(10)
+	issueReductionCycle := int64(10)
+	issueAmount := toHVH(100)
+	usdtPrice := toHVH(1) // 1 USDT == 1 HVH
+
+	stateCfg := hvhstate.StateConfig{
+		TermPeriod:          &common.HexInt64{Value: termPeriod},
+		USDTPrice:           new(common.HexInt).SetValue(usdtPrice),
+		IssueAmount:         new(common.HexInt).SetValue(issueAmount),
+		IssueReductionCycle: &common.HexInt64{Value: issueReductionCycle},
+	}
+	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
+	mcc.height = 1
+	cc := NewCallContext(mcc, nil)
+
+	err := es.StartRewardIssue(cc, issueStart)
+	assert.NoError(t, err)
+
+	oldOwners := []module.Address{
+		common.MustNewAddressFromString("hx11"),
+		common.MustNewAddressFromString("hx12"),
+		common.MustNewAddressFromString("hx13"),
+	}
+	newOwners := []module.Address{
+		common.MustNewAddressFromString("hx21"),
+		common.MustNewAddressFromString("hx22"),
+		common.MustNewAddressFromString("hx23"),
+	}
+
+	priceInUSDT := toUSDT(5_000)
+	priceInHVH := toHVH(50_000)
+
+	for i := 0; i < len(oldOwners); i++ {
+		id := int64(i + 1)
+		err = es.RegisterPlanet(
+			cc, id, false, false,
+			oldOwners[i], priceInUSDT, priceInHVH)
+		assert.NoError(t, err)
+		jso, err := es.GetPlanetInfo(cc, id)
+		assert.NoError(t, err)
+		assert.True(t, jso["owner"].(module.Address).Equal(oldOwners[i]))
+	}
+
+	goByHeight(t, issueStart, es, mcc, nil)
+	goByCount(t, termPeriod, es, mcc, nil)
+
+	for i := 0; i < len(oldOwners); i++ {
+		id := int64(i + 1)
+		jso, err := es.GetPlanetInfo(cc, id)
+		assert.NoError(t, err)
+		assert.True(t, jso["owner"].(module.Address).Equal(oldOwners[i]))
+
+		err = es.SetPlanetOwner(cc, id, newOwners[i])
+		assert.NoError(t, err)
+
+		jso2, err := es.GetPlanetInfo(cc, id)
+		assert.NoError(t, err)
+		assert.True(t, jso2["owner"].(module.Address).Equal(newOwners[i]))
+
+		assert.Equal(t, jso["isPrivate"].(bool), jso2["isPrivate"].(bool))
+		assert.Equal(t, jso["isCompany"].(bool), jso2["isCompany"].(bool))
+		assert.Equal(t, jso["usdtPrice"].(*big.Int), jso2["usdtPrice"].(*big.Int))
+		assert.Equal(t, jso["havahPrice"].(*big.Int), jso2["havahPrice"].(*big.Int))
+		assert.Equal(t, jso["height"].(int64), jso2["height"].(int64))
+	}
 }
