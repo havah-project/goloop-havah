@@ -22,7 +22,7 @@ import static foundation.icon.test.common.Env.LOG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
-@Tag(Constants.TAG_HAVAH)
+//@Tag(Constants.TAG_HAVAH)
 public class GovernanceTest extends TestBase {
     /*
     1. setUSDT & getUSDT

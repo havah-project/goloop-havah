@@ -180,10 +180,11 @@ task testJavaScore(type: ChainTest, overwrite: true) {
     useJUnitPlatform {
         includeTags "javaScore"
     }
-    configFile = "./data/config/java.json"
+    configFile = "./data/config/havah.json"
     chainDir = ".chain/javascore"
     logFile = ".chain/javascore.log"
-    envFile = "./data/chainenv/java.props"
+    gsDir = "./data/genesisStorage/genesis_havah.json"
+    envFile = "./data/chainenv/havah.props"
     dockerEnv = "javascore"
 
     dependsOn 'cleanTestJavaScore'
@@ -194,11 +195,11 @@ task testJavaGov(type: ChainTest, overwrite: true) {
     useJUnitPlatform {
         includeTags "javaGov"
     }
-    configFile = "./data/config/javagov.json"
+    configFile = "./data/config/havah.json"
     chainDir = ".chain/javagov"
     logFile = ".chain/javagov.log"
-    gsDir = "./data/genesisStorage/genesis_javagov.json"
-    envFile = "./data/chainenv/javagov.props"
+    gsDir = "./data/genesisStorage/genesis_havah.json"
+    envFile = "./data/chainenv/havah.props"
     dockerEnv = "javagov"
 
     dependsOn 'cleanTestJavaGov'
