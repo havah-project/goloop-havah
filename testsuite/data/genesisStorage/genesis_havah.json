@@ -42,13 +42,33 @@
         },
         {
             "address": "cx7000000000000000000000000000000000000000",
+            "balance": "0x64",
             "name": "ecosystem",
             "score": {
                 "contentId": "hash:{{hash:ecosystem-optimized.jar}}",
                 "contentType": "application/java",
                 "owner": "hx54f021fc4a755a2a2c9fdda47a16ce4cd3f3b43e",
                 "params": {
-                    "_name": "Eco-System"
+                    "_name": "Eco-System",
+                    "_lockAmount": "0x64",
+                    "_schedules": [
+                        {
+                            "blockHeight": "0xa",
+                            "percent": "50"
+                        },
+                        {
+                            "blockHeight": "0x14",
+                            "percent": "30"
+                        },
+                        {
+                            "blockHeight": "0x1E",
+                            "percent": "10"
+                        },
+                        {
+                            "blockHeight": "0x28",
+                            "percent": "10"
+                        }
+                    ]
                 }
             }
         },
