@@ -480,7 +480,7 @@ func (s *State) calcClaimableReward(height int64, p *Planet, pr *planetReward) (
 	// All rewards have been locked
 	lockupTerm := (height - p.Height() - 1) / termPeriod
 	if lockupTerm < privateLockupTerm {
-		return new(big.Int), nil
+		return hvhmodule.BigIntZero, nil
 	}
 
 	releaseCycle := (lockupTerm-privateLockupTerm)/hvhmodule.DayPerMonth + 1
