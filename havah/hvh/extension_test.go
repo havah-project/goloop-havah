@@ -17,6 +17,10 @@ import (
 	"github.com/icon-project/goloop/service/state"
 )
 
+var (
+	SystemTreasury = common.MustNewAddressFromString("hx1000000000000000000000000000000000000000")
+)
+
 type mockAccount struct {
 	state.AccountState
 	contract bool
@@ -103,7 +107,7 @@ func (cc *mockCallContext) OnEvent(addr module.Address, indexed, data [][]byte) 
 }
 
 func (cc *mockCallContext) Treasury() module.Address {
-	return hvhmodule.ServiceTreasury
+	return SystemTreasury
 }
 
 func (cc *mockCallContext) GetBalance(address module.Address) *big.Int {
@@ -469,6 +473,54 @@ func TestExtensionStateImpl_Reward2(t *testing.T) {
 	// claimable = ri3["claimable"].(*big.Int)
 	// total := ri3["total"].(*big.Int)
 	// es.Logger().Infof("total=%d claimable=%s", total, hex.EncodeToString(claimable.Bytes()))
+}
+
+func TestExtensionStateImpl_DistributeFee(t *testing.T) {
+	var balance *big.Int
+	issueStart := int64(10)
+	termPeriod := int64(10)
+	issueAmount := toHVH(10)
+	usdtPrice := toHVH(1) // 1 USDT == 1 HVH
+	owner := common.MustNewAddressFromString("hx2222")
+
+	stateCfg := hvhstate.StateConfig{
+		TermPeriod:  &common.HexInt64{Value: termPeriod},
+		USDTPrice:   new(common.HexInt).SetValue(usdtPrice),
+		IssueAmount: new(common.HexInt).SetValue(issueAmount),
+	}
+	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
+	mcc.height = 1
+	cc := NewCallContext(mcc, owner)
+
+	err := es.StartRewardIssue(cc, issueStart)
+	assert.NoError(t, err)
+	balance = cc.GetBalance(hvhmodule.PublicTreasury)
+	assert.Zero(t, balance.Sign())
+
+	// Initial condition setting
+	mcc.SetBalance(hvhmodule.ServiceTreasury, toHVH(10))
+	mcc.SetBalance(hvhmodule.HooverFund, hvhmodule.BigIntHooverBudget)
+	mcc.SetBalance(cc.Treasury(), toHVH(20))
+	es.Logger().Infof("Treasury: %s", cc.Treasury())
+
+	assert.Zero(t, mcc.GetBalance(hvhmodule.EcoSystem).Sign())
+	assert.Zero(t, mcc.GetBalance(hvhmodule.SustainableFund).Sign())
+
+	// 1st term start
+	goByHeight(t, issueStart, es, mcc, nil)
+
+	// No fee distribution at the first term
+	assert.Zero(t, mcc.GetBalance(hvhmodule.EcoSystem).Sign())
+	assert.Zero(t, mcc.GetBalance(hvhmodule.SustainableFund).Sign())
+
+	// 2nd term start
+	goByCount(t, termPeriod, es, mcc, nil)
+
+	assert.Zero(t, mcc.GetBalance(hvhmodule.EcoSystem).Cmp(toHVH(6)))
+	assert.Zero(t, mcc.GetBalance(hvhmodule.SustainableFund).Cmp(new(big.Int).Add(issueAmount, toHVH(24))))
+	assert.Zero(t, mcc.GetBalance(hvhmodule.HooverFund).Cmp(hvhmodule.BigIntHooverBudget))
+	assert.Zero(t, mcc.GetBalance(hvhmodule.ServiceTreasury).Sign())
+	assert.Zero(t, mcc.GetBalance(cc.Treasury()).Sign())
 }
 
 func TestExtensionStateImpl_IssueReduction(t *testing.T) {
