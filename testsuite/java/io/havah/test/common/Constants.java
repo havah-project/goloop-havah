@@ -27,6 +27,9 @@ public class Constants extends foundation.icon.test.common.Constants {
     public static final Address PLANETNFT_ADDRESS
             = new Address("cx8000000000000000000000000000000000000000");
 
+    public static final Address VAULT_ADDRESS
+            = new Address("cx1100000000000000000000000000000000000000");
+
     public static final int RPC_ERROR_INVALID_ID = -30032;
 
     public static final BigInteger INITIAL_ISSUE_AMOUNT = new BigInteger("5000000000000000000000000", 10); // 초기 발행량
