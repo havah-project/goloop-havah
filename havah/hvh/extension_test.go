@@ -217,12 +217,22 @@ func TestExtensionStateImpl_StartRewardIssueInvalid(t *testing.T) {
 }
 
 func TestExtensionStateImpl_StartRewardIssueValid(t *testing.T) {
+	var err error
 	termPeriod := int64(hvhmodule.TermPeriod)
 	mcc, es := newMockContextAndExtensionState(t, newSimplePlatformConfig(termPeriod, 1))
-	mcc.height = 100
+	mcc.height = 10
 	cc := NewCallContext(mcc, nil)
-	err := es.StartRewardIssue(cc, 101)
+
+	err = es.StartRewardIssue(cc, 100)
 	assert.NoError(t, err)
+
+	err = es.StartRewardIssue(cc, 110)
+	assert.NoError(t, err)
+
+	goByHeight(t, 110, es, mcc, nil)
+
+	err = es.StartRewardIssue(cc, 150)
+	assert.Error(t, err)
 }
 
 // Case 0

@@ -84,14 +84,21 @@ func (s *State) GetIssueStart() int64 {
 }
 
 // SetIssueStart writes the issue start height to varDB in ExtensionState
-func (s *State) SetIssueStart(curBH, startBH int64) error {
-	if startBH < 1 || startBH <= curBH {
+func (s *State) SetIssueStart(height, newIssueStart int64) error {
+	if newIssueStart < 1 || newIssueStart <= height {
 		return scoreresult.Errorf(
 			hvhmodule.StatusIllegalArgument,
-			"Invalid height: cur=%v start=%v", curBH, startBH)
+			"Invalid height: cur=%v start=%v", height, newIssueStart)
 	}
+
 	varDB := s.getVarDB(hvhmodule.VarIssueStart)
-	return varDB.Set(startBH)
+	issueStart := varDB.Int64()
+	if IsIssueStarted(height, issueStart) {
+		return scoreresult.Errorf(
+			hvhmodule.StatusIllegalArgument, "RewardIssue has already begun")
+	}
+
+	return varDB.Set(newIssueStart)
 }
 
 func (s *State) GetTermPeriod() int64 {
