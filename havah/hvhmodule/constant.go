@@ -68,10 +68,10 @@ const (
 // PlatformConfig default values
 const (
 	TermPeriod          = DayBlock
-	IssueAmount         = 5_000_000                // unit: HVH
+	IssueAmount         = 4_300_000                // unit: HVH
 	IssueReductionCycle = DayPerYear               // 1 year (360) in term
 	PrivateLockup       = DayPerYear               // 1 year (360) in term
-	HooverBudget        = 5_000_000                // unit: HVH
+	HooverBudget        = 4_300_000                // unit: HVH
 	IssueLimit          = 50 * IssueReductionCycle // unit: term
 )
 
