@@ -250,8 +250,8 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 
 	issueStart := es.state.GetIssueStart()
 	if !hvhstate.IsIssueStarted(height, issueStart) {
-		return scoreresult.Errorf(
-			hvhmodule.StatusIllegalArgument, "Issue is not started")
+		return errors.InvalidStateError.Errorf(
+			"IssueDoesntStarted(height=%d,issueStart=%d)", height, issueStart)
 	}
 
 	// Check if a planet exists
