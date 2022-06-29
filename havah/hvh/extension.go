@@ -248,13 +248,18 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 	height := cc.BlockHeight()
 	es.Logger().Debugf("ReportPlanetWork() start: height=%d id=%d", height, id)
 
+	issueStart := es.state.GetIssueStart()
+	if !hvhstate.IsIssueStarted(height, issueStart) {
+		return scoreresult.Errorf(
+			hvhmodule.StatusIllegalArgument, "Issue is not started")
+	}
+
 	// Check if a planet exists
 	p, err := es.state.GetPlanet(id)
 	if err != nil {
 		return err
 	}
 
-	issueStart := es.state.GetIssueStart()
 	termPeriod := es.state.GetTermPeriod()
 	termSeq := (height - issueStart) / termPeriod
 	termStart := termSeq*termPeriod + issueStart

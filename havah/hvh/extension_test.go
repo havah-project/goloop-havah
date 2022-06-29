@@ -675,3 +675,33 @@ func TestExtensionStateImpl_SetPlanetOwner(t *testing.T) {
 		assert.Equal(t, jso["height"].(int64), jso2["height"].(int64))
 	}
 }
+
+func TestExtensionStateImpl_ReportPlanetWork_BeforeStartRewardIssue(t *testing.T) {
+	var err error
+	id := int64(1)
+	termPeriod := int64(10)
+	issueReductionCycle := int64(10)
+	issueAmount := toHVH(100)
+	usdtPrice := toHVH(1) // 1 USDT == 1 HVH
+	owner := common.MustNewAddressFromString("hx1234")
+
+	stateCfg := hvhstate.StateConfig{
+		TermPeriod:          &common.HexInt64{Value: termPeriod},
+		USDTPrice:           new(common.HexInt).SetValue(usdtPrice),
+		IssueAmount:         new(common.HexInt).SetValue(issueAmount),
+		IssueReductionCycle: &common.HexInt64{Value: issueReductionCycle},
+	}
+	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
+	mcc.height = 1
+	cc := NewCallContext(mcc, nil)
+
+	priceInUSDT := toUSDT(5_000)
+	priceInHVH := toHVH(50_000)
+	err = es.RegisterPlanet(cc, id, false, false, owner, priceInUSDT, priceInHVH)
+	assert.NoError(t, err)
+
+	goByCount(t, 100, es, mcc, nil)
+
+	err = es.ReportPlanetWork(cc, id)
+	assert.Error(t, err)
+}
