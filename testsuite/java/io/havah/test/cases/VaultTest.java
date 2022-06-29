@@ -46,36 +46,29 @@ public class VaultTest extends TestBase {
         vaultScore = new VaultScore(txHandler);
 
         ownerWallet = Utils.getGovernor();
+        txHandler.transfer(ownerWallet.getAddress(), amount);
+        ensureIcxBalance(txHandler, ownerWallet.getAddress(), BigInteger.ZERO, amount);
     }
 
     @Test
     void startVault() throws Exception {
-        LOG.infoEntering("transfer icx", "transfer 300 ICX to vault score from accounts");
-        Bytes txHash = txHandler.transfer(wallets[0], vaultScore.getAddress(), ICX.multiply(BigInteger.valueOf(10)));
-        assertSuccess(txHandler.getResult(txHash));
-        txHash = txHandler.transfer(wallets[1], vaultScore.getAddress(), ICX.multiply(BigInteger.valueOf(10)));
-        assertSuccess(txHandler.getResult(txHash));
-        txHash = txHandler.transfer(wallets[2], vaultScore.getAddress(), ICX.multiply(BigInteger.valueOf(10)));
-        assertSuccess(txHandler.getResult(txHash));
-
-        assertEquals(ICX.multiply(BigInteger.valueOf(30)).intValue(), txHandler.getBalance(vaultScore.getAddress()).intValue());
-        LOG.infoExiting();
-
         LOG.infoEntering("call", "setAccounts()");
         VaultScore.VestingAccount[] accounts = {
                 new VaultScore.VestingAccount(wallets[0].getAddress(), BigInteger.valueOf(5000)),
                 new VaultScore.VestingAccount(wallets[1].getAddress(), BigInteger.valueOf(3000)),
                 new VaultScore.VestingAccount(wallets[2].getAddress(), BigInteger.valueOf(2000))
         };
-        BigInteger[] heights = {
-                BigInteger.valueOf(25),
-                BigInteger.valueOf(35),
-                BigInteger.valueOf(45)
-        };
-        TransactionResult result = vaultScore.setAccounts(ownerWallet, accounts, heights);
-        assertSuccess(result);
 
-        txHash = txHandler.transfer(wallets[0], vaultScore.getAddress(), ICX.multiply(BigInteger.valueOf(100)));
+        BigInteger curHeight = Utils.getHeight();
+
+        BigInteger[] heights = {
+                curHeight.add(BigInteger.valueOf(10)),
+                curHeight.add(BigInteger.valueOf(15)),
+                curHeight.add(BigInteger.valueOf(30))
+        };
+        assertSuccess(vaultScore.setAccounts(ownerWallet, accounts, heights));
+
+        Bytes txHash = txHandler.transfer(wallets[0], vaultScore.getAddress(), ICX.multiply(BigInteger.valueOf(100)));
         assertFailure(txHandler.getResult(txHash));
         LOG.infoExiting();
 
