@@ -1,49 +1,85 @@
-# Extension for HAVAH
+# ChainScore APIs
 
 ## Introduction
 
 This document is intended to explain the following:
 
+* Basic and HAVAH-specific JSON-RPC APIs that ChainScore provides
 * HAVAH-specific characteristics such as default configurations and predefined contracts
-* JSON-RPC APIs for HAVAH available to interact with Goloop nodes.
 
-## Configurations
-
-## HAVAH APIs
+## Common
 
 API path : `<scheme>://<host>/api/v3`
 
-* All HAVAH APIs follow SCORE API call convention
-* Target SCORE Address for HAVAH APIs: `cx0000000000000000000000000000000000000000`
-* Each HAVAH API `TX` method section explains the content of `data` field in `icx_sendTransaction`
-* Each HAVAH API `QUERY` method section explains the content of `data` field in `icx_call`
+* All APIs follow SCORE API call convention
+* Target SCORE Address for ChainScore APIs: `cx0000000000000000000000000000000000000000`
 * For more details on SCORE API call convention, refer to [jsonrpc_v3.md](jsonrpc_v3.md)
 
-```json
-{
-  "jsonrpc": "2.0",
-  "id": 1234,
-  "method": "icx_sendTransaction",
-  "params": {
-    "version": "0x3",
-    "from": "hx0123456789012345678901234567890123456789",
-    "to": "cx0000000000000000000000000000000000000000",
-    "stepLimit": "0x7e3a85",
-    "timestamp": "0x563a6cf330136",
-    "nid": "0x3",
-    "nonce": "0x0",
-    "value": "0x0",
-    "signature": "VAia7YZ2Ji6igKWzjR2YsGa2m5...",
-    "dataType": "call",
-    "data": {
-      "method": "startRewardIssue",
-      "params": {
-        "value": "0x64"
-      }
-    }
-  }
-}
-```
+## Basic APIs
+
+Basic JSON-RPC APIs that ChainScore provides commonly, regardless of a specific platform
+
+### disableScore
+
+### enableScore
+
+### blockScore
+
+### unblockScore
+
+### getBlockedScores
+
+### setRevision
+
+### setStepCost
+
+### setMaxStepLimit
+
+### setStepPrice
+
+### getStepCost
+
+### getStepCosts
+
+### getMaxStepLimit
+
+### getScoreStatus
+
+### getServiceConfig
+
+### getFeeSharingConfig
+
+### getScoreOwner
+
+### setScoreOwner
+
+### setRoundLimitFactor
+
+### getRoundLimitFactor
+
+### addDeployer
+
+### removeDeployer
+
+### isDeployer
+
+### getDeployers
+
+### setDeployerWhiteListEnabled
+
+### setTimestampThreshold
+
+### getTimestampThreshold
+
+### grantValidator
+
+### revokeValidator
+
+### getValidators
+
+## HAVAH APIs
+
+HAVAH-specific JSON-RPC APIs
 
 ### startRewardIssue
 
@@ -152,7 +188,7 @@ txHash
 
 ### isPlanetManager
 
-* Query if a specific address is a PlanetManager
+* Query if a specific address is a PlanetManager or not
 
 > Request
  
@@ -209,6 +245,8 @@ txHash
   "id": 1234,
   "method": "icx_sendTransaction",
   "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
     "data": {
       "method": "registerPlanet",
       "params": {
@@ -251,7 +289,6 @@ txHash
   "jsonrpc": "2.0",
   "method": "icx_call",
   "params": {
-    "version": "0x3",
     "to": "cx0000000000000000000000000000000000000000",
     "dataType": "call",
     "data": {
@@ -283,9 +320,9 @@ txHash
 
 #### Parameters
 
-| Key       | VALUE Type | Required | Description                             |
-|:----------|:-----------|:---------|:----------------------------------------|
-| id        | T_INT      | true     | Planet ID                               |
+| Key       | VALUE Type | Required | Description |
+|:----------|:-----------|:---------|:------------|
+| id        | T_INT      | true     | Planet ID   |
 
 #### Returns
 
@@ -311,8 +348,8 @@ txHash
   "id": 1234,
   "method": "icx_sendTransaction",
   "params": {
-    "from": "hx0123456789012345678901234567890123456789",
     "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
     "data": {
       "method": "unregisterPlanet",
       "params": {
@@ -325,9 +362,9 @@ txHash
 
 #### Parameters
 
-| Key       | VALUE Type | Required | Description                             |
-|:----------|:-----------|:---------|:----------------------------------------|
-| id        | T_INT      | true     | Planet ID                               |
+| Key | VALUE Type | Required | Description |
+|:----|:-----------|:---------|:------------|
+| id  | T_INT      | true     | Planet ID   |
 
 #### Returns
 
@@ -336,7 +373,7 @@ txHash
 ### setPlanetOwner
 
 * Changes a planet owner
-* Called by a planet owner
+* Called by PlanetNFT SCORE
 
 #### Parameters
 
@@ -351,10 +388,30 @@ txHash
 
 ### reportPlanetWork
 
-* PlanetManager notifies a planet's work to the network
-* The network offers the rewards to a planet whose work is reported
-* Only one report for a planet is allowed in a term
+* PlanetManager reports a planet's work
+* The network offers the rewards to a planet whose work has been reported in a term
+* Only one report for a planet is available in a term
 * Called by PlanetManager
+
+> Request
+ 
+```json
+{
+  "id": 1234,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "reportPlanetWork",
+      "params": {
+        "id": "0x1"
+      }
+    }
+  }
+}
+```
 
 #### Parameters
 
@@ -368,13 +425,35 @@ txHash
 
 ### claimPlanetReward
 
-* Claims an accumulated reward for a planet
+* Claims remaining rewards for a specific planet
+* Claimed rewards are transferred from PublicTreasury to the planet owner
+* Called by a planet owner
+ 
+> Request
+ 
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1234,
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "claimPlanetReward",
+      "params": {
+        "ids": ["0x1", "0x2", "0x10"]
+      }
+    }
+  }
+}
+```
 
 #### Parameters
 
-| Key | VALUE Type | Required | Description |
-|:----|:-----------|:---------|:------------|
-| ids | T_LIST     | true     | Planet IDs  |
+| Key | VALUE Type | Required | Description                 |
+|:----|:-----------|:---------|:----------------------------|
+| ids | T_LIST     | true     | Planet IDs to claim rewards |
 
 #### Returns
 
@@ -384,15 +463,59 @@ txHash
 
 * Returns the information on a planet reward
 
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getRewardInfo",
+      "params": {
+        "id": "0x1"
+      }
+    }
+  }
+}
+```
+
+> Response
+ 
+ ```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "height": "0x3e8",
+    "total": "0x8ac7230489e80000",
+    "remain": "0xde0b6b3a7640000",
+    "claimable": "0xde0b6b3a7640000"
+  }
+}
+```
+
 #### Parameters
 
-| Key | VALUE Type | Required | Description      |
-|:----|:-----------|:---------|:-----------------|
-| id  | T_INT      | true     | Planet ID        |
+| Key | VALUE Type | Required | Description |
+|:----|:-----------|:---------|:------------|
+| id  | T_INT      | true     | Planet ID   |
+
+#### Returns
+
+| Key       | VALUE Type | Required | Description                                               |
+|:----------|:-----------|:---------|:----------------------------------------------------------|
+| height    | T_INT      | true     | Current block height                                      |
+| total     | T_INT      | true     | Total accumulated rewards until now                       |
+| remain    | T_INT      | true     | Difference between Total Rewards and Claimed Rewards      |
+| claimable | T_INT      | true     | Rewards that a planet owner can receive when claiming now |
 
 ### getIssueInfo
 
-* Returns the information on issue-related global configuration
+* Returns the information on issue-related configuration
  
 > Request
  
@@ -434,13 +557,13 @@ None
  
 #### Returns
 
-| Key                 | VALUE Type | Required | Description                              |
-|:--------------------|:-----------|:---------|:-----------------------------------------|
-| height              | T_INT      | true     | Current block height                     |
-| termPeriod          | T_INT      | true     | Coin issuing term period (unit: block)   |
-| issueReductionCycle | T_INT      | true     | -                                        |
-| issueStart          | T_INT      | false    | BlockHeight when issuing coin will begin |
-| termSequence        | T_INT      | false    | Sequence of a term starting with 0       |
+| Key                 | VALUE Type | Required | Description                                        |
+|:--------------------|:-----------|:---------|:---------------------------------------------------|
+| height              | T_INT      | true     | Current block height                               |
+| termPeriod          | T_INT      | true     | Coin issuing term period (unit: block)             |
+| issueReductionCycle | T_INT      | true     | issueAmount is reduced at a fixed rate every cycle |
+| issueStart          | T_INT      | false    | BlockHeight when issuing coin will begin           |
+| termSequence        | T_INT      | false    | Sequence of a term starting with 0                 |
 
 ### getUSDTPrice
 
@@ -492,8 +615,8 @@ None
 
 ```json
 {
-  "jsonrpc": "2.0",
   "id": 1234,
+  "jsonrpc": "2.0",
   "method": "icx_sendTransaction",
   "params": {
     "to": "cx0000000000000000000000000000000000000000",
