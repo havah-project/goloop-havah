@@ -485,6 +485,71 @@ func TestExtensionStateImpl_Reward2(t *testing.T) {
 	// es.Logger().Infof("total=%d claimable=%s", total, hex.EncodeToString(claimable.Bytes()))
 }
 
+// Case 3
+// company planet rewards
+// Company planet rewards are distributed to EcoSystem and its planet owner in a ratio of 6:4
+func TestExtensionStateImpl_Reward3(t *testing.T) {
+	var balance *big.Int
+	id := int64(1)
+	issueStart := int64(10)
+	termPeriod := int64(10)
+	issueAmount := toHVH(10) // 10 HVH
+	usdtPrice := toHVH(10)   // 1 USDT == 10 HVH
+	owner := common.MustNewAddressFromString("hx2222")
+
+	stateCfg := hvhstate.StateConfig{
+		TermPeriod:  &common.HexInt64{Value: termPeriod},
+		USDTPrice:   new(common.HexInt).SetValue(usdtPrice),
+		IssueAmount: new(common.HexInt).SetValue(issueAmount),
+	}
+	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
+	mcc.height = 1
+	cc := NewCallContext(mcc, owner)
+
+	err := es.StartRewardIssue(cc, issueStart)
+	assert.NoError(t, err)
+	balance = cc.GetBalance(hvhmodule.PublicTreasury)
+	assert.Zero(t, balance.Sign())
+
+	priceInUSDT := toUSDT(5_000)
+	priceInHVH := toHVH(50_000)
+	err = es.RegisterPlanet(cc, id, false, true, owner, priceInUSDT, priceInHVH)
+
+	// Before reporting a planet work, the balances of related accounts are 0
+	assert.Zero(t, cc.GetBalance(hvhmodule.EcoSystem).Sign())
+	assert.Zero(t, cc.GetBalance(owner).Sign())
+
+	// Go To issueStart height
+	height := issueStart + termPeriod/2
+	goByHeight(t, height, es, mcc, nil)
+
+	err = es.ReportPlanetWork(cc, id)
+	assert.NoError(t, err)
+
+	// Expected balances after reporting a planet work
+	ecoReward := new(big.Int).Mul(issueAmount, hvhmodule.BigRatEcoSystemToCompanyReward.Num())
+	ecoReward.Div(ecoReward, hvhmodule.BigRatEcoSystemToCompanyReward.Denom())
+	ownerReward := new(big.Int).Sub(issueAmount, ecoReward)
+
+	// Check if reward info is correct
+	jso, err := es.GetRewardInfo(cc, id)
+	assert.NoError(t, err)
+	checkRewardInfo(t, jso, cc.BlockHeight(), issueAmount, ownerReward, ownerReward)
+
+	// Claim rewards for company planet owner
+	err = es.ClaimPlanetReward(cc, []int64{id})
+	assert.NoError(t, err)
+	assert.Zero(t, ownerReward.Cmp(cc.GetBalance(owner)))
+	// EcoSystem reward will be transferred at the beginning of the next term
+	assert.Zero(t, cc.GetBalance(hvhmodule.EcoSystem).Sign())
+
+	// Go to the next term start
+	goByHeight(t, issueStart+termPeriod*2, es, mcc, nil)
+
+	// Rewards for EcoSystem will be claimed automatically at the beginning of the next term
+	assert.Zero(t, ecoReward.Cmp(cc.GetBalance(hvhmodule.EcoSystem)))
+}
+
 func TestExtensionStateImpl_DistributeFee(t *testing.T) {
 	var balance *big.Int
 	issueStart := int64(10)
