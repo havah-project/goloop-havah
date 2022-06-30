@@ -97,21 +97,8 @@
                 "contentType": "application/java",
                 "owner": "hx54f021fc4a755a2a2c9fdda47a16ce4cd3f3b43e",
                 "params": {
-                    "vestingAccounts": [
-                        {
-                            "scheduledPercents":"0x1388",
-                            "account":"hxf813618186fc1d02fa82ce3650cfa6ce1ea8f73d"
-                        },
-                        {
-                            "scheduledPercents":"0xbb8",
-                            "account":"hxc071acc23f64e00bc87daaff79cdb2b522a2d037"
-                        },
-                        {
-                            "scheduledPercents":"0x7d0",
-                            "account":"hx59a0ed378b8f7077e2340154b4cf496bd53fbd05"
-                        }
-                    ],
-                    "heights":["0x19","0x23","0x2d"]
+                    "vestingAccounts": [],
+                    "heights":[]
                 }
             }
         }
