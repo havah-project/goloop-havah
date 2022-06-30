@@ -19,39 +19,29 @@ API path : `<scheme>://<host>/api/v3`
 
 Basic JSON-RPC APIs that ChainScore provides commonly, regardless of a specific platform
 
-### disableScore
-
-### enableScore
-
-### blockScore
-
-### unblockScore
-
-### getBlockedScores
-
 ### setRevision
 
+### getRevision
+
 ### setStepCost
-
-### setMaxStepLimit
-
-### setStepPrice
 
 ### getStepCost
 
 ### getStepCosts
 
+### setMaxStepLimit
+
 ### getMaxStepLimit
 
-### getScoreStatus
+### setStepPrice
+
+### getStepPrice
 
 ### getServiceConfig
 
-### getFeeSharingConfig
+### setScoreOwner
 
 ### getScoreOwner
-
-### setScoreOwner
 
 ### setRoundLimitFactor
 
@@ -64,8 +54,6 @@ Basic JSON-RPC APIs that ChainScore provides commonly, regardless of a specific 
 ### isDeployer
 
 ### getDeployers
-
-### setDeployerWhiteListEnabled
 
 ### setTimestampThreshold
 

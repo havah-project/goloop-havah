@@ -55,46 +55,6 @@ type chainScore struct {
 
 var chainMethods = []*chainMethod{
 	{scoreapi.Method{
-		scoreapi.Function, "disableScore",
-		scoreapi.FlagExternal, 1,
-		[]scoreapi.Parameter{
-			{"address", scoreapi.Address, nil, nil},
-		},
-		nil,
-	}, 0, 0},
-	{scoreapi.Method{
-		scoreapi.Function, "enableScore",
-		scoreapi.FlagExternal, 1,
-		[]scoreapi.Parameter{
-			{"address", scoreapi.Address, nil, nil},
-		},
-		nil,
-	}, 0, 0},
-	{scoreapi.Method{
-		scoreapi.Function, "blockScore",
-		scoreapi.FlagExternal, 1,
-		[]scoreapi.Parameter{
-			{"address", scoreapi.Address, nil, nil},
-		},
-		nil,
-	}, 0, 0},
-	{scoreapi.Method{
-		scoreapi.Function, "unblockScore",
-		scoreapi.FlagExternal, 1,
-		[]scoreapi.Parameter{
-			{"address", scoreapi.Address, nil, nil},
-		},
-		nil,
-	}, 0, 0},
-	{scoreapi.Method{
-		scoreapi.Function, "getBlockedScores",
-		scoreapi.FlagReadOnly, 0,
-		nil,
-		[]scoreapi.DataType{
-			scoreapi.List,
-		},
-	}, 0, 0},
-	{scoreapi.Method{
 		scoreapi.Function, "setRevision",
 		scoreapi.FlagExternal, 1,
 		[]scoreapi.Parameter{
@@ -173,29 +133,11 @@ var chainMethods = []*chainMethod{
 		},
 	}, 0, 0},
 	{scoreapi.Method{
-		scoreapi.Function, "getScoreStatus",
-		scoreapi.FlagReadOnly, 1,
-		[]scoreapi.Parameter{
-			{"address", scoreapi.Address, nil, nil},
-		},
-		[]scoreapi.DataType{
-			scoreapi.Dict,
-		},
-	}, 0, 0},
-	{scoreapi.Method{
 		scoreapi.Function, "getServiceConfig",
 		scoreapi.FlagReadOnly, 0,
 		nil,
 		[]scoreapi.DataType{
 			scoreapi.Integer,
-		},
-	}, 0, 0},
-	{scoreapi.Method{
-		scoreapi.Function, "getFeeSharingConfig",
-		scoreapi.FlagReadOnly, 0,
-		nil,
-		[]scoreapi.DataType{
-			scoreapi.Dict,
 		},
 	}, 0, 0},
 	{scoreapi.Method{
@@ -386,13 +328,6 @@ var chainMethods = []*chainMethod{
 		[]scoreapi.DataType{
 			scoreapi.List,
 		},
-	}, 0, 0},
-	{scoreapi.Method{scoreapi.Function, "setDeployerWhiteListEnabled",
-		scoreapi.FlagExternal, 1,
-		[]scoreapi.Parameter{
-			{"yn", scoreapi.Bool, nil, nil},
-		},
-		nil,
 	}, 0, 0},
 	{scoreapi.Method{
 		scoreapi.Function, "setTimestampThreshold",
