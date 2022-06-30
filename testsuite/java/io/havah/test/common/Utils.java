@@ -41,6 +41,10 @@ public final class Utils {
         return _governor;
     }
 
+    public static GovScore getGovScore() {
+        return _govScore;
+    }
+
     public static IconService getIconService() {
         return _iconService;
     }
