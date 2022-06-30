@@ -42,7 +42,7 @@
         },
         {
             "address": "cx7000000000000000000000000000000000000000",
-            "balance": "0x64",
+            "balance": "0x422CA8B0A00A425000000",
             "name": "ecosystem",
             "score": {
                 "contentId": "hash:{{hash:ecosystem-optimized.jar}}",
@@ -50,7 +50,6 @@
                 "owner": "hx54f021fc4a755a2a2c9fdda47a16ce4cd3f3b43e",
                 "params": {
                     "_name": "Eco-System",
-                    "_lockAmount": "0x64",
                     "_schedules": [
                         {
                             "blockHeight": "0xa",
@@ -107,12 +106,11 @@
     "chain": {
         "platform": "havah",
         "havah": {
-            "termPeriod": "0x8",
-            "privateLockup": "0x2",
-            "privateReleaseCycle": "0x4",
-            "issueReductionCycle": "0x8",
-            "usdtPrice": "0xDE0B6B3A7640000",
-            "issueReductionCycle" : "0x8000"
+            "termPeriod": "0x300",
+            "privateLockup": "0x12",
+            "privateReleaseCycle": "0x3",
+            "issueReductionCycle" : "0x20",
+            "usdtPrice": "0x8ac7230489e80000"
         },
         "fee": {
             "stepPrice": "0x2e90edd00",

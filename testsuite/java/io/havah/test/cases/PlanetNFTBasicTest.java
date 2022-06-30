@@ -14,6 +14,7 @@ import foundation.icon.test.common.Env;
 import foundation.icon.test.common.TestBase;
 import foundation.icon.test.common.TransactionHandler;
 import io.havah.test.common.Constants;
+import io.havah.test.common.Utils;
 import io.havah.test.score.PlanetNFTScore;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
@@ -21,7 +22,6 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import static foundation.icon.test.common.Env.LOG;
@@ -38,26 +38,16 @@ public class PlanetNFTBasicTest extends TestBase {
 
     @BeforeAll
     static void setup() throws Exception {
-        Env.Node node = Env.nodes[0];
-        Env.Channel channel = node.channels[0];
-        Env.Chain chain = channel.chain;
-        IconService iconService = new IconService(new HttpProvider(channel.getAPIUrl(Env.testApiVer)));
-        txHandler = new TransactionHandler(iconService, chain);
+        txHandler = Utils.getTxHandler();
         deployer = txHandler.getChain().governorWallet;
 
         // init wallets
-        wallets = new KeyWallet[]{
-                KeyWallet.create(), KeyWallet.create(), KeyWallet.create()
-        };
-        List<KeyWallet> walletList = new ArrayList<>(Arrays.asList(wallets));
-        walletList.add(deployer);
-        BigInteger amount = ICX.multiply(BigInteger.valueOf(50));
-        for (KeyWallet wallet : walletList) {
-            txHandler.transfer(wallet.getAddress(), amount);
+        wallets = new KeyWallet[3];
+        wallets[0] = deployer;
+        for (int i = 1; i < wallets.length; i++) {
+            wallets[i] = KeyWallet.create();
         }
-        for (KeyWallet wallet : wallets) {
-            ensureIcxBalance(txHandler, wallet.getAddress(), BigInteger.ZERO, amount);
-        }
+        Utils.distributeCoin((Wallet[]) wallets);
         planetNFTScore = new PlanetNFTScore(deployer, txHandler);
     }
 
@@ -210,6 +200,7 @@ public class PlanetNFTBasicTest extends TestBase {
         for (int i = 0; i < wallet.length; i++) {
             wallet[i] = KeyWallet.create();
         }
+        Utils.distributeCoin(wallet);
         _mintAndCheckBalance(deployer, wallet[0].getAddress()); // mint with cnt
         _mintAndTransferFrom(wallet[0], wallet[1], wallet[2], wallet[3], wallet[4].getAddress()); // failure
         _mintAndTransferFrom(wallet[0], wallet[0], wallet[1], wallet[2], wallet[4].getAddress()); // failure
@@ -241,7 +232,7 @@ public class PlanetNFTBasicTest extends TestBase {
     }
 
     @Test
-    void suppply() throws Exception {
+    void supply() throws Exception {
         var supply = planetNFTScore.totalSupply();
         Wallet holder = KeyWallet.create();
 
@@ -322,6 +313,7 @@ public class PlanetNFTBasicTest extends TestBase {
         LOG.info("requester(" + requester.getAddress() + "), ownerOf(" + planetNFTScore.ownerOf(tokenId) + ")");
         assertEquals(successTest, validRequester);
         Wallet agent = KeyWallet.create();
+        Utils.distributeCoin(new Wallet[]{agent});
         assertEquals(_agentNone, _getOpState(tokenId));
         TransactionResult result = planetNFTScore.getResult(planetNFTScore.requestStartOp(requester, tokenId, agent.getAddress()));
         assertEquals(validRequester ? 1 : 0, result.getStatus().intValue(), result.toString());
@@ -359,24 +351,6 @@ public class PlanetNFTBasicTest extends TestBase {
         LOG.infoExiting();
     }
 
-//    @Test
-    void MyTest() throws Exception {
-        Wallet wallet = KeyWallet.create();
-        Wallet wallet2 = KeyWallet.create();
-        _mintAndCheckBalance(deployer, wallet.getAddress()); // success test
-        var tokenId = planetNFTScore.tokenIdsOf(wallet.getAddress(), 0, 1);
-        assertEquals(1, tokenId.balance.intValue());
-        var id = tokenId.tokenIds.get(0);
-        var txHash = planetNFTScore.transfer(wallet, wallet2.getAddress(), id);
-        TransactionResult result = planetNFTScore.getResult(txHash);
-        LOG.info("myResult(" + result + ")");
-        assertEquals(1, result.getStatus().intValue());
-        tokenId = planetNFTScore.tokenIdsOf(wallet2.getAddress(), 0, 1);
-        assertEquals(1, tokenId.balance.intValue());
-        var newId = tokenId.tokenIds.get(0);
-        assertEquals(id, newId);
-    }
-
     @Test
     void requestAgent() throws Exception {
         Wallet holder = wallets[0];
@@ -388,18 +362,4 @@ public class PlanetNFTBasicTest extends TestBase {
         _validStepForAgentRequest(fake, tokenId, false);
         _validStepForAgentRequest(holder, tokenId, true);
     }
-
-    // test for agent
-    // reqeustStartOp
-    //
-    // approved
-    // balanceOf
-    // ownerOf
-    // mint
-    // burn
-    // approve
-    // transfer
-    // transferFrom
-
-    // test for agent state
 }

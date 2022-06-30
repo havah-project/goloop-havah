@@ -31,7 +31,7 @@ public class SustainableFundTest extends TestBase {
     private static ChainScore chainScore;
     private static Wallet sfOwner;
     private static BigInteger totalRewardPerDay
-            = BigInteger.valueOf(5).multiply(BigInteger.TEN.pow(6)).multiply(BigInteger.TEN.pow(18));
+            = BigInteger.valueOf(430).multiply(BigInteger.TEN.pow(4)).multiply(BigInteger.TEN.pow(18));
 
     @BeforeAll
     static void setup() throws Exception {
@@ -50,6 +50,16 @@ public class SustainableFundTest extends TestBase {
         chainScore = new ChainScore(txHandler);
 
         var startHeight = Utils.startRewardIssueIfNotStarted();
+        Utils.waitUtil(startHeight);
+
+        startHeight = Utils.getHeight().add(BigInteger.valueOf(5));
+        var govScore = Utils.getGovScore();
+        var governor = Utils.getGovernor();
+        govScore.startRewardIssue(governor, startHeight);
+        Utils.waitUtil(startHeight.add(BigInteger.ONE));
+
+        startHeight = Utils.getHeight().add(BigInteger.valueOf(5));
+        govScore.startRewardIssue(governor, startHeight);
         Utils.waitUtil(startHeight);
     }
 
