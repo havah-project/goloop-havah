@@ -379,6 +379,7 @@ txHash
 * PlanetManager reports a planet's work
 * The network offers the rewards to a planet whose work has been reported in a term
 * Only one report for a planet is available in a term
+* `RewardOffered` eventlog is recorded in this transaction result
 * Called by PlanetManager
 
 > Request
@@ -410,6 +411,18 @@ txHash
 #### Returns
 
 txHash
+
+#### EventLog
+
+`RewardOffered(termSequence int, id int, rewardWithHoover int, hooverRequest int)`
+
+| Key              | VALUE Type | Indexed | Description                                                              |
+|:-----------------|:-----------|:--------|:-------------------------------------------------------------------------|
+| termSequence     | T_INT      | false   | Term sequence starting with 0                                            |
+| id               | T_INT      | false   | Planet ID                                                                |
+| rewardWithHoover | T_INT      | false   | Rewards in HVH that the planet gets including an subsidy from HooverFund |
+| hooverRequest    | T_INT      | false   | Subsidy from HooverFund                                                  |
+
 
 ### claimPlanetReward
 
