@@ -113,9 +113,8 @@ func (es *ExtensionStateImpl) Logger() log.Logger {
 }
 
 func (es *ExtensionStateImpl) SetLogger(logger log.Logger) {
-	if logger != nil {
-		es.logger = logger
-	}
+	es.logger = logger
+	es.state.SetLogger(es.logger)
 }
 
 func (es *ExtensionStateImpl) GetSnapshot() state.ExtensionSnapshot {

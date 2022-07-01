@@ -20,6 +20,10 @@ type State struct {
 	logger   log.Logger
 }
 
+func (s *State) SetLogger(logger log.Logger) {
+	s.logger = logger
+}
+
 func (s *State) GetValue(key []byte) ([]byte, error) {
 	return s.store.Get(key)
 }
