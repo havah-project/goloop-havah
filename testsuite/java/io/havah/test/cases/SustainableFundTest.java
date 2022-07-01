@@ -101,7 +101,7 @@ public class SustainableFundTest extends TestBase {
         Utils.waitUtilNextTerm();
         Utils.waitUtilNextTerm();
         var inflow2 = sfScore.getInflow();
-        Map<SF_INFLOW, BigInteger> expectedAddAmount = Map.of(
+        Map<SF_INFLOW, BigInteger> addedAmount = Map.of(
                 SF_INFLOW.TX_FEE, treasuryBalance.multiply(BigInteger.valueOf(80)).divide(BigInteger.valueOf(100)),
                 SF_INFLOW.MISSING_REWARD, totalRewardPerDay,
                 SF_INFLOW.SERVICE_FEE, BigInteger.ZERO,
@@ -110,7 +110,7 @@ public class SustainableFundTest extends TestBase {
         for (var type : SF_INFLOW.values()) {
             var value = inflow.getItem(type.getTypeName()).asInteger();
             var value2 = inflow2.getItem(type.getTypeName()).asInteger();
-            assertEquals(value.add(expectedAddAmount.get(type)), value2);
+            assertEquals(value.add(addedAmount.get(type)), value2);
         }
         // outflow - hoover_refill
     }
@@ -164,7 +164,7 @@ public class SustainableFundTest extends TestBase {
     }
 
     @Test
-    void inflowPlanetSales() throws Exception {
+    void checkInflow() throws Exception {
         var inflowObj = sfScore.getInflow();
         List<Bytes> txHashList = new ArrayList<>();
         var bal = txHandler.getBalance(wallets[2].getAddress());

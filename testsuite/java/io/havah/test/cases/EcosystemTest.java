@@ -22,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Tag(Constants.TAG_HAVAH)
 public class EcosystemTest {
-    private static IconService iconService;
     private static TransactionHandler txHandler;
     private static EcosystemScore ecoScore;
     private static Wallet ecoOwner;
@@ -30,7 +29,6 @@ public class EcosystemTest {
 
     @BeforeAll
     static void setup() throws Exception {
-        iconService = Utils.getIconService();
         txHandler = Utils.getTxHandler();
         ecoScore = new EcosystemScore(txHandler);
         ecoOwner = Utils.getGovernor();
@@ -95,8 +93,8 @@ public class EcosystemTest {
     }
 
     static class LockSchedule {
-        private BigInteger blockHeight;
-        private BigInteger amount;
+        private final BigInteger blockHeight;
+        private final BigInteger amount;
         public LockSchedule(BigInteger blockHeight, BigInteger amount) {
             this.blockHeight = blockHeight;
             this.amount = amount;
