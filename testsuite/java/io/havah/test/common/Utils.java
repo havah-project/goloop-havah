@@ -144,4 +144,14 @@ public final class Utils {
         }
         return termSequence.asInteger();
     }
+
+    public static String displayToken(BigInteger amount) {
+        BigInteger hvh = BigInteger.ZERO;
+        BigInteger ONE_HVH = BigInteger.ONE.multiply(BigInteger.TEN.pow(18));
+        if (amount.compareTo(ONE_HVH) >= 0) {
+            hvh = amount.divide(ONE_HVH);
+            amount = amount.subtract(hvh.multiply(ONE_HVH));
+        }
+        return hvh + " HVH, " + amount + " LOOP";
+    }
 }

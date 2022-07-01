@@ -92,12 +92,20 @@ public class PlanetNFTBasicTest extends TestBase {
         LOG.infoExiting();
     }
 
+    /*
+        operator의 주소를 이용하여 mint가 정상적으로 되고
+        operator가 아닌 주소를 이용하여 mint api호출 시 실패.
+     */
     @Test
     void mintPlanet() throws Exception {
         _mintAndCheckBalance(wallets[0]); // failure test
         _mintAndCheckBalance(deployer); // success test
     }
 
+    /*
+        mint 이후 balanceOf에 정상적으로 반영되었는지 확인한다.
+        한번에 여러 TX를 보내고 모든 TX에 대해 정성적으로 NFT가 생성되었는지 balanceOf함수를 이용하여 확인한다.
+     */
     @Test
     void mintPlanetAndCheckBalances() throws Exception {
         Address newAddress = KeyWallet.create().getAddress();
@@ -167,6 +175,9 @@ public class PlanetNFTBasicTest extends TestBase {
         LOG.infoExiting();
     }
 
+    /*
+        다른 주소로 전송이 정상적으로 이루어지는지 확인한다.
+     */
     @Test
     void transfer() throws Exception {
         _mintAndTransfer(wallets[0], wallets[1], wallets[2].getAddress()); // failure case
@@ -287,79 +298,79 @@ public class PlanetNFTBasicTest extends TestBase {
         }
     }
 
-    int _getOpState(BigInteger tokenId) throws Exception {
-        RpcObject params = new RpcObject.Builder()
-                .put("_tokenId", new RpcValue(tokenId))
-                .build();
-        RpcItem item = planetNFTScore.call("getOpState", params);
-        return item.asInteger().intValue();
-    }
+//    int _getOpState(BigInteger tokenId) throws Exception {
+//        RpcObject params = new RpcObject.Builder()
+//                .put("_tokenId", new RpcValue(tokenId))
+//                .build();
+//        RpcItem item = planetNFTScore.call("getOpState", params);
+//        return item.asInteger().intValue();
+//    }
 
-    private static final int _agentNone = 0;
-    private static final int _agentRequestingDelegation = 1;
-    private static final int _agentAccepted = 2;
-    private static final int _agentRequestingCancel = 3;
+//    private static final int _agentNone = 0;
+//    private static final int _agentRequestingDelegation = 1;
+//    private static final int _agentAccepted = 2;
+//    private static final int _agentRequestingCancel = 3;
 
-    void _assertResult(Bytes txHash, boolean success) throws Exception {
-        TransactionResult result = planetNFTScore.getResult(txHash);
-        // print result
-        assertEquals(success ? 1 : 0, result.getStatus().intValue());
-    }
+//    void _assertResult(Bytes txHash, boolean success) throws Exception {
+//        TransactionResult result = planetNFTScore.getResult(txHash);
+//        // print result
+//        assertEquals(success ? 1 : 0, result.getStatus().intValue());
+//    }
 
-    void _validStepForAgentRequest(Wallet requester, BigInteger tokenId, boolean successTest) throws Exception {
-        String testCase = (successTest ? "success" : "failure") + " case";
-        LOG.infoEntering("validStepForAgentRequest tokenId(" + tokenId + ") for " + testCase);
-        boolean validRequester = requester.getAddress().equals(planetNFTScore.ownerOf(tokenId));
-        LOG.info("requester(" + requester.getAddress() + "), ownerOf(" + planetNFTScore.ownerOf(tokenId) + ")");
-        assertEquals(successTest, validRequester);
-        Wallet agent = KeyWallet.create();
-        Utils.distributeCoin(new Wallet[]{agent});
-        assertEquals(_agentNone, _getOpState(tokenId));
-        TransactionResult result = planetNFTScore.getResult(planetNFTScore.requestStartOp(requester, tokenId, agent.getAddress()));
-        assertEquals(validRequester ? 1 : 0, result.getStatus().intValue(), result.toString());
-        assertEquals(validRequester ? _agentRequestingDelegation : _agentNone, _getOpState(tokenId));
+//    void _validStepForAgentRequest(Wallet requester, BigInteger tokenId, boolean successTest) throws Exception {
+//        String testCase = (successTest ? "success" : "failure") + " case";
+//        LOG.infoEntering("validStepForAgentRequest tokenId(" + tokenId + ") for " + testCase);
+//        boolean validRequester = requester.getAddress().equals(planetNFTScore.ownerOf(tokenId));
+//        LOG.info("requester(" + requester.getAddress() + "), ownerOf(" + planetNFTScore.ownerOf(tokenId) + ")");
+//        assertEquals(successTest, validRequester);
+//        Wallet agent = KeyWallet.create();
+//        Utils.distributeCoin(new Wallet[]{agent});
+//        assertEquals(_agentNone, _getOpState(tokenId));
+//        TransactionResult result = planetNFTScore.getResult(planetNFTScore.requestStartOp(requester, tokenId, agent.getAddress()));
+//        assertEquals(validRequester ? 1 : 0, result.getStatus().intValue(), result.toString());
+//        assertEquals(validRequester ? _agentRequestingDelegation : _agentNone, _getOpState(tokenId));
+//
+//        _assertResult(planetNFTScore.cancelStartOpReq(requester, tokenId), validRequester);
+//        assertEquals(_agentNone, _getOpState(tokenId));
+//
+//        _assertResult(planetNFTScore.requestStartOp(requester, tokenId, agent.getAddress()), validRequester);
+//        assertEquals(validRequester ? _agentRequestingDelegation : _agentNone, _getOpState(tokenId));
+//        _assertResult(planetNFTScore.rejectStartOpReq(agent, tokenId), validRequester);
+//        assertEquals(validRequester ? 1 : 0, result.getStatus().intValue());
+//        assertEquals(_agentNone, _getOpState(tokenId));
+//
+//        _assertResult(planetNFTScore.requestStartOp(requester, tokenId, agent.getAddress()), validRequester);
+//        assertEquals(validRequester ? _agentRequestingDelegation : _agentNone, _getOpState(tokenId));
+//
+//        _assertResult(planetNFTScore.acceptStartOpReq(agent, tokenId, agent.getAddress()), validRequester);
+//        assertEquals(validRequester ? _agentAccepted : _agentNone, _getOpState(tokenId));
+//
+//        // check planetInfo
+//        _assertResult(planetNFTScore.requestStopOp(requester, tokenId), validRequester);
+//        assertEquals(validRequester ? _agentRequestingCancel : _agentNone, _getOpState(tokenId));
+//
+//        _assertResult(planetNFTScore.cancelStopOpReq(requester, tokenId), validRequester);
+//        assertEquals(validRequester ? _agentAccepted : _agentNone, _getOpState(tokenId));
+//
+//        _assertResult(planetNFTScore.requestStopOp(requester, tokenId), validRequester);
+//        assertEquals(validRequester ? _agentRequestingCancel : _agentNone, _getOpState(tokenId));
+//
+//        _assertResult(planetNFTScore.acceptStopOpReq(agent, tokenId), validRequester);
+//        assertEquals(_agentNone, _getOpState(tokenId));
+//
+//        // check planetInfo
+//        LOG.infoExiting();
+//    }
 
-        _assertResult(planetNFTScore.cancelStartOpReq(requester, tokenId), validRequester);
-        assertEquals(_agentNone, _getOpState(tokenId));
-
-        _assertResult(planetNFTScore.requestStartOp(requester, tokenId, agent.getAddress()), validRequester);
-        assertEquals(validRequester ? _agentRequestingDelegation : _agentNone, _getOpState(tokenId));
-        _assertResult(planetNFTScore.rejectStartOpReq(agent, tokenId), validRequester);
-        assertEquals(validRequester ? 1 : 0, result.getStatus().intValue());
-        assertEquals(_agentNone, _getOpState(tokenId));
-
-        _assertResult(planetNFTScore.requestStartOp(requester, tokenId, agent.getAddress()), validRequester);
-        assertEquals(validRequester ? _agentRequestingDelegation : _agentNone, _getOpState(tokenId));
-
-        _assertResult(planetNFTScore.acceptStartOpReq(agent, tokenId, agent.getAddress()), validRequester);
-        assertEquals(validRequester ? _agentAccepted : _agentNone, _getOpState(tokenId));
-
-        // check planetInfo
-        _assertResult(planetNFTScore.requestStopOp(requester, tokenId), validRequester);
-        assertEquals(validRequester ? _agentRequestingCancel : _agentNone, _getOpState(tokenId));
-
-        _assertResult(planetNFTScore.cancelStopOpReq(requester, tokenId), validRequester);
-        assertEquals(validRequester ? _agentAccepted : _agentNone, _getOpState(tokenId));
-
-        _assertResult(planetNFTScore.requestStopOp(requester, tokenId), validRequester);
-        assertEquals(validRequester ? _agentRequestingCancel : _agentNone, _getOpState(tokenId));
-
-        _assertResult(planetNFTScore.acceptStopOpReq(agent, tokenId), validRequester);
-        assertEquals(_agentNone, _getOpState(tokenId));
-
-        // check planetInfo
-        LOG.infoExiting();
-    }
-
-    @Test
-    void requestAgent() throws Exception {
-        Wallet holder = wallets[0];
-        _mintAndCheckBalance(deployer, holder.getAddress());
-        var tokenIdsMap = planetNFTScore.tokenIdsOf(holder.getAddress(), 0, 10);
-        var tokenIds = tokenIdsMap.tokenIds;
-        var tokenId = tokenIds.get(0);
-        Wallet fake = wallets[1];
-        _validStepForAgentRequest(fake, tokenId, false);
-        _validStepForAgentRequest(holder, tokenId, true);
-    }
+//    @Test
+//    void requestAgent() throws Exception {
+//        Wallet holder = wallets[0];
+//        _mintAndCheckBalance(deployer, holder.getAddress());
+//        var tokenIdsMap = planetNFTScore.tokenIdsOf(holder.getAddress(), 0, 10);
+//        var tokenIds = tokenIdsMap.tokenIds;
+//        var tokenId = tokenIds.get(0);
+//        Wallet fake = wallets[1];
+//        _validStepForAgentRequest(fake, tokenId, false);
+//        _validStepForAgentRequest(holder, tokenId, true);
+//    }
 }
