@@ -13,7 +13,6 @@ import (
 	"github.com/icon-project/goloop/havah/hvh"
 	"github.com/icon-project/goloop/havah/hvh/hvhstate"
 	"github.com/icon-project/goloop/havah/hvhmodule"
-	"github.com/icon-project/goloop/havah/hvhutils"
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/contract"
 	"github.com/icon-project/goloop/service/platform/basic"
@@ -52,7 +51,7 @@ func (p *platform) ToRevision(value int) module.Revision {
 
 func (p *platform) NewBaseTransaction(wc state.WorldContext) (module.Transaction, error) {
 	height := wc.BlockHeight()
-	es := p.getExtensionState(wc, nil)
+	es := hvh.GetExtensionStateFromWorldContext(wc, nil)
 	if es == nil {
 		return nil, nil
 	}
@@ -95,7 +94,7 @@ func checkBaseTX(txs module.TransactionList) bool {
 
 func (p *platform) OnValidateTransactions(wc state.WorldContext, patches, txs module.TransactionList) error {
 	needBaseTX := false
-	es := p.getExtensionState(wc, nil)
+	es := hvh.GetExtensionStateFromWorldContext(wc, nil)
 	if es != nil {
 		needBaseTX = hvhstate.IsIssueStarted(wc.BlockHeight(), es.GetIssueStart())
 	}
@@ -150,19 +149,6 @@ func NewPlatform(base string, cid int) (base.Platform, error) {
 		base: base,
 		cid:  cid,
 	}, nil
-}
-
-func (p *platform) getExtensionState(wc state.WorldContext, logger log.Logger) *hvh.ExtensionStateImpl {
-	es := wc.GetExtensionState()
-	if es == nil {
-		return nil
-	}
-	esi, ok := es.(*hvh.ExtensionStateImpl)
-	if !ok {
-		return nil
-	}
-	esi.SetLogger(hvhutils.NewLogger(logger))
-	return esi
 }
 
 func init() {

@@ -23,7 +23,6 @@ import (
 	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/havah/hvh"
 	"github.com/icon-project/goloop/havah/hvhmodule"
-	"github.com/icon-project/goloop/havah/hvhutils"
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/scoreresult"
 )
@@ -41,23 +40,11 @@ func (s *chainScore) checkNFT(charge bool) error {
 }
 
 func (s *chainScore) getExtensionState() (*hvh.ExtensionStateImpl, error) {
-	es := s.cc.GetExtensionState()
+	es := hvh.GetExtensionStateFromWorldContext(s.cc, s.log)
 	if es == nil {
-		err := errors.Errorf("ExtensionState is nil")
-		return nil, s.toScoreResultError(scoreresult.UnknownFailureError, err)
+		return nil, errors.InvalidStateError.New("ExtensionState is nil")
 	}
-	esi := es.(*hvh.ExtensionStateImpl)
-	esi.SetLogger(hvhutils.NewLogger(s.cc.Logger()))
-	return esi, nil
-}
-
-func (s *chainScore) toScoreResultError(code errors.Code, err error) error {
-	msg := err.Error()
-	if logger := s.cc.Logger(); logger != nil {
-		logger = hvhutils.NewLogger(logger)
-		logger.Errorf(msg)
-	}
-	return code.Wrap(err, msg)
+	return es, nil
 }
 
 func (s *chainScore) newCallContext() hvhmodule.CallContext {

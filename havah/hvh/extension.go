@@ -421,3 +421,16 @@ func (es *ExtensionStateImpl) GetRewardInfo(cc hvhmodule.CallContext, id int64) 
 	height := cc.BlockHeight()
 	return es.state.GetRewardInfo(height, id)
 }
+
+func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {
+	es := wc.GetExtensionState()
+	if es == nil {
+		return nil
+	}
+	if esi, ok := es.(*ExtensionStateImpl); ok {
+		esi.SetLogger(hvhutils.NewLogger(logger))
+		return esi
+	} else {
+		return nil
+	}
+}

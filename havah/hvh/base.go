@@ -139,7 +139,7 @@ func (tx *baseV3) Execute(ctx contract.Context, estimate bool) (txresult.Receipt
 	defer cc.Dispose()
 
 	icc := NewCallContext(cc, tx.From())
-	es := cc.GetExtensionState().(*ExtensionStateImpl)
+	es := GetExtensionStateFromWorldContext(cc, cc.Logger())
 	if es == nil {
 		return nil, errors.InvalidStateError.New("ExtensionIsNotReady")
 	}
