@@ -21,27 +21,594 @@ Basic JSON-RPC APIs that ChainScore provides commonly, regardless of a specific 
 
 ### setRevision
 
+* Sets a revision to activate new features
+ 
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "setRevision",
+      "params": {
+        "code": "0x13"
+      }
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key  | VALUE Type | Required | Description   |
+|:-----|:-----------|:---------|:--------------|
+| code | T_INT      | true     | revision code |
+
+#### Returns
+
+`T_HASH` - txHash
+
 ### getRevision
+
+* Returns revision
+
+> Request
+ 
+ ```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getRevision"
+    }
+  }
+}
+```
+
+> Response
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": "0x13"
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+`T_INT` - Revision code
 
 ### setStepCost
 
+* Sets step cost of each action
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "setStepCost",
+      "params": {
+        "type": "apiCall",
+        "cost": "0x2710"
+      }
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key  | VALUE Type | Required | Description          |
+|:-----|:-----------|:---------|:---------------------|
+| type | T_STRING   | true     | action type          |
+| cost | T_INT      | true     | step cost for action |
+
+> Action types
+
+| Action         | Default        | Description |
+|:---------------|:---------------|:------------|
+| default        | 100_000        | -           |
+| contractCall   | 25_000         | -           |
+| contractCreate | 1_000_000_000  | -           |
+| contractUpdate | 1_000_000_000  | -           |
+| contractSet    | 15_000         | -           |
+| getBase        | 3_000          | -           |
+| get            | 25             | -           |
+| setBase        | 10_000         | -           |
+| set            | 320            | -           |
+| deleteBase     | 200            | -           |
+| delete         | -240           | -           |
+| input          | 200            | -           |
+| logBase        | 5_000          | -           |
+| log            | 100            | -           |
+| apiCall        | 10_000         | -           |
+
+#### Returns
+
+`T_HASH` - txHash
+
 ### getStepCost
+
+* Returns the step cost of a specific action
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getStepCost",
+      "params": {
+        "type": "apiCall"
+      }
+    }
+  }
+}
+```
+
+> Response
+ 
+ ```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": "0x2710"
+}
+```
+
+#### Parameters
+
+| Key  | VALUE Type | Required | Description |
+|:-----|:-----------|:---------|:------------|
+| type | T_STRING   | true     | action type |
+
+#### Returns
+
+`T_INT` - step cost of a specific action type
 
 ### getStepCosts
 
+* Returns a table of the step costs for each action
+
+> Request
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getStepCosts"
+    }
+  }
+}
+```
+
+> Response
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "schema": "0x1",
+    "default": "0x186a0",
+    "input": "0xc8",
+    "contractCall": "0x61a8",
+    "contractCreate": "0x3b9aca00",
+    "contractUpdate": "0x3b9aca00",
+    "contractSet": "0x3a98",
+    "get": "0x19",
+    "getBase": "0xbb8",
+    "set": "0x140",
+    "setBase": "0x2710",
+    "delete": "-0xf0",
+    "deleteBase": "0xc8",
+    "log": "0x64",
+    "logBase": "0x1388",
+    "apiCall": "0x2710"
+  }
+}
+``` 
+
+#### Parameters
+
+None
+
+#### Returns
+
+`T_DICT` - a dict: key - camel-cased action strings, value - step costs in integer
+
 ### setMaxStepLimit
+
+* Sets the maximum step limit that any SCORE execution should be bounded by
+ 
+> Request
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "setMaxStepLimit",
+      "params": {
+        "contextType": "query",
+        "limit": "0x2faf080"
+      }
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key         | VALUE Type | Required | Description                                    |
+|:------------|:-----------|:---------|:-----------------------------------------------|
+| contextType | T_STRING   | true     | `invoke` for sendTransaction, `query` for call |
+| limit       | T_INT      | true     | maximum step limit for each contextType        |
+
+#### Returns
+
+`T_HASH` - txHash
 
 ### getMaxStepLimit
 
+* Returns the maximum step limit value that any SCORE execution should be bounded by
+
+> Request
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getMaxStepLimit",
+      "params": {
+        "contextType": "invoke"
+      }
+    }
+  }
+}
+``` 
+
+> Response
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": "0x9502f900"
+}
+```
+
+#### Parameters
+
+| Key         | VALUE Type | Required | Description                                    |
+|:------------|:-----------|:---------|:-----------------------------------------------|
+| contextType | T_STRING   | true     | `invoke` for sendTransaction, `query` for call |
+
+#### Returns
+
+`T_INT` - integer of the maximum step limit for the given contextType
+
 ### setStepPrice
+
+* Sets the new step price
+
+> Request
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "setStepPrice",
+      "params": {
+        "price": "0x2e90edd00"
+      }
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key   | VALUE Type | Required | Description    |
+|:------|:-----------|:---------|:---------------|
+| price | T_INT      | true     | new step price |
+
+#### Returns
+
+`T_HASH` - txHash
 
 ### getStepPrice
 
+* Returns the current step price
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getStepPrice"
+    }
+  }
+}
+```
+
+> Response
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": "0x2e90edd00"
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+`T_INT` - step price
+
 ### getServiceConfig
+
+* Returns an integer value representing service configuration bitwise flags
+
+> Request
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000001",
+    "dataType": "call",
+    "data": {
+      "method": "getServiceConfig"
+    }
+  }
+}
+``` 
+
+> Response
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": "0x1"
+}  
+```
+  
+#### Parameters
+
+None
+
+#### Returns
+
+`T_INT` - integer value representing the service configuration bitwise flags
+
+> Service configuration flags
+
+| Name                  | VALUE | 
+|:----------------------|:------|
+| Fee                   | 0x01  |
+| Audit                 | 0x02  |
+| DeployerWhiteList     | 0x04  |
+| ScorePackageValidator | 0x08  |
+| Membership            | 0x10  |
+| FeeSharing            | 0x20  |
 
 ### setScoreOwner
 
+* Changes the owner of the score indicated by a given address
+* Only the score owner can change its owner
+* If a score owner changes its owner to `hx0000000000000000000000000000000000000000`, it means that the score is frozen and no one can update or modify it anymore
+* Score address is also available for a score owner
+* A score itself can be set to its owner
+
+> Request
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1234,
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "setScoreOwner",
+      "params": {
+        "score": "cx8d3ef83a63d8bbd3f08c4a8b8a18fbae13368b40",
+        "owner": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
+      }
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key   | VALUE Type | Required | Description                        |
+|:------|:-----------|:---------|:-----------------------------------|
+| score | T_ADDRESS  | true     | score address to change its owner  |
+| owner | T_ADDRESS  | true     | new owner address of a given score |
+
+#### Returns
+
+`T_HASH` - txHash
+
 ### getScoreOwner
+
+* Returns the owner of the score indicated by a given address
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getScoreOwner",
+      "params": {
+        "score": "cx8d3ef83a63d8bbd3f08c4a8b8a18fbae13368b40"
+      }
+    }
+  }
+}
+```
+
+> Response
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
+}
+```
+
+#### Parameters
+
+| Key   | VALUE Type | Required | Description            |
+|:------|:-----------|:---------|:-----------------------|
+| score | T_ADDRESS  | true     | score address to query |
+
+#### Returns
+
+`T_ADDRESS` - owner address of a given score
+
+### setTimestampThreshold
+
+* Sets transaction timestamp threshold in millisecond
+* Transactions whose timestamp is out of range of timestamp threshold is rejected
+* `block.timestamp - threshold <= valid tx timestamp < block.timestamp + threshold`
+
+> Request
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "setTimestampThreshold",
+      "params": {
+        "threshold": "0x493e0"
+      }
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key       | VALUE Type | Required | Description        |
+|:----------|:-----------|:---------|:-------------------|
+| threshold | T_INT      | true     | tx threshold in ms |
+
+#### Returns
+
+`T_HASH` - txHash
+
+### getTimestampThreshold
+
+* Returns transaction threshold in millisecond
+
+> Request
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getTimestampThreshold"
+    }
+  }
+}
+```
+
+> Response
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": "0x493e0"
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+ 
+`T_INT` - transaction threshold in millisecond
 
 ### setRoundLimitFactor
 
@@ -54,10 +621,6 @@ Basic JSON-RPC APIs that ChainScore provides commonly, regardless of a specific 
 ### isDeployer
 
 ### getDeployers
-
-### setTimestampThreshold
-
-### getTimestampThreshold
 
 ### grantValidator
 
@@ -102,7 +665,7 @@ HAVAH-specific JSON-RPC APIs
 
 #### Returns
 
-txHash
+`T_HASH` - txHash
 
 ### addPlanetManager
 
@@ -137,7 +700,7 @@ txHash
 
 #### Returns
 
-txHash
+`T_HASH` - txHash
 
 ### removePlanetManager
 
@@ -172,7 +735,7 @@ txHash
 
 #### Returns
 
-txHash
+`T_HASH` - txHash
 
 ### isPlanetManager
 
@@ -263,7 +826,7 @@ txHash
 
 #### Returns
 
-txHash
+`T_HASH` - txHash
 
 ### getPlanetInfo
 
@@ -356,7 +919,7 @@ txHash
 
 #### Returns
 
-txHash
+`T_HASH` - txHash
 
 ### setPlanetOwner
 
@@ -372,7 +935,7 @@ txHash
 
 #### Returns
 
-txHash
+`T_HASH` - txHash
 
 ### reportPlanetWork
 
@@ -410,11 +973,11 @@ txHash
 
 #### Returns
 
-txHash
+`T_HASH` - txHash
 
 #### EventLog
 
-`RewardOffered(termSequence int, id int, rewardWithHoover int, hooverRequest int)`
+* Signature: `RewardOffered(int,int,int,int)`
 
 | Key              | VALUE Type | Indexed | Description                                                              |
 |:-----------------|:-----------|:--------|:-------------------------------------------------------------------------|
@@ -422,7 +985,6 @@ txHash
 | id               | T_INT      | false   | Planet ID                                                                |
 | rewardWithHoover | T_INT      | false   | Rewards in HVH that the planet gets including an subsidy from HooverFund |
 | hooverRequest    | T_INT      | false   | Subsidy from HooverFund                                                  |
-
 
 ### claimPlanetReward
 
@@ -458,7 +1020,18 @@ txHash
 
 #### Returns
 
-txHash
+`T_HASH` - txHash
+
+#### EventLog
+
+* Signature: `RewardClaimed(int,int,Address,int)`
+
+| Key          | VALUE Type | Indexed | Description                   |
+|:-------------|:-----------|:--------|:------------------------------|
+| termSequence | T_INT      | false   | Term sequence starting with 0 |
+| id           | T_INT      | false   | Planet ID                     |
+| owner        | T_ADDRESS  | false   | Planet owner claiming rewards |
+| amount       | T_INT      | false   | Claimed reward amount         |
 
 ### getRewardInfo
 
@@ -640,4 +1213,4 @@ None
 
 #### Returns
 
-txHash
+`T_HASH` - txHash
