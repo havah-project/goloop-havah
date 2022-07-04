@@ -19,7 +19,6 @@ type WorldContext interface {
 	Issue(address module.Address, amount *big.Int) (*big.Int, error)
 	Transfer(from module.Address, to module.Address, amount *big.Int) error
 	GetTotalSupply() *big.Int
-	AddTotalSupply(amount *big.Int) (*big.Int, error)
 	SetValidators(validators []module.Validator) error
 	StepPrice() *big.Int
 	GetScoreOwner(score module.Address) (module.Address, error)

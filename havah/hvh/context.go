@@ -78,7 +78,7 @@ func (ctx *callContextImpl) Issue(address module.Address, amount *big.Int) (*big
 	var err error
 	var totalSupply *big.Int
 	if amount.Sign() > 0 {
-		totalSupply, err = ctx.AddTotalSupply(amount)
+		totalSupply, err = ctx.addTotalSupply(amount)
 		if err != nil {
 			return nil, err
 		}
@@ -130,7 +130,7 @@ func (ctx *callContextImpl) GetTotalSupply() *big.Int {
 	return hvhmodule.BigIntZero
 }
 
-func (ctx *callContextImpl) AddTotalSupply(amount *big.Int) (*big.Int, error) {
+func (ctx *callContextImpl) addTotalSupply(amount *big.Int) (*big.Int, error) {
 	as := ctx.GetAccountState(state.SystemID)
 	varDB := scoredb.NewVarDB(as, state.VarTotalSupply)
 	ts := varDB.BigInt()
