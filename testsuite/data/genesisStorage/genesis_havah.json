@@ -98,7 +98,7 @@
                 "owner": "hx54f021fc4a755a2a2c9fdda47a16ce4cd3f3b43e",
                 "params": {
                     "vestingAccounts": [],
-                    "heights":[]
+                    "vestingSchedules":[]
                 }
             }
         }
