@@ -22,6 +22,7 @@ Basic JSON-RPC APIs that ChainScore provides commonly, regardless of a specific 
 ### setRevision
 
 * Sets a revision to activate new features
+* Called by Governance SCORE
  
 > Request
 
@@ -95,6 +96,7 @@ None
 ### setStepCost
 
 * Sets step cost of each action
+* Called by Governance SCORE
 
 > Request
 
@@ -126,23 +128,23 @@ None
 
 > Action types
 
-| Action         | Default        | Description |
-|:---------------|:---------------|:------------|
-| default        | 100_000        | -           |
-| contractCall   | 25_000         | -           |
-| contractCreate | 1_000_000_000  | -           |
-| contractUpdate | 1_000_000_000  | -           |
-| contractSet    | 15_000         | -           |
-| getBase        | 3_000          | -           |
-| get            | 25             | -           |
-| setBase        | 10_000         | -           |
-| set            | 320            | -           |
-| deleteBase     | 200            | -           |
-| delete         | -240           | -           |
-| input          | 200            | -           |
-| logBase        | 5_000          | -           |
-| log            | 100            | -           |
-| apiCall        | 10_000         | -           |
+| Action         |        Default | Description |
+|:---------------|---------------:|:------------|
+| default        |        100_000 | -           |
+| contractCall   |         25_000 | -           |
+| contractCreate |  1_000_000_000 | -           |
+| contractUpdate |  1_000_000_000 | -           |
+| contractSet    |         15_000 | -           |
+| getBase        |          3_000 | -           |
+| get            |             25 | -           |
+| setBase        |         10_000 | -           |
+| set            |            320 | -           |
+| deleteBase     |            200 | -           |
+| delete         |           -240 | -           |
+| input          |            200 | -           |
+| logBase        |          5_000 | -           |
+| log            |            100 | -           |
+| apiCall        |         10_000 | -           |
 
 #### Returns
 
@@ -251,6 +253,7 @@ None
 ### setMaxStepLimit
 
 * Sets the maximum step limit that any SCORE execution should be bounded by
+* Called by Governance SCORE
  
 > Request
  
@@ -331,6 +334,7 @@ None
 ### setStepPrice
 
 * Sets the new step price
+* Called by Governance SCORE
 
 > Request
  
@@ -458,6 +462,7 @@ None
 * If a score owner changes its owner to `hx0000000000000000000000000000000000000000`, it means that the score is frozen and no one can update or modify it anymore
 * Score address is also available for a score owner
 * A score itself can be set to its owner
+* Called by Governance SCORE
 
 > Request
 
@@ -540,6 +545,7 @@ None
 * Sets transaction timestamp threshold in millisecond
 * Transactions whose timestamp is out of range of timestamp threshold is rejected
 * `block.timestamp - threshold <= valid tx timestamp < block.timestamp + threshold`
+* Called by Governance SCORE
 
 > Request
  
@@ -581,7 +587,7 @@ None
 {
   "id": 1,
   "jsonrpc": "2.0",
-  "method": "icx_sendTransaction",
+  "method": "icx_call",
   "params": {
     "to": "cx0000000000000000000000000000000000000000",
     "dataType": "call",
@@ -610,17 +616,166 @@ None
  
 `T_INT` - transaction threshold in millisecond
 
-### setRoundLimitFactor
-
-### getRoundLimitFactor
-
 ### addDeployer
+
+* Adds an address to deployer list
+* Only the addresses in deployer list can deploy a score
+* Called by Governance SCORE
+
+> Request
+ 
+ ```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "addDeployer",
+      "params": {
+        "address": "hx0123456789012345678901234567890123456789"
+      }
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key     | VALUE Type | Required | Description                  |
+|:--------|:-----------|:---------|:-----------------------------|
+| address | T_ADDRESS  | true     | address to add as a deployer |
+
+#### Returns
+
+`T_HASH` - txHash
 
 ### removeDeployer
 
+* Remove an address from deployer list
+* Called by Governance SCORE
+ 
+> Request
+
+ ```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "removeDeployer",
+      "params": {
+        "address": "hx0123456789012345678901234567890123456789"
+      }
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key     | VALUE Type | Required | Description                          |
+|:--------|:-----------|:---------|:-------------------------------------|
+| address | T_ADDRESS  | true     | address to remove from deployer list |
+
+#### Returns
+
+`T_HASH` - txHash
+
 ### isDeployer
 
+* Returns true if a given address is contained in deployer list
+
+> Request
+
+ ```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "isDeployer",
+      "params": {
+        "address": "hx0123456789012345678901234567890123456789"
+      }
+    }
+  }
+}
+```
+
+> Response
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": "0x1"
+}
+``` 
+
+#### Parameters
+
+| Key     | VALUE Type | Required | Description      |
+|:--------|:-----------|:---------|:-----------------|
+| address | T_ADDRESS  | true     | address to query |
+
+#### Returns
+
+`T_BOOL` - boolean value representing if a given address is a deployer or not
+
 ### getDeployers
+
+* Returns the entire addresses that are allowed to deploy a score
+
+> Request
+
+ ```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getDeployers"
+    }
+  }
+}
+```
+
+> Response
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": [
+    "hx0123456789012345678901234567890123456789",
+    "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
+  ]
+}  
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+`T_DICT` - addresses that are allowed to deploy a score
+
+### setRoundLimitFactor
+
+### getRoundLimitFactor
 
 ### grantValidator
 
