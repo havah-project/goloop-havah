@@ -3,12 +3,14 @@ package io.havah.test.cases;
 import foundation.icon.icx.IconService;
 import foundation.icon.icx.KeyWallet;
 import foundation.icon.icx.Wallet;
+import foundation.icon.icx.data.Address;
 import foundation.icon.icx.data.Bytes;
 import foundation.icon.test.common.TestBase;
 import foundation.icon.test.common.TransactionHandler;
 import io.havah.test.common.Constants;
 import io.havah.test.common.Utils;
 import io.havah.test.score.ChainScore;
+import io.havah.test.score.IRC2TokenScore;
 import io.havah.test.score.SustainableFundScore;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Order;
@@ -19,7 +21,9 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
+import static foundation.icon.test.common.Env.LOG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Tag(Constants.TAG_HAVAH)
@@ -116,10 +120,56 @@ public class SustainableFundTest extends TestBase {
     }
 
     @Test
-    void transferToken() {
+    void transferToken() throws Exception {
+        LOG.infoEntering("transferToken");
+
         // must deploy erc20
+        Wallet irc2Deployer = KeyWallet.create();
+        Wallet noPermission = KeyWallet.create();
+        Wallet receiver = KeyWallet.create();
+
+        LOG.info("distributeCoin");
+        Utils.distributeCoin(new Wallet[] {
+                irc2Deployer,
+                noPermission,
+                receiver,
+        });
+
+        IRC2TokenScore irc2 = IRC2TokenScore.mustDeploy(txHandler, irc2Deployer);
+        LOG.info("deployed IRC2, address(" + irc2.getAddress() + ")");
         // transfer to SF
+        irc2.transfer(irc2Deployer, Constants.SUSTAINABLEFUND_ADDRESS, BigInteger.TEN);
         // transferToken
+        // failure case
+        Wallet[] testWallet = new Wallet[] {
+                noPermission, // failure case
+                sfOwner // success case
+        };
+        // wrong token address
+        var transferValue = BigInteger.ONE;
+        byte[] addr = new byte[20];
+        new Random().nextBytes(addr);
+        var wrongIRC2Addr = new Address(Address.AddressPrefix.CONTRACT, addr);
+        var hash = sfScore.transferToken(sfOwner, wrongIRC2Addr, receiver.getAddress(), transferValue);
+        assertEquals(BigInteger.ZERO, txHandler.getResult(hash).getStatus());
+
+        var sfTokenBalance = irc2.balanceOf(Constants.SUSTAINABLEFUND_ADDRESS);
+        LOG.info("SF token balance(" + sfTokenBalance + ")");
+        for (Wallet wallet : testWallet) {
+            hash = sfScore.transferToken(wallet, irc2.getAddress(), receiver.getAddress(), transferValue);
+            var result = txHandler.getResult(hash);
+            assertEquals(wallet.equals(sfOwner) ? BigInteger.ONE : BigInteger.ZERO, result.getStatus());
+            if (wallet.equals(sfOwner))  {
+                // check token balance
+                assertEquals(sfTokenBalance.subtract(transferValue), irc2.balanceOf(Constants.SUSTAINABLEFUND_ADDRESS));
+                assertEquals(transferValue, irc2.balanceOf(receiver.getAddress()));
+            }
+            LOG.info((wallet.equals(sfOwner) ? "success" : "failure")
+                    + " test SF token balance before : " + sfTokenBalance
+                    + " after : " + irc2.balanceOf(Constants.SUSTAINABLEFUND_ADDRESS));
+        }
+        // success case
+        LOG.infoExiting();
     }
 
     private void _transferAndCheck(Wallet wallet, boolean expectedResult) throws Exception {
