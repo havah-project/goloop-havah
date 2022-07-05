@@ -32,7 +32,11 @@ public class Constants extends foundation.icon.test.common.Constants {
 
     public static final int RPC_ERROR_INVALID_ID = -30032;
 
-    public static final BigInteger INITIAL_ISSUE_AMOUNT = new BigInteger("5000000000000000000000000", 10); // 초기 발행량
+    public static final BigInteger INITIAL_ISSUE_AMOUNT = new BigInteger("4300000000000000000000000", 10); // 초기 보상
+
+    public static final BigInteger PRIVATE_LOCKUP = BigInteger.valueOf(2);
+
+    public static final BigInteger PRIVATE_RELEASE_CYCLE = BigInteger.valueOf(4);
 
     public static BigInteger TOTAL_REWARD_PER_DAY
             = BigInteger.valueOf(430).multiply(BigInteger.TEN.pow(4)).multiply(BigInteger.TEN.pow(18));
