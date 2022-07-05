@@ -891,6 +891,7 @@ None
 ### setRoundLimitFactor
 
 * Sets a roundLimitFactor that is used for roundLimit calculation
+* Called by Governance SCORE
 * `RoundLimit = (len(validators) * roundLimitFactor + 2) / 3`
 
 > Request
@@ -917,7 +918,7 @@ None
 
 | Key    | VALUE Type | Required | Description |
 |:-------|:-----------|:---------|:------------|
-| factor | T_ADDRESS  | true     | -           |
+| factor | T_INT      | true     | -           |
 
 #### Returns
 
