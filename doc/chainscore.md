@@ -890,7 +890,77 @@ None
 
 ### setRoundLimitFactor
 
+* Sets a roundLimitFactor that is used for roundLimit calculation
+* `RoundLimit = (len(validators) * roundLimitFactor + 2) / 3`
+
+> Request
+ 
+ ```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "setRoundLimitFactor",
+      "params": {
+        "factor": "0x3"
+      }
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key    | VALUE Type | Required | Description |
+|:-------|:-----------|:---------|:------------|
+| factor | T_ADDRESS  | true     | -           |
+
+#### Returns
+
+`T_HASH` - txHash
+
 ### getRoundLimitFactor
+
+* Returns the current roundLimitFactor
+
+> Request
+ 
+ ```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getRoundLimitFactor"
+    }
+  }
+}
+```
+
+> Response
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": "0x3"
+}
+```
+  
+#### Parameters
+
+None
+
+#### Returns
+
+`T_INT` - integer value representing roundLimitFactor
 
 ## HAVAH APIs
 
