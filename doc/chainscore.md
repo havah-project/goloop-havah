@@ -773,15 +773,124 @@ None
 
 `T_DICT` - addresses that are allowed to deploy a score
 
-### setRoundLimitFactor
-
-### getRoundLimitFactor
-
 ### grantValidator
+
+* Adds an address to validator list
+* Contract address is not available
+* Called by Governance SCORE
+
+> Request
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "grantValidator",
+      "params": {
+        "address": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
+      }
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key     | VALUE Type | Required | Description                   |
+|:--------|:-----------|:---------|:------------------------------|
+| address | T_ADDRESS  | true     | address to add as a validator |
+
+#### Returns
+
+`T_HASH` - txHash
 
 ### revokeValidator
 
+* Removes a validator from validator list
+* Called by Governance SCORE
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "revokeValidator",
+      "params": {
+        "address": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
+      }
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key     | VALUE Type | Required | Description                           |
+|:--------|:-----------|:---------|:--------------------------------------|
+| address | T_ADDRESS  | true     | address to remove from validator list |
+
+#### Returns
+
+`T_HASH` - txHash
+
 ### getValidators
+
+* Returns the current validator list
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getValidators"
+    }
+  }
+}
+```
+
+> Response
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": [
+    "hx3ece50aaa01f7c4d128c029d569dd86950c34215",
+    "hxd55474243722deb1333480583cb01b38e04b90d7",
+    "hx1d07c197bb3bf6131eb48969496c065e022b8f40",
+    "hxbb9edb232b4519722be70a4fbf81015d0a1ed811"
+  ]
+}
+```
+ 
+#### Parameters
+
+None
+
+#### Returns
+
+`T_LIST` - the current validator list
+
+### setRoundLimitFactor
+
+### getRoundLimitFactor
 
 ## HAVAH APIs
 
