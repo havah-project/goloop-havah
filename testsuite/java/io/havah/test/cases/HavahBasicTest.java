@@ -484,6 +484,62 @@ public class HavahBasicTest extends TestBase {
 
     @Test
     @Order(10)
+    public void claimPrivatePlanetRewardTest() throws Exception {
+        LOG.infoEntering("claimPrivatePlanetRewardTest");
+        _getIssueInfo();
+        KeyWallet planetManagerWallet = KeyWallet.create();
+        KeyWallet planetWallet = KeyWallet.create();
+        BigInteger termPeriod = _getTermPeriod();
+        BigInteger privateLockup = Constants.PRIVATE_LOCKUP;
+        BigInteger privateReleaseCycle = Constants.PRIVATE_RELEASE_CYCLE;
+        LOG.info("termPeriod : " + termPeriod);
+        LOG.info("privateLockup : " + privateLockup);
+        LOG.info("privateReleaseCycle : " + privateReleaseCycle);
+
+        Utils.distributeCoin(new Wallet[] {planetManagerWallet, planetWallet});
+
+        _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PRIVATE);
+        List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
+        BigInteger planetHeight = _getPlanetInfo(planetIds.get(0));
+
+        _waitUtil(_getHeight().add(termPeriod));
+        _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
+
+        var lockupHeight = _getStartHeightOfTerm(privateLockup, termPeriod, planetHeight);
+        LOG.info("lockupHeight = " + lockupHeight);
+        _waitUtil(lockupHeight);
+
+        int testTermCycle = 25;
+        for (int i = 0; i < testTermCycle; i++) {
+            var nextCycle = lockupHeight.add(termPeriod.multiply(privateReleaseCycle).multiply(BigInteger.valueOf(i + 1)));
+            LOG.info("cycle : " + i);
+            var curHeight = _getHeight();
+            while (nextCycle.compareTo(curHeight) > 0) {
+                var curTerm = curHeight.subtract(planetHeight).divide(termPeriod).add(BigInteger.ONE);
+//                LOG.info("term : " + curTerm);
+//                _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
+
+//                LOG.info("total = " + _getCurrentPublicReward());
+                BigInteger claimable = _getRewardInfo(planetIds.get(0));
+//                BigInteger expected = _getCurrentPrivateReward(planetHeight, _getCurrentPublicReward());
+//                LOG.info("expected = " + expected);
+//                assertEquals(0, claimable.compareTo(expected), "claimable is not expected");
+
+                _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{ planetIds.get(0) }, true);
+                var nextTerm = _getStartHeightOfTerm(curTerm.add(BigInteger.ONE), termPeriod, planetHeight);
+                _waitUtil(nextTerm);
+                curHeight = _getHeight();
+            }
+            // check rewardinfo
+            _getRewardInfo(planetIds.get(0));
+        }
+
+        LOG.infoExiting();
+    }
+
+    @Test
+    @Order(11)
     public void issueReductionCycleTest() throws Exception {
         LOG.infoEntering("issueReductionCycleTest");
         KeyWallet planetManagerWallet = KeyWallet.create();
@@ -519,59 +575,6 @@ public class HavahBasicTest extends TestBase {
         LOG.info("reduction termReward : " + termReward);
         assertEquals(claimable.compareTo(termReward), 0, "reduction term reward is not equals to claimable");
         _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true);
-
-        LOG.infoExiting();
-    }
-
-    @Test
-    @Order(11)
-    public void claimPrivatePlanetRewardTest() throws Exception {
-        LOG.infoEntering("claimPrivatePlanetRewardTest");
-        _getIssueInfo();
-        KeyWallet planetManagerWallet = KeyWallet.create();
-        KeyWallet planetWallet = KeyWallet.create();
-        BigInteger termPeriod = _getTermPeriod();
-        BigInteger privateLockup = Constants.PRIVATE_LOCKUP;
-        BigInteger privateReleaseCycle = Constants.PRIVATE_RELEASE_CYCLE;
-        LOG.info("termPeriod : " + termPeriod);
-        LOG.info("privateLockup : " + privateLockup);
-        LOG.info("privateReleaseCycle : " + privateReleaseCycle);
-
-        Utils.distributeCoin(new Wallet[] {planetManagerWallet, planetWallet});
-
-        _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PRIVATE);
-        List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
-        BigInteger planetHeight = _getPlanetInfo(planetIds.get(0));
-
-        var lockupHeight = _getStartHeightOfTerm(privateLockup, termPeriod, planetHeight);
-        LOG.info("lockupHeight = " + lockupHeight);
-        _waitUtil(lockupHeight);
-
-        int testTermCycle = 4;
-        for (int i = 0; i < testTermCycle; i++) {
-            var nextCycle = lockupHeight.add(termPeriod.multiply(privateReleaseCycle).multiply(BigInteger.valueOf(i + 1)));
-            LOG.info("nextCycle : " + nextCycle);
-            var curHeight = _getHeight();
-            while (nextCycle.compareTo(curHeight) > 0) {
-                var curTerm = curHeight.subtract(planetHeight).divide(termPeriod).add(BigInteger.ONE);
-                LOG.info("term : " + curTerm);
-                _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
-
-                LOG.info("total = " + _getCurrentPublicReward());
-                BigInteger claimable = _getRewardInfo(planetIds.get(0));
-                BigInteger expected = _getCurrentPrivateReward(planetHeight, _getCurrentPublicReward());
-                LOG.info("expected = " + expected);
-                assertEquals(0, claimable.compareTo(expected), "claimable is not expected");
-
-                _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true);
-                var nextTerm = _getStartHeightOfTerm(curTerm.add(BigInteger.ONE), termPeriod, planetHeight);
-                _waitUtil(nextTerm);
-                curHeight = _getHeight();
-            }
-            // check rewardinfo
-            _getRewardInfo(planetIds.get(0));
-        }
 
         LOG.infoExiting();
     }
