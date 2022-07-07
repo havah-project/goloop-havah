@@ -429,7 +429,7 @@ func (s *State) ClaimEcoSystemReward() (*big.Int, error) {
 	reward := s.getBigInt(hvhmodule.VarEcoReward)
 	if reward == nil || reward.Sign() < 0 {
 		return nil, scoreresult.Errorf(
-			hvhmodule.StatusCriticalError, "Invalid EcoSystem reward: %v", reward)
+			hvhmodule.StatusCriticalError, "Invalid EcoSystem reward: %d", reward)
 	}
 
 	if reward.Sign() > 0 {
@@ -494,14 +494,14 @@ func (s *State) calcClaimableReward(height int64, p *Planet, pr *planetReward) (
 		return hvhmodule.BigIntZero, nil
 	}
 
-	releaseCycle := (lockupTerm-privateLockupTerm)/hvhmodule.DayPerMonth + 1
-	maxPrivateReleaseCycle := s.getInt64OrDefault(
-		hvhmodule.VarPrivateReleaseCycle, hvhmodule.MaxPrivateReleaseCycle)
+	privateReleaseCycle := s.getInt64OrDefault(
+		hvhmodule.VarPrivateReleaseCycle, hvhmodule.PrivateReleaseCycle)
+	releaseDivision := (lockupTerm-privateLockupTerm)/privateReleaseCycle + 1
 
-	if releaseCycle < maxPrivateReleaseCycle {
-		lockedReward := big.NewInt(maxPrivateReleaseCycle - releaseCycle)
+	if releaseDivision < hvhmodule.PrivateReleaseDivision {
+		lockedReward := big.NewInt(hvhmodule.PrivateReleaseDivision - releaseDivision)
 		lockedReward.Mul(lockedReward, pr.Total())
-		lockedReward.Div(lockedReward, big.NewInt(maxPrivateReleaseCycle))
+		lockedReward.Div(lockedReward, big.NewInt(hvhmodule.PrivateReleaseDivision))
 
 		claimableReward = new(big.Int).Sub(claimableReward, lockedReward)
 		if claimableReward.Sign() < 0 {
@@ -574,7 +574,7 @@ func (s *State) OnTermStart(issueAmount *big.Int) error {
 	}
 
 	s.logger.Debugf(
-		"OnTermStart() end: allPlanet=%d activeUSDT=%s rwdRemain=%s rwdTotal=%s",
+		"OnTermStart() end: allPlanet=%d activeUSDT=%d rwdRemain=%d rwdTotal=%d",
 		allPlanet, usdtPrice, rewardRemain, rewardRemain,
 	)
 	return nil
@@ -687,14 +687,14 @@ func (s *State) printInitState() {
 	s.logger.Infof("Initial platform configuration\n"+
 		"TermPeriod: %d\n"+
 		"IssueReductionCycle: %d\n"+
-		"MaxPrivateReleaseCycle: %d\n"+
+		"PrivateReleaseCycle: %d\n"+
 		"PrivateLockup: %d\n"+
 		"IssueAmount: %d\n"+
 		"HooverBudget: %d\n"+
 		"USDTPrice: %d\n",
 		s.GetTermPeriod(),
 		s.GetIssueReductionCycle(),
-		s.getInt64OrDefault(hvhmodule.VarPrivateReleaseCycle, hvhmodule.MaxPrivateReleaseCycle),
+		s.getInt64OrDefault(hvhmodule.VarPrivateReleaseCycle, hvhmodule.PrivateReleaseCycle),
 		s.getInt64OrDefault(hvhmodule.VarPrivateLockup, hvhmodule.PrivateLockup),
 		s.getBigIntOrDefault(hvhmodule.VarIssueAmount, hvhmodule.BigIntInitIssueAmount),
 		s.GetHooverBudget(),

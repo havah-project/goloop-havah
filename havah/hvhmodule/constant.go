@@ -34,11 +34,10 @@ const (
 )
 
 const (
-	BlockInterval          = 2000 // unit: ms
-	RoundLimitFactor       = 3
-	MaxPlanetCount         = 50000
-	MaxCountToClaim        = 50
-	MaxPrivateReleaseCycle = MonthPerYear * 2
+	BlockInterval    = 2000 // unit: ms
+	RoundLimitFactor = 3
+	MaxPlanetCount   = 50000
+	MaxCountToClaim  = 50
 
 	StepPrice          = 12500000000
 	MaxStepLimitInvoke = 2500000000
@@ -67,12 +66,14 @@ const (
 
 // PlatformConfig default values
 const (
-	TermPeriod          = DayBlock
-	IssueAmount         = 4_300_000                // unit: HVH
-	IssueReductionCycle = DayPerYear               // 1 year (360) in term
-	PrivateLockup       = DayPerYear               // 1 year (360) in term
-	HooverBudget        = 4_300_000                // unit: HVH
-	IssueLimit          = 50 * IssueReductionCycle // unit: term
+	TermPeriod             = DayBlock    // unit: block
+	IssueAmount            = 4_300_000   // unit: HVH
+	IssueReductionCycle    = DayPerYear  // 1 year (360) in term
+	PrivateLockup          = DayPerYear  // 1 year (360) in term
+	PrivateReleaseCycle    = DayPerMonth // unit: term
+	PrivateReleaseDivision = MonthPerYear * 2
+	HooverBudget           = 4_300_000                // unit: HVH
+	IssueLimit             = 50 * IssueReductionCycle // unit: term
 )
 
 // VarDB, DictDB, ArrayDB keys
@@ -82,7 +83,7 @@ const (
 	VarIssueLimit          = "issue_limit"           // unit: term
 	VarTermPeriod          = "term_period"           // unit: block
 	VarIssueReductionCycle = "issue_reduction_cycle" // unit: term
-	VarPrivateReleaseCycle = "private_release_cycle" // unit: month
+	VarPrivateReleaseCycle = "private_release_cycle" // unit: term
 	VarPrivateLockup       = "private_lockup"        // unit: term
 	VarHooverBudget        = "hoover_budget"         // unit: hvh
 	VarUSDTPrice           = "usdt_price"            // unit: hvh

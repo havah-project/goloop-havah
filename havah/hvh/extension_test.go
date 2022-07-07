@@ -550,6 +550,67 @@ func TestExtensionStateImpl_Reward3(t *testing.T) {
 	assert.Zero(t, ecoReward.Cmp(cc.GetBalance(hvhmodule.EcoSystem)))
 }
 
+// Case4
+// private planet
+// claim rewards during private release cycle
+func TestExtensionStateImpl_Reward_PrivateReleaseCycle(t *testing.T) {
+	var err error
+	id := int64(1)
+	issueStart := int64(10)
+	termPeriod := int64(4)
+	privateLockup := int64(10)
+	privateReleaseCycle := int64(5)
+	issueAmount := hvhmodule.BigIntInitIssueAmount
+	usdtPrice := toHVH(1) // 1 USDT == 10 HVH
+	owner := common.MustNewAddressFromString("hx2222")
+
+	stateCfg := hvhstate.StateConfig{
+		TermPeriod:          &common.HexInt64{Value: termPeriod},
+		PrivateLockup:       &common.HexInt64{Value: privateLockup},
+		PrivateReleaseCycle: &common.HexInt64{Value: privateReleaseCycle},
+		IssueAmount:         new(common.HexInt).SetValue(issueAmount),
+		USDTPrice:           new(common.HexInt).SetValue(usdtPrice),
+	}
+	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
+	mcc.height = 1
+	cc := NewCallContext(mcc, owner)
+
+	err = es.StartRewardIssue(cc, issueStart)
+	assert.NoError(t, err)
+
+	priceInUSDT := big.NewInt(1)
+	priceInHVH := big.NewInt(1)
+	err = es.RegisterPlanet(cc, id, true, false, owner, priceInUSDT, priceInHVH)
+	assert.NoError(t, err)
+
+	// Term 0
+	goByHeight(t, issueStart, es, mcc, nil)
+
+	err = es.ReportPlanetWork(cc, id)
+	assert.NoError(t, err)
+
+	goByCount(t, termPeriod*privateLockup, es, mcc, nil)
+
+	for i := int64(0); i < hvhmodule.PrivateReleaseDivision; i++ {
+		lockedReward := big.NewInt(hvhmodule.PrivateReleaseDivision - (i + 1))
+		lockedReward.Mul(lockedReward, issueAmount)
+		lockedReward.Div(lockedReward, big.NewInt(hvhmodule.PrivateReleaseDivision))
+		expectedToClaim := new(big.Int).Sub(issueAmount, lockedReward)
+
+		err = es.ClaimPlanetReward(cc, []int64{id})
+		assert.NoError(t, err)
+
+		balance := mcc.GetBalance(owner)
+		es.Logger().Debugf("i=%d expected=%d balance=%d", i, expectedToClaim, balance)
+		assert.Zero(t, expectedToClaim.Cmp(balance))
+
+		goByCount(t, termPeriod*privateReleaseCycle, es, mcc, nil)
+	}
+
+	balance := cc.GetBalance(owner)
+	assert.Zero(t, issueAmount.Cmp(balance))
+}
+
 func TestExtensionStateImpl_DistributeFee(t *testing.T) {
 	var balance *big.Int
 	issueStart := int64(10)
