@@ -40,9 +40,6 @@ import (
 
 type baseDataJSON struct {
 	IssueAmount common.HexInt `json:"issueAmount"`
-
-	//rewardTotal  *common.HexInt `json:"rewardTotal"`
-	//rewardRemain *common.HexInt `json:"rewardRemain"`
 }
 
 func parseBaseData(data []byte) (*baseDataJSON, error) {
@@ -156,7 +153,7 @@ func (tx *baseV3) Execute(ctx contract.Context, estimate bool) (txresult.Receipt
 }
 
 func (tx *baseV3) Dispose() {
-	//panic("implement me")
+	// panic("implement me")
 }
 
 func (tx *baseV3) Group() module.TransactionGroup {
@@ -315,7 +312,7 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 
 	if (baseTxCount % termPeriod) != 0 {
 		if baseData.IssueAmount.Value().Sign() != 0 {
-			return transaction.InvalidTxValue.Errorf(""+
+			return transaction.InvalidTxValue.Errorf(
 				"Invalid issueAmount(%s)", baseData.IssueAmount.Value())
 		}
 		return nil

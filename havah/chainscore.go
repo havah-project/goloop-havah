@@ -645,10 +645,6 @@ func (s *chainScore) checkGovernance(charge bool) error {
 	return nil
 }
 
-const (
-	SysNoCharge = 1 << iota
-)
-
 func newChainScore(cc contract.CallContext, from module.Address, value *big.Int) (contract.SystemScore, error) {
 	fromGov := cc.Governance().Equal(from)
 	return &chainScore{
