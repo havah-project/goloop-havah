@@ -19,7 +19,7 @@
     "havah": {
       "termPeriod": "0xa8c0",
       "issueReductionCycle": "0x168",
-      "privateReleaseCycle": "0x1e",
+      "privateReleaseCycle": "0x18",
       "privateLockup": "0x168",
       "issueLimit": "0x4650",
       "issueAmount": "0x38e8f7792d79767800000",
@@ -32,13 +32,24 @@
 
 ### Parameters
 
-| Key                 | VALUE type | Possible to omit |              Default | Description                               |
-|:--------------------|:-----------|:-----------------|---------------------:|-------------------------------------------|
-| termPeriod          | T_INT      | true             |                43200 | term period in blocks when coin is issued |
-| issueReductionCycle | T_INT      | true             |                  360 | unit: term                                |
-| privateReleaseCycle | T_INT      | true             |                   30 | unit: term                                |
-| privateLockup       | T_INT      | true             |                  360 | unit: term                                |
-| issueLimit          | T_INT      | true             |                18000 | No issues after issueLimit (unit: term)   |
-| issueAmount         | T_INT      | true             | 4_300_000 * 10 ** 18 | unit: HVH                                 |
-| hooverBudget        | T_INT      | true             | 4_300_000 * 10 ** 18 | unit: HVH                                 |                                         |
-| usdtPrice           | T_INT      | false            |                    - | 1 USDT price in HVH                       |
+| Key                 | VALUE type | Possible to omit |              Default |  Unit |
+|:--------------------|:-----------|:-----------------|---------------------:|------:|
+| termPeriod          | T_INT      | true             |                43200 | block |
+| issueReductionCycle | T_INT      | true             |                  360 |  term |
+| privateReleaseCycle | T_INT      | true             |                   24 | month |
+| privateLockup       | T_INT      | true             |                  360 |  term |
+| issueLimit          | T_INT      | true             |                18000 |  term |
+| issueAmount         | T_INT      | true             | 4_300_000 * 10 ** 18 |   HVH |
+| hooverBudget        | T_INT      | true             | 4_300_000 * 10 ** 18 |   HVH |                                         |
+| usdtPrice           | T_INT      | false            |                    - |   HVH |
+
+* `termPeriod`: Coins for reward are issued every term period in blocks
+* `issueReductionCycle`: issueAmount is reduced at a fixed rate each cycle
+* `privateReleaseCycle`: Number of months the all rewards can be claimed
+  * 1/`privateReleaseCycle` of all rewards can be claimed each month
+* `privateLockup`: Period during which the reward is locked up
+* `issueLimit`: No issues after issueLimit
+* `issueAmount`: Amount of coins to be issued every term period
+* `hooverBudget`: Max budget of HooverFund account  
+* `usdtPrice`: 1 USDT price in HVH
+ 
