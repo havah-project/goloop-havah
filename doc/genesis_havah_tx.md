@@ -36,7 +36,7 @@
 |:--------------------|:-----------|:-----------------|---------------------:|------:|
 | termPeriod          | T_INT      | true             |                43200 | block |
 | issueReductionCycle | T_INT      | true             |                  360 |  term |
-| privateReleaseCycle | T_INT      | true             |                   24 | month |
+| privateReleaseCycle | T_INT      | true             |                   30 |  term |
 | privateLockup       | T_INT      | true             |                  360 |  term |
 | issueLimit          | T_INT      | true             |                18000 |  term |
 | issueAmount         | T_INT      | true             | 4_300_000 * 10 ** 18 |   HVH |
@@ -45,8 +45,7 @@
 
 * `termPeriod`: Coins for reward are issued every term period in blocks
 * `issueReductionCycle`: issueAmount is reduced at a fixed rate each cycle
-* `privateReleaseCycle`: Number of months the all rewards can be claimed
-  * 1/`privateReleaseCycle` of all rewards can be claimed each month
+* `privateReleaseCycle`: Additional 1/24 of total rewards can be claimed each cycle
 * `privateLockup`: Period during which the reward is locked up
 * `issueLimit`: No issues after issueLimit
 * `issueAmount`: Amount of coins to be issued every term period

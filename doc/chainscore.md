@@ -1324,7 +1324,7 @@ HAVAH-specific JSON-RPC APIs
 ### claimPlanetReward
 
 * Claims remaining rewards for a specific planet
-* Claimed rewards are transferred from PublicTreasury to the planet owner
+* Claimed rewards are transferred from `PublicTreasury` to the planet owner
 * Called by a planet owner
  
 > Request
@@ -1349,9 +1349,9 @@ HAVAH-specific JSON-RPC APIs
 
 #### Parameters
 
-| Key | VALUE Type | Required | Description                 |
-|:----|:-----------|:---------|:----------------------------|
-| ids | T_LIST     | true     | Planet IDs to claim rewards |
+| Key | VALUE Type | Required | Description                                 |
+|:----|:-----------|:---------|:--------------------------------------------|
+| ids | T_LIST     | true     | Planet IDs to claim rewards (max count: 50) |
 
 #### Returns
 
