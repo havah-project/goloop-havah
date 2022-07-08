@@ -58,6 +58,10 @@ public final class Utils {
         return lastBlk.getHeight();
     }
 
+    public static BigInteger getHeightNext(int number) throws IOException {
+        return getHeight().add(BigInteger.valueOf(number));
+    }
+
     public static void waitUtil(BigInteger height) throws Exception {
         var now = getHeight();
         while (now.compareTo(height) < 0) {
@@ -145,7 +149,7 @@ public final class Utils {
         return termSequence.asInteger();
     }
 
-    public static String displayToken(BigInteger amount) {
+    public static String printTokenAmount(BigInteger amount) {
         BigInteger hvh = BigInteger.ZERO;
         BigInteger ONE_HVH = BigInteger.ONE.multiply(BigInteger.TEN.pow(18));
         if (amount.compareTo(ONE_HVH) >= 0) {
