@@ -11,17 +11,29 @@ import io.havah.test.common.Constants;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.Arrays;
+import java.util.Map;
 
 import static foundation.icon.test.common.Env.LOG;
 
 public class VaultScore extends Score {
     public static class VestingAccount {
         public Address account;
-        public BigInteger scheduledPercents; // 분배 비율
+        public BigInteger amount; // 전체 분배 비율
 
-        public VestingAccount(Address account, BigInteger percents) {
+        public VestingAccount(Address account, BigInteger amount) {
             this.account = account;
-            this.scheduledPercents = percents;
+            this.amount = amount;
+        }
+    }
+
+    public static class VestingHeight {
+        public BigInteger height;
+        public BigInteger ratio; // 텀 분배 비율
+
+        public VestingHeight(BigInteger height, BigInteger ratio) {
+            this.height = height;
+            this.ratio = ratio;
         }
     }
     public VaultScore(TransactionHandler txHandler) {
@@ -34,26 +46,55 @@ public class VaultScore extends Score {
         return super.invokeAndWaitResult(wallet, method, params, BigInteger.ZERO, Constants.DEFAULT_STEPS);
     }
 
-    public TransactionResult setAccounts(Wallet wallet, VestingAccount[] vestingAccounts, BigInteger[] heights)
+    public TransactionResult addAllocation(Wallet wallet, VestingAccount[] vestingAccounts)
             throws ResultTimeoutException, IOException {
         var accounts = new RpcArray.Builder();
         for (var a : vestingAccounts) {
             accounts.add(new RpcObject.Builder()
                     .put("account", new RpcValue(a.account))
-                    .put("scheduledPercents", new RpcValue(a.scheduledPercents))
+                    .put("amount", new RpcValue(a.amount))
                     .build());
-        }
-
-        var vestingHeights = new RpcArray.Builder();
-        for (var h : heights) {
-            vestingHeights.add(new RpcValue(h));
         }
 
         RpcObject params = new RpcObject.Builder()
                 .put("vestingAccounts", accounts.build())
-                .put("heights", vestingHeights.build())
                 .build();
-        return invokeAndWaitResult(wallet, "setAccounts", params);
+
+        return invokeAndWaitResult(wallet, "addAllocation", params);
+    }
+
+    public TransactionResult setAllocation(Wallet wallet, VestingAccount[] vestingAccounts, VestingHeight[] vestingHeights)
+            throws ResultTimeoutException, IOException {
+        var accounts = new RpcArray.Builder();
+        for (var a : vestingAccounts) {
+            accounts.add(new RpcObject.Builder()
+                    .put("account", new RpcValue(a.account))
+                    .put("amount", new RpcValue(a.amount))
+                    .build());
+        }
+
+        RpcObject params = new RpcObject.Builder()
+                .put("vestingAccounts", accounts.build())
+                .build();
+
+        return invokeAndWaitResult(wallet, "addAllocation", params);
+    }
+
+    public TransactionResult setVestingHeights(Wallet wallet, VestingHeight[] vestingHeights)
+            throws ResultTimeoutException, IOException {
+        var heights = new RpcArray.Builder();
+        for (var h : vestingHeights) {
+            heights.add(new RpcObject.Builder()
+                    .put("height", new RpcValue(h.height))
+                    .put("ratio", new RpcValue(h.ratio))
+                    .build());
+        }
+
+        RpcObject params = new RpcObject.Builder()
+                .put("vestingHeights", heights.build())
+                .build();
+
+        return invokeAndWaitResult(wallet, "setVestingHeights", params);
     }
 
     public TransactionResult claim(Wallet wallet)
@@ -61,24 +102,29 @@ public class VaultScore extends Score {
         return invokeAndWaitResult(wallet, "claim", null);
     }
 
-    public BigInteger getBalanceOf(Address owner) throws IOException {
+    public Map<String, Object> getVestingInfo(Address owner) throws IOException {
         RpcObject params = new RpcObject.Builder()
                 .put("address", new RpcValue(owner))
                 .build();
-        return call("getBalanceOf", params).asInteger();
-    }
-
-    public BigInteger getClaimableAmount(Address owner) throws IOException {
-        RpcObject params = new RpcObject.Builder()
-                .put("address", new RpcValue(owner))
-                .build();
-        try {
-            RpcItem item = call("getClaimableAmount", params);
-            return item.asInteger();
-        } catch (RpcError e) {
-            LOG.info("getClaimableAmount rpc error = " + e.getMessage());
+        RpcObject item = (RpcObject) call("getVestingInfo", params);
+        if (!item.isEmpty()) {
+            RpcArray heightsArr = item.getItem("heights").asArray();
+            BigInteger[] heights = new BigInteger[heightsArr.size()];
+            for (int i=0; i< heights.length; i++) {
+                heights[i] = heightsArr.get(i).asInteger();
+            }
+            RpcArray amountsArr = item.getItem("vestingAmounts").asArray();
+            BigInteger[] acmounts = new BigInteger[amountsArr.size()];
+            for (int i=0; i< acmounts.length; i++) {
+                acmounts[i] = amountsArr.get(i).asInteger();
+            }
+            return Map.of(
+                    "total", item.getItem("total").asInteger(),
+                    "heights", Arrays.toString(heights),
+                    "claimable", item.getItem("claimable").asInteger(),
+                    "vestingAmounts", Arrays.toString(acmounts)
+            );
         }
-
-        return BigInteger.ZERO;
+        return Map.of();
     }
 }

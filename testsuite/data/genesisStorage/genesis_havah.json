@@ -95,11 +95,7 @@
             "score": {
                 "contentId": "hash:{{hash:vault-optimized.jar}}",
                 "contentType": "application/java",
-                "owner": "hx54f021fc4a755a2a2c9fdda47a16ce4cd3f3b43e",
-                "params": {
-                    "vestingAccounts": [],
-                    "vestingSchedules":[]
-                }
+                "owner": "hx54f021fc4a755a2a2c9fdda47a16ce4cd3f3b43e"
             }
         }
     ],
