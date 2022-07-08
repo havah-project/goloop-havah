@@ -97,7 +97,6 @@ public class ChainScore extends Score {
  /// ----------- apis for HAVAH ----------------
     public BigInteger getUSDTPrice() throws IOException {
         var v = call("getUSDTPrice", null);
-        System.out.println("getUSDTPrice (" + v + ")");
         return call("getUSDTPrice", null).asInteger();
     }
 
