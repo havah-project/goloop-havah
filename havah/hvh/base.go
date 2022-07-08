@@ -391,7 +391,7 @@ func (es *ExtensionStateImpl) TransferMissedReward(cc hvhmodule.CallContext) err
 	if err = cc.Transfer(hvhmodule.PublicTreasury, hvhmodule.SustainableFund, missed); err != nil {
 		return err
 	}
-	if err = increaseVarDBInSustainableFund(cc, hvhmodule.VarMissingReward, balance); err != nil {
+	if err = increaseVarDBInSustainableFund(cc, hvhmodule.VarMissingReward, missed); err != nil {
 		return err
 	}
 
