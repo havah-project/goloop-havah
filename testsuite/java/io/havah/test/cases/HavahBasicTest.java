@@ -302,14 +302,6 @@ public class HavahBasicTest extends TestBase {
         }
     }
 
-    public void _testPrivateReward(BigInteger total) {
-        BigDecimal value = new BigDecimal(total).divide(new BigDecimal("24"), MathContext.DECIMAL128);
-        for (int  i=1; i<=24; i++) {
-            BigDecimal reward = value.multiply(BigDecimal.valueOf(i));
-            LOG.info("reward : " + reward.setScale(1, RoundingMode.DOWN).setScale(0, RoundingMode.UP).toBigInteger());
-        }
-    }
-
     @Test
     @Order(1)
     public void addPlanetManagerTest() throws Exception {
@@ -539,14 +531,25 @@ public class HavahBasicTest extends TestBase {
         for (int i = 0; i < testTermCycle; i++) {
             var nextCycle = lockupHeight.add(termPeriod.multiply(privateReleaseCycle).multiply(BigInteger.valueOf(i + 1)));
             BigInteger claimable = _getRewardInfo(planetId);
-            BigInteger expected = _getCurrentPrivateReward(planetHeight, totalReward);
+            BigInteger expected = _getCurrentPrivateReward(planetHeight, totalReward).subtract(claimedReward);
             LOG.info("claimable = " + claimable);
             LOG.info("expected = " + expected);
             assertEquals(claimable.compareTo(expected), 0, "private reward is not expected");
+            _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true);
+            claimedReward = claimedReward.add(claimable);
+
+            _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
+            totalReward = totalReward.add(_getCurrentPublicReward());
 
             _waitUtil(nextCycle);
         }
-        _getRewardInfo(planetId);
+        BigInteger claimable = _getRewardInfo(planetId);
+        BigInteger expected = totalReward.subtract(claimedReward);
+        LOG.info("last claim!");
+        LOG.info("claimable = " + claimable);
+        LOG.info("expected = " + expected);
+        assertEquals(claimable.compareTo(expected), 0, "last reward is not expected");
+        _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true);
         
         LOG.infoExiting();
     }
