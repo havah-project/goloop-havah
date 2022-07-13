@@ -149,6 +149,12 @@ public final class Utils {
         return termSequence.asInteger();
     }
 
+    public static boolean isRewardIssued() throws Exception {
+        RpcObject obj = _chainScore.getIssueInfo();
+        var termSequence = obj.getItem("termSequence");
+        return termSequence != null;
+    }
+
     public static String printTokenAmount(BigInteger amount) {
         BigInteger hvh = BigInteger.ZERO;
         BigInteger ONE_HVH = BigInteger.ONE.multiply(BigInteger.TEN.pow(18));

@@ -43,4 +43,7 @@ public class Constants extends foundation.icon.test.common.Constants {
 
     public static BigInteger HOOVER_BUDGET
             = TOTAL_REWARD_PER_DAY;
+
+    public static BigInteger ECOSYSTEM_INITIAL_BALANCE
+            = BigInteger.valueOf(15).multiply(BigInteger.TEN.pow(8)).multiply(BigInteger.TEN.pow(18));
 }

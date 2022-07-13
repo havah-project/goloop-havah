@@ -58,12 +58,14 @@ public class IRC2TokenScore extends Score {
         return call("totalSupply", null).asInteger();
     }
 
-    public Bytes transfer(Wallet wallet, Address to, BigInteger value) throws IOException {
-        RpcObject params = new RpcObject.Builder()
+    public Bytes transfer(Wallet wallet, Address to, BigInteger value, byte[] _data) throws IOException {
+        RpcObject.Builder builder = new RpcObject.Builder()
                 .put("_to", new RpcValue(to))
-                .put("_value", new RpcValue(value))
-                .build();
-        return invoke(wallet, "transfer", params, null, TRANSFER_STEP);
+                .put("_value", new RpcValue(value));
+        if (_data != null) {
+            builder .put("_data", new RpcValue(_data));
+        }
+        return invoke(wallet, "transfer", builder.build(), null, TRANSFER_STEP);
     }
 }
 
