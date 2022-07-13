@@ -81,13 +81,15 @@ public class GovernanceTest extends TestBase {
     @Test
     void testAPIS() throws Exception {
         LOG.infoEntering("setUSDTPrice", "setUSDTPrice : 200");
-        BigInteger price = chainScore.getUSDTPrice().add(BigInteger.ONE);
+        var origin = chainScore.getUSDTPrice();
+        BigInteger price = origin.add(BigInteger.ONE);
         assertSuccess(govScore.setUSDTPrice(governorWallet, price));
         LOG.infoExiting();
 
         LOG.infoEntering("getUSDTPrice");
         BigInteger changed = chainScore.getUSDTPrice();
         assertEquals(price, changed);
+        assertSuccess(govScore.setUSDTPrice(governorWallet, origin));
 
         LOG.infoEntering("addPlanetManager");
         assertSuccess(govScore.addPlanetManager(governorWallet, testWallets[1].getAddress()));
@@ -114,6 +116,11 @@ public class GovernanceTest extends TestBase {
         LOG.info("Address(" + wallet.getAddress() + "), USDTPrice result(" + result + ")");
         assertEquals(success ? 1 : 0, result.getStatus().intValue(), result.toString());
         assertEquals(success ? change : price, chainScore.getUSDTPrice());
+
+        if (success) {
+            result = govScore.setUSDTPrice(wallet, change);
+            assertEquals(success ? 1 : 0, result.getStatus().intValue(), result.toString());
+        }
         LOG.info("checkUSDTPrice");
     }
 
