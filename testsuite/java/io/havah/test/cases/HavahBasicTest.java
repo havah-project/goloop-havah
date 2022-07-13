@@ -4,7 +4,6 @@ import foundation.icon.icx.IconService;
 import foundation.icon.icx.KeyWallet;
 import foundation.icon.icx.Wallet;
 import foundation.icon.icx.data.Address;
-import foundation.icon.icx.data.Block;
 import foundation.icon.icx.data.Bytes;
 import foundation.icon.icx.data.TransactionResult;
 import foundation.icon.icx.transport.http.HttpProvider;
@@ -22,10 +21,7 @@ import io.havah.test.score.PlanetNFTScore;
 import org.junit.jupiter.api.*;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.math.MathContext;
-import java.math.RoundingMode;
 import java.util.List;
 
 import static foundation.icon.test.common.Env.LOG;
@@ -67,17 +63,13 @@ public class HavahBasicTest extends TestBase {
             fail(ex.getMessage());
         }
 
-        _waitUtil(_startRewardIssue(governorWallet, BigInteger.valueOf(5), true));
+        Utils.startRewardIssueIfNotStarted();
+        Utils.waitUtil(Utils.getHeight().add(BigInteger.valueOf(5)));
     }
 
     @AfterAll
     public static void clean() {
 
-    }
-
-    private static BigInteger _getHeight() throws IOException {
-        Block lastBlk = iconService.getLastBlock().execute();
-        return lastBlk.getHeight();
     }
 
     private static BigInteger _getStartHeightOfTerm(BigInteger term, BigInteger termPeriod, BigInteger rewardStartHeight) {
@@ -124,7 +116,7 @@ public class HavahBasicTest extends TestBase {
 
     private static BigInteger _startRewardIssue(Wallet wallet, BigInteger addHeight, boolean success) throws IOException, ResultTimeoutException {
         LOG.infoEntering("_startRewardIssue", "expect : " + success);
-        var height = _getHeight();
+        var height = Utils.getHeight();
         var reward = height.add(addHeight);
         LOG.info("cur height : " + height);
         LOG.info("reward height : " + reward);
@@ -224,23 +216,14 @@ public class HavahBasicTest extends TestBase {
         return obj.getItem("issueReductionCycle").asInteger();
     }
 
-    private static void _waitUtil(BigInteger height) throws Exception {
-        var now = _getHeight();
-        while (now.compareTo(height) < 0) {
-            LOG.info("now(" + now + ") wait(" + height + ")");
-            Thread.sleep(1500);
-            now = _getHeight();
-        }
-    }
-
-    private static void _waitUtilNextHeight() throws Exception {
-        var now = _getHeight();
+    private static void waitUtilNextHeight() throws Exception {
+        var now = Utils.getHeight();
         var termPeriod = _getTermPeriod();
         var height = now.add(termPeriod.subtract(now.mod(termPeriod)));
         while (now.compareTo(height) < 0) {
             LOG.info("now(" + now + ") wait(" + height + ")");
             Thread.sleep(1500);
-            now = _getHeight();
+            now = Utils.getHeight();
         }
     }
 
@@ -272,8 +255,6 @@ public class HavahBasicTest extends TestBase {
 
     public BigInteger _getCurrentPrivateReward(BigInteger planetStart, BigInteger total) throws IOException {
         try {
-            BigDecimal value = new BigDecimal(total).divide(new BigDecimal("24"), MathContext.DECIMAL128);
-
             RpcObject obj = chainScore.getIssueInfo();
             BigInteger termPeriod = obj.getItem("termPeriod").asInteger();
             BigInteger height = obj.getItem("height").asInteger();
@@ -290,10 +271,7 @@ public class HavahBasicTest extends TestBase {
             BigInteger reward = total;
             LOG.info("releaseCycle : " + releaseCycle);
             if (releaseCycle.compareTo(BigInteger.valueOf(25)) < 0)  {
-                BigDecimal rewardDecimal = value.multiply(new BigDecimal(releaseCycle));
-                reward = rewardDecimal.setScale(1, RoundingMode.DOWN).setScale(0, RoundingMode.UP).toBigInteger();
-                if (reward.compareTo(BigInteger.ZERO) < 0)
-                    reward = total;
+                reward = total.subtract(total.multiply(BigInteger.valueOf(24).subtract(releaseCycle)).divide(BigInteger.valueOf(24)));
             }
             return reward;
         } catch (NullPointerException e) {
@@ -366,12 +344,12 @@ public class HavahBasicTest extends TestBase {
 //        BigInteger startReward = BigInteger.valueOf(5);
 //        _startRewardIssue(EOAWallet, startReward, false);
 //        BigInteger reward = _startRewardIssue(governorWallet, startReward, true);
-//        if(_getHeight().compareTo(reward) < 0)
+//        if(Utils.getHeight().compareTo(reward) < 0)
 //            _startRewardIssue(governorWallet, startReward, true); // 리워드가 시작되기 전 호출은 성공해야함.
 //        else
 //            LOG.info("reward already started. ignore continuous call test.");
 //
-//        _waitUtil(reward);
+//        Utils.waitUtil(reward);
 //
 //        _startRewardIssue(governorWallet, startReward, false); // 리워드가 시작되면 실패해야 한다고 함.
 //        LOG.infoExiting();
@@ -395,7 +373,7 @@ public class HavahBasicTest extends TestBase {
         _reportPlanetWork(EOAWallet, planetIds.get(0), false);
         _reportPlanetWork(planetManagerWallet, BigInteger.valueOf(-1), false);
 
-        _waitUtil(_getHeight().add(termPeriod));
+        Utils.waitUtil(Utils.getHeight().add(termPeriod));
 
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
         LOG.infoExiting();
@@ -415,7 +393,7 @@ public class HavahBasicTest extends TestBase {
         _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PUBLIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
 
-        _waitUtil(_getHeight().add(termPeriod));
+        Utils.waitUtil(Utils.getHeight().add(termPeriod));
         _getPlanetInfo(planetIds.get(0));
 
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
@@ -430,7 +408,7 @@ public class HavahBasicTest extends TestBase {
         _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PUBLIC);
         planetIds = _tokenIdsOf(planetWallet.getAddress(), 2, BigInteger.TWO);
 
-        _waitUtil(_getHeight().add(termPeriod));
+        Utils.waitUtil(Utils.getHeight().add(termPeriod));
 
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
         _reportPlanetWork(planetManagerWallet, planetIds.get(1), true);
@@ -467,7 +445,7 @@ public class HavahBasicTest extends TestBase {
         _getPlanetInfo(planetIds.get(0));
         LOG.info("planetWallet : " + planetWallet.getAddress());
 
-        _waitUtilNextHeight();
+        waitUtilNextHeight();
 
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
         BigInteger claimable = _getRewardInfo(planetIds.get(0));
@@ -484,7 +462,7 @@ public class HavahBasicTest extends TestBase {
         LOG.info("ecosystem balance (before claim) : " + beforeEco);
         _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true);
 
-        _waitUtilNextHeight();
+        waitUtilNextHeight();
 
         BigInteger afterEco = txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS);
         LOG.info("ecosystem balance (after claim) : " + afterEco);
@@ -516,16 +494,14 @@ public class HavahBasicTest extends TestBase {
         BigInteger planetId = planetIds.get(0);
         BigInteger planetHeight = _getPlanetInfo(planetId);
 
-//        _testPrivateReward(_getCurrentPublicReward());
-
-        _waitUtil(_getHeight().add(termPeriod));
+        Utils.waitUtil(Utils.getHeight().add(termPeriod));
         _reportPlanetWork(planetManagerWallet, planetId, true);
         BigInteger totalReward = _getCurrentPublicReward();
         BigInteger claimedReward = BigInteger.ZERO;
 
         var lockupHeight = _getStartHeightOfTerm(privateLockup, termPeriod, planetHeight.add(BigInteger.ONE));
         LOG.info("lockupHeight = " + lockupHeight);
-        _waitUtil(lockupHeight);
+        Utils.waitUtil(lockupHeight);
 
         int testTermCycle = 24;
         for (int i = 0; i < testTermCycle; i++) {
@@ -541,7 +517,7 @@ public class HavahBasicTest extends TestBase {
             _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
             totalReward = totalReward.add(_getCurrentPublicReward());
 
-            _waitUtil(nextCycle);
+            Utils.waitUtil(nextCycle);
         }
         BigInteger claimable = _getRewardInfo(planetId);
         BigInteger expected = totalReward.subtract(claimedReward);
@@ -550,7 +526,7 @@ public class HavahBasicTest extends TestBase {
         LOG.info("expected = " + expected);
         assertEquals(claimable.compareTo(expected), 0, "last reward is not expected");
         _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true);
-        
+
         LOG.infoExiting();
     }
 
@@ -574,7 +550,7 @@ public class HavahBasicTest extends TestBase {
 
         _getPlanetInfo(planetIds.get(0));
 
-        _waitUtil(_getHeight().add(termPeriod));
+        Utils.waitUtil(Utils.getHeight().add(termPeriod));
 
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
         BigInteger claimable = _getRewardInfo(planetIds.get(0));
@@ -583,7 +559,7 @@ public class HavahBasicTest extends TestBase {
         assertEquals(claimable.compareTo(termReward), 0, "term reward is not equals to claimable");
         _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true);
 
-        _waitUtil(_getIssueInfo().add(termPeriod.multiply(issueReductionCycle)));
+        Utils.waitUtil(_getIssueInfo().add(termPeriod.multiply(issueReductionCycle)));
 
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
         claimable = _getRewardInfo(planetIds.get(0));
