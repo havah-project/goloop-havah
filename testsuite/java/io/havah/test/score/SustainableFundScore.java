@@ -21,6 +21,7 @@ public class SustainableFundScore extends Score {
     public static final String INFLOW_PLANETSALES = "PLANET_SALES";
     public static final String INFLOW_MISSINGREWARD = "MISSING_REWARD";
     public static final String INFLOW_SERVICEFEE = "SERVICE_FEE";
+    public static final String OUTFLOW_CUSTOM = "CUSTOM";
 
 
     public SustainableFundScore(TransactionHandler txHandler) {
@@ -29,6 +30,10 @@ public class SustainableFundScore extends Score {
 
     public RpcObject getInflow() throws IOException {
         return call("getInflow", null).asObject();
+    }
+
+    public RpcObject getInflowInUSDT() throws IOException {
+        return call("getInflowInUSDT", null).asObject();
     }
 
     public BigInteger getInflowAmount() throws Exception {
@@ -41,6 +46,17 @@ public class SustainableFundScore extends Score {
 
     public RpcObject getOutflow() throws IOException {
         return call("getOutflow", null).asObject();
+    }
+
+    public RpcObject getOutflowInUSDT() throws IOException {
+        return call("getOutflowInUSDT", null).asObject();
+    }
+
+    public Bytes setUsdt(Wallet wallet, Address address) throws Exception {
+        RpcObject params = new RpcObject.Builder()
+                .put("_address", new RpcValue(address))
+                .build();
+        return invoke(wallet, "setUsdt", params);
     }
 
     public Bytes transfer(Wallet wallet, Address to, BigInteger value) throws Exception {
@@ -66,11 +82,11 @@ public class SustainableFundScore extends Score {
         return invoke(wallet, "transferToken", builder.build());
     }
 
-    public Bytes transferFromPlanetSales(Wallet wallet, BigInteger value) throws Exception {
-        return invoke(wallet, "transferFromPlanetSales", null, value);
+    public Bytes depositFromPlanetSales(Wallet wallet, BigInteger value) throws Exception {
+        return invoke(wallet, "depositFromPlanetSales", null, value);
     }
 
-    public Bytes transferFromServiceFee(Wallet wallet, BigInteger value) throws Exception {
-        return invoke(wallet, "transferFromServiceFee", null, value);
+    public Bytes depositFromServiceFee(Wallet wallet, BigInteger value) throws Exception {
+        return invoke(wallet, "depositFromServiceFee", null, value);
     }
 }
