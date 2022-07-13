@@ -1,26 +1,20 @@
 package io.havah.test.cases;
 
-import foundation.icon.icx.IconService;
 import foundation.icon.icx.KeyWallet;
 import foundation.icon.icx.Wallet;
 import foundation.icon.icx.data.Bytes;
-import foundation.icon.icx.data.TransactionResult;
 import foundation.icon.test.common.TestBase;
 import foundation.icon.test.common.TransactionHandler;
 import io.havah.test.common.Constants;
 import io.havah.test.common.Utils;
-import io.havah.test.score.SustainableFundScore;
 import io.havah.test.score.VaultScore;
-import jdk.jshell.execution.Util;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
 
 import static foundation.icon.test.common.Env.LOG;
-import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Tag(Constants.TAG_HAVAH)
 public class VaultTest extends TestBase {
@@ -64,10 +58,11 @@ public class VaultTest extends TestBase {
         LOG.infoExiting();
 
         LOG.infoEntering("call", "setVestingHeights()");
+        BigInteger curHeight = Utils.getHeight();
         VaultScore.VestingHeight[] schedules = {
-                new VaultScore.VestingHeight(BigInteger.valueOf(25), BigInteger.valueOf(2500)),
-                new VaultScore.VestingHeight(BigInteger.valueOf(30), BigInteger.valueOf(5000)),
-                new VaultScore.VestingHeight(BigInteger.valueOf(35), BigInteger.valueOf(10000))
+                new VaultScore.VestingHeight(curHeight.add(BigInteger.valueOf(10)), BigInteger.valueOf(2500)),
+                new VaultScore.VestingHeight(curHeight.add(BigInteger.valueOf(20)), BigInteger.valueOf(5000)),
+                new VaultScore.VestingHeight(curHeight.add(BigInteger.valueOf(30)), BigInteger.valueOf(10000))
         };
         vaultScore.setVestingHeights(ownerWallet, schedules);
         LOG.infoExiting();
@@ -86,7 +81,7 @@ public class VaultTest extends TestBase {
         LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
         LOG.infoExiting();
 
-        Utils.waitUtil(BigInteger.valueOf(25));
+        Utils.waitUtil(curHeight.add(BigInteger.valueOf(10)));
 
         LOG.infoEntering("call", "claim() [0] : " + wallets[0].getAddress());
         LOG.info("getVestingInfo before claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
@@ -97,27 +92,7 @@ public class VaultTest extends TestBase {
         LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
         LOG.infoExiting();
 
-        Utils.waitUtil(BigInteger.valueOf(30));
-
-        LOG.infoEntering("call", "claim() [0] : " + wallets[0].getAddress());
-        LOG.info("getVestingInfo before claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
-        LOG.info("wallet balance before claim : " + txHandler.getBalance(wallets[0].getAddress()));
-        assertSuccess(vaultScore.claim(wallets[0]));
-        LOG.info("getVestingInfo after claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
-        LOG.info("wallet balance after claim : " + txHandler.getBalance(wallets[0].getAddress()));
-        LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
-        LOG.infoExiting();
-
-        LOG.infoEntering("call", "claim() [1] : " + wallets[1].getAddress());
-        LOG.info("getVestingInfo before claim : " + vaultScore.getVestingInfo(wallets[1].getAddress()));
-        LOG.info("wallet balance before claim : " + txHandler.getBalance(wallets[1].getAddress()));
-        assertSuccess(vaultScore.claim(wallets[1]));
-        LOG.info("getVestingInfo after claim : " + vaultScore.getVestingInfo(wallets[1].getAddress()));
-        LOG.info("wallet balance after claim : " + txHandler.getBalance(wallets[1].getAddress()));
-        LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
-        LOG.infoExiting();
-
-        Utils.waitUtil(BigInteger.valueOf(35));
+        Utils.waitUtil(curHeight.add(BigInteger.valueOf(20)));
 
         LOG.infoEntering("call", "claim() [0] : " + wallets[0].getAddress());
         LOG.info("getVestingInfo before claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
@@ -137,7 +112,27 @@ public class VaultTest extends TestBase {
         LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
         LOG.infoExiting();
 
-        Utils.waitUtil(BigInteger.valueOf(40));
+        Utils.waitUtil(curHeight.add(BigInteger.valueOf(30)));
+
+        LOG.infoEntering("call", "claim() [0] : " + wallets[0].getAddress());
+        LOG.info("getVestingInfo before claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
+        LOG.info("wallet balance before claim : " + txHandler.getBalance(wallets[0].getAddress()));
+        assertSuccess(vaultScore.claim(wallets[0]));
+        LOG.info("getVestingInfo after claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
+        LOG.info("wallet balance after claim : " + txHandler.getBalance(wallets[0].getAddress()));
+        LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
+        LOG.infoExiting();
+
+        LOG.infoEntering("call", "claim() [1] : " + wallets[1].getAddress());
+        LOG.info("getVestingInfo before claim : " + vaultScore.getVestingInfo(wallets[1].getAddress()));
+        LOG.info("wallet balance before claim : " + txHandler.getBalance(wallets[1].getAddress()));
+        assertSuccess(vaultScore.claim(wallets[1]));
+        LOG.info("getVestingInfo after claim : " + vaultScore.getVestingInfo(wallets[1].getAddress()));
+        LOG.info("wallet balance after claim : " + txHandler.getBalance(wallets[1].getAddress()));
+        LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
+        LOG.infoExiting();
+
+        Utils.waitUtil(curHeight.add(BigInteger.valueOf(40)));
 
         LOG.infoEntering("call", "claim() [0] : " + wallets[0].getAddress());
         LOG.info("getVestingInfo before claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
