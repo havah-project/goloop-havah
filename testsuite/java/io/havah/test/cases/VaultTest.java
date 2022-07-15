@@ -2,7 +2,10 @@ package io.havah.test.cases;
 
 import foundation.icon.icx.KeyWallet;
 import foundation.icon.icx.Wallet;
+import foundation.icon.icx.data.Address;
 import foundation.icon.icx.data.Bytes;
+import foundation.icon.icx.data.TransactionResult;
+import foundation.icon.test.common.ResultTimeoutException;
 import foundation.icon.test.common.TestBase;
 import foundation.icon.test.common.TransactionHandler;
 import io.havah.test.common.Constants;
@@ -12,9 +15,12 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.math.BigInteger;
+import java.util.Map;
 
 import static foundation.icon.test.common.Env.LOG;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Tag(Constants.TAG_HAVAH)
 public class VaultTest extends TestBase {
@@ -44,6 +50,33 @@ public class VaultTest extends TestBase {
         ensureIcxBalance(txHandler, ownerWallet.getAddress(), BigInteger.ZERO, amount);
     }
 
+    BigInteger _getVaultClaimableAmount(Address address) throws IOException {
+        var vestingInfo = vaultScore.getVestingInfo(address);
+        if(vestingInfo.containsKey("claimable")) {
+            return (BigInteger) vestingInfo.get("claimable");
+        }
+        return BigInteger.ZERO;
+    }
+
+    Map<String, Object> _getVestingInfo(Address address) throws IOException {
+        return vaultScore.getVestingInfo(address);
+    }
+
+    void _checkAndClaim(KeyWallet wallet) throws IOException, ResultTimeoutException {
+        LOG.infoEntering("_checkAndClaim", "claim : " + wallet.getAddress());
+        BigInteger claimable = _getVaultClaimableAmount(wallet.getAddress());
+        BigInteger balance = txHandler.getBalance(wallet.getAddress());
+        TransactionResult result = vaultScore.claim(wallet);
+        assertSuccess(result);
+        BigInteger fee = Utils.getTxFee(result);
+        balance = txHandler.getBalance(wallet.getAddress()).subtract(balance);
+        LOG.info("claimable : " + claimable);
+        claimable = claimable.subtract(fee);
+        LOG.info("real claim amount (exclude txFee) : " + claimable);
+        LOG.info("balance : " + balance);
+        assertEquals(0, balance.compareTo(claimable), "claimable is not expected");
+        LOG.infoExiting();
+    }
     @Test
     void startVault() throws Exception {
         LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
@@ -59,10 +92,11 @@ public class VaultTest extends TestBase {
 
         LOG.infoEntering("call", "setVestingHeights()");
         BigInteger curHeight = Utils.getHeight();
+        BigInteger[] heights = { curHeight.add(BigInteger.valueOf(10)), curHeight.add(BigInteger.valueOf(20)), curHeight.add(BigInteger.valueOf(30)) };
         VaultScore.VestingHeight[] schedules = {
-                new VaultScore.VestingHeight(curHeight.add(BigInteger.valueOf(10)), BigInteger.valueOf(2500)),
-                new VaultScore.VestingHeight(curHeight.add(BigInteger.valueOf(20)), BigInteger.valueOf(5000)),
-                new VaultScore.VestingHeight(curHeight.add(BigInteger.valueOf(30)), BigInteger.valueOf(10000))
+                new VaultScore.VestingHeight(heights[0], BigInteger.valueOf(2500)),
+                new VaultScore.VestingHeight(heights[1], BigInteger.valueOf(5000)),
+                new VaultScore.VestingHeight(heights[2], BigInteger.valueOf(10000))
         };
         vaultScore.setVestingHeights(ownerWallet, schedules);
         LOG.infoExiting();
@@ -72,84 +106,15 @@ public class VaultTest extends TestBase {
         assertFailure(txHandler.getResult(txHash));
         LOG.infoExiting();
 
-        LOG.infoEntering("call", "claim() [0] : " + wallets[0].getAddress());
-        LOG.info("getVestingInfo before claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
-        LOG.info("wallet balance before claim : " + txHandler.getBalance(wallets[0].getAddress()));
-        assertSuccess(vaultScore.claim(wallets[0]));
-        LOG.info("getVestingInfo after claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
-        LOG.info("wallet balance after claim : " + txHandler.getBalance(wallets[0].getAddress()));
-        LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
-        LOG.infoExiting();
+        LOG.info("vestingInfo wallets[0] : " + _getVestingInfo(wallets[0].getAddress()));
 
-        Utils.waitUtil(curHeight.add(BigInteger.valueOf(10)));
-
-        LOG.infoEntering("call", "claim() [0] : " + wallets[0].getAddress());
-        LOG.info("getVestingInfo before claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
-        LOG.info("wallet balance before claim : " + txHandler.getBalance(wallets[0].getAddress()));
-        assertSuccess(vaultScore.claim(wallets[0]));
-        LOG.info("getVestingInfo after claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
-        LOG.info("wallet balance after claim : " + txHandler.getBalance(wallets[0].getAddress()));
-        LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
-        LOG.infoExiting();
-
-        Utils.waitUtil(curHeight.add(BigInteger.valueOf(20)));
-
-        LOG.infoEntering("call", "claim() [0] : " + wallets[0].getAddress());
-        LOG.info("getVestingInfo before claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
-        LOG.info("wallet balance before claim : " + txHandler.getBalance(wallets[0].getAddress()));
-        assertSuccess(vaultScore.claim(wallets[0]));
-        LOG.info("getVestingInfo after claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
-        LOG.info("wallet balance after claim : " + txHandler.getBalance(wallets[0].getAddress()));
-        LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
-        LOG.infoExiting();
-
-        LOG.infoEntering("call", "claim() [1] : " + wallets[1].getAddress());
-        LOG.info("getVestingInfo before claim : " + vaultScore.getVestingInfo(wallets[1].getAddress()));
-        LOG.info("wallet balance before claim : " + txHandler.getBalance(wallets[1].getAddress()));
-        assertSuccess(vaultScore.claim(wallets[1]));
-        LOG.info("getVestingInfo after claim : " + vaultScore.getVestingInfo(wallets[1].getAddress()));
-        LOG.info("wallet balance after claim : " + txHandler.getBalance(wallets[1].getAddress()));
-        LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
-        LOG.infoExiting();
-
-        Utils.waitUtil(curHeight.add(BigInteger.valueOf(30)));
-
-        LOG.infoEntering("call", "claim() [0] : " + wallets[0].getAddress());
-        LOG.info("getVestingInfo before claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
-        LOG.info("wallet balance before claim : " + txHandler.getBalance(wallets[0].getAddress()));
-        assertSuccess(vaultScore.claim(wallets[0]));
-        LOG.info("getVestingInfo after claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
-        LOG.info("wallet balance after claim : " + txHandler.getBalance(wallets[0].getAddress()));
-        LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
-        LOG.infoExiting();
-
-        LOG.infoEntering("call", "claim() [1] : " + wallets[1].getAddress());
-        LOG.info("getVestingInfo before claim : " + vaultScore.getVestingInfo(wallets[1].getAddress()));
-        LOG.info("wallet balance before claim : " + txHandler.getBalance(wallets[1].getAddress()));
-        assertSuccess(vaultScore.claim(wallets[1]));
-        LOG.info("getVestingInfo after claim : " + vaultScore.getVestingInfo(wallets[1].getAddress()));
-        LOG.info("wallet balance after claim : " + txHandler.getBalance(wallets[1].getAddress()));
-        LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
-        LOG.infoExiting();
-
-        Utils.waitUtil(curHeight.add(BigInteger.valueOf(40)));
-
-        LOG.infoEntering("call", "claim() [0] : " + wallets[0].getAddress());
-        LOG.info("getVestingInfo before claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
-        LOG.info("wallet balance before claim : " + txHandler.getBalance(wallets[0].getAddress()));
-        assertSuccess(vaultScore.claim(wallets[0]));
-        LOG.info("getVestingInfo after claim : " + vaultScore.getVestingInfo(wallets[0].getAddress()));
-        LOG.info("wallet balance after claim : " + txHandler.getBalance(wallets[0].getAddress()));
-        LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
-        LOG.infoExiting();
-
-        LOG.infoEntering("call", "claim() [2] : " + wallets[2].getAddress());
-        LOG.info("getVestingInfo before claim : " + vaultScore.getVestingInfo(wallets[2].getAddress()));
-        LOG.info("wallet balance before claim : " + txHandler.getBalance(wallets[2].getAddress()));
-        assertSuccess(vaultScore.claim(wallets[2]));
-        LOG.info("getVestingInfo after claim : " + vaultScore.getVestingInfo(wallets[2].getAddress()));
-        LOG.info("wallet balance after claim : " + txHandler.getBalance(wallets[2].getAddress()));
-        LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
+        LOG.infoEntering("claim", "claim vault");
+        for(int i=0; i<heights.length; i++) {
+            Utils.waitUtil(heights[i]);
+            _checkAndClaim(wallets[0]);
+        }
+        LOG.info("vestingInfo wallets[1] : " + _getVestingInfo(wallets[1].getAddress()));
+        _checkAndClaim(wallets[1]);
         LOG.infoExiting();
     }
 }
