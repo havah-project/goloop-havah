@@ -3,7 +3,9 @@ package io.havah.test.score;
 import foundation.icon.icx.Wallet;
 import foundation.icon.icx.data.Address;
 import foundation.icon.icx.data.TransactionResult;
-import foundation.icon.icx.transport.jsonrpc.*;
+import foundation.icon.icx.transport.jsonrpc.RpcArray;
+import foundation.icon.icx.transport.jsonrpc.RpcObject;
+import foundation.icon.icx.transport.jsonrpc.RpcValue;
 import foundation.icon.test.common.ResultTimeoutException;
 import foundation.icon.test.common.TransactionHandler;
 import foundation.icon.test.score.Score;
@@ -13,8 +15,6 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Map;
-
-import static foundation.icon.test.common.Env.LOG;
 
 public class VaultScore extends Score {
     public static class VestingAccount {
