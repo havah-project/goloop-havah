@@ -366,6 +366,11 @@ var chainMethods = []*chainMethod{
 			scoreapi.List,
 		},
 	}, 0, 0},
+	{scoreapi.Method{scoreapi.Fallback, "fallback",
+		scoreapi.FlagPayable, 0,
+		nil,
+		nil,
+	}, 0, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {

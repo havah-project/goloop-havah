@@ -14,6 +14,7 @@ const (
 	SigRewardClaimed  = "RewardClaimed(int,int,Address,int)"
 	SigTermStarted    = "TermStarted(int)"
 	SigICXIssued      = "ICXIssued(int,int,int)"
+	SigICXBurned      = "ICXBurned(Address,int,int)"
 	SigHooverRefilled = "HooverRefilled(int,int,int)"
 )
 
@@ -59,6 +60,17 @@ func onICXIssuedEvent(cc hvhmodule.CallContext, termSeq int64, amount, totalSupp
 		[][]byte{[]byte(SigICXIssued)},
 		[][]byte{
 			intconv.Int64ToBytes(termSeq),
+			intconv.BigIntToBytes(amount),
+			intconv.BigIntToBytes(totalSupply),
+		},
+	)
+}
+
+func onICXBurnedEvent(cc hvhmodule.CallContext, from module.Address, amount, totalSupply *big.Int) {
+	cc.OnEvent(state.SystemAddress,
+		[][]byte{[]byte(SigICXBurned)},
+		[][]byte{
+			from.Bytes(),
 			intconv.BigIntToBytes(amount),
 			intconv.BigIntToBytes(totalSupply),
 		},

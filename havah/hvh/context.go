@@ -91,6 +91,27 @@ func (ctx *callContextImpl) Issue(address module.Address, amount *big.Int) (*big
 	return totalSupply, nil
 }
 
+func (ctx *callContextImpl) Burn(amount *big.Int) (*big.Int, error) {
+	if amount == nil || amount.Sign() < 0 {
+		return nil, errors.IllegalArgumentError.Errorf("Invalid issueAmount: %v", amount)
+	}
+
+	var err error
+	var totalSupply *big.Int
+	if amount.Sign() > 0 {
+		totalSupply, err = ctx.addTotalSupply(new(big.Int).Neg(amount))
+		if err != nil {
+			return nil, err
+		}
+		if err = ctx.withdraw(state.SystemAddress, amount); err != nil {
+			return nil, err
+		}
+	} else {
+		totalSupply = ctx.GetTotalSupply()
+	}
+	return totalSupply, nil
+}
+
 func (ctx *callContextImpl) Transfer(from module.Address, to module.Address, amount *big.Int) (err error) {
 	if err = validateAmount(amount); err != nil {
 		return

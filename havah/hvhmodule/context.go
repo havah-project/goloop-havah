@@ -17,6 +17,7 @@ type WorldContext interface {
 	ConsensusInfo() module.ConsensusInfo
 	GetBalance(address module.Address) *big.Int
 	Issue(address module.Address, amount *big.Int) (*big.Int, error)
+	Burn(amount *big.Int) (*big.Int, error)
 	Transfer(from module.Address, to module.Address, amount *big.Int) error
 	GetTotalSupply() *big.Int
 	SetValidators(validators []module.Validator) error

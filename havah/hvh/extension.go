@@ -422,6 +422,19 @@ func (es *ExtensionStateImpl) GetRewardInfo(cc hvhmodule.CallContext, id int64) 
 	return es.state.GetRewardInfo(height, id)
 }
 
+func (es *ExtensionStateImpl) BurnCoin(cc hvhmodule.CallContext, amount *big.Int) error {
+	from := cc.From()
+	es.Logger().Debugf("BurnCoin() start: from=%s amount=%d", from, amount)
+	totalSupply, err := cc.Burn(amount)
+	if err != nil {
+		return err
+	}
+	onICXBurnedEvent(cc, from, amount, totalSupply)
+	es.Logger().Debugf(
+		"BurnCoin() end: from=%s amount=%d ts=%d", from, amount, totalSupply)
+	return nil
+}
+
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {
 	es := wc.GetExtensionState()
 	if es == nil {

@@ -9,6 +9,7 @@ import (
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
+	"github.com/icon-project/goloop/service/state"
 )
 
 func newMockCallContextAndFrom() (hvhmodule.CallContext, module.Address) {
@@ -37,6 +38,21 @@ func TestCallContextImpl_Issue(t *testing.T) {
 
 	_, err = cc.Issue(from, new(big.Int).Neg(amount))
 	assert.Error(t, err)
+}
+
+func TestCallContextImpl_Burn(t *testing.T) {
+	cc, _ := newMockCallContextAndFrom()
+	amount := big.NewInt(1000)
+
+	ts, err := cc.Issue(state.SystemAddress, amount)
+	assert.Zero(t, ts.Cmp(amount))
+
+	nts, err := cc.Burn(amount)
+	assert.NoError(t, err)
+	assert.Zero(t, nts.Sign())
+
+	balance := cc.GetBalance(state.SystemAddress)
+	assert.Zero(t, balance.Sign())
 }
 
 func TestCallContextImpl_Transfer(t *testing.T) {

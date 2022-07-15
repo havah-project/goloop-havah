@@ -124,7 +124,7 @@ func (s *chainScore) Ex_isPlanetManager(address module.Address) (bool, error) {
 func (s *chainScore) Ex_registerPlanet(
 	id *common.HexInt,
 	isPrivate, isCompany bool, owner module.Address, usdt, price *common.HexInt) error {
-	if err := s.checkNFT(true) ; err != nil {
+	if err := s.checkNFT(true); err != nil {
 		return err
 	}
 	es, err := s.getExtensionState()
@@ -137,7 +137,7 @@ func (s *chainScore) Ex_registerPlanet(
 }
 
 func (s *chainScore) Ex_unregisterPlanet(id *common.HexInt) error {
-	if err := s.checkNFT(true) ; err != nil {
+	if err := s.checkNFT(true); err != nil {
 		return err
 	}
 	es, err := s.getExtensionState()
@@ -148,7 +148,7 @@ func (s *chainScore) Ex_unregisterPlanet(id *common.HexInt) error {
 }
 
 func (s *chainScore) Ex_setPlanetOwner(id *common.HexInt, owner module.Address) error {
-	if err := s.checkNFT(true) ; err != nil {
+	if err := s.checkNFT(true); err != nil {
 		return err
 	}
 	es, err := s.getExtensionState()
@@ -213,4 +213,15 @@ func (s *chainScore) Ex_getRewardInfo(id *common.HexInt) (map[string]interface{}
 		return nil, err
 	}
 	return es.GetRewardInfo(s.newCallContext(), id.Int64())
+}
+
+func (s *chainScore) Ex_fallback() error {
+	if err := s.tryChargeCall(); err != nil {
+		return err
+	}
+	es, err := s.getExtensionState()
+	if err != nil {
+		return err
+	}
+	return es.BurnCoin(s.newCallContext(), s.value)
 }
