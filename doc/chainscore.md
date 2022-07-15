@@ -1549,3 +1549,47 @@ None
 #### Returns
 
 `T_HASH` - txHash
+
+### fallback
+
+* This method is called automatically when coins are transferred to `cx0000000000000000000000000000000000000000`
+* To burn coins, transfer the amount of coins to burn to `cx0000000000000000000000000000000000000000`
+* Every account can burn its coins
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "version": "0x3",
+    "from": "hxc0d4791be0b5ef67063b3c10b840fb81514db2e2",
+    "to": "cx0000000000000000000000000000000000000000",
+    "value": "0xde0b6b3a7640000",
+    "stepLimit": "0xf4240",
+    "timestamp": "0x5e3d15dcc37f7",
+    "nid": "0x101",
+    "signature":"ut0co6SLSzYAeellbZijrpSLZjQsi5YAyUBXPbvuwy58qeiFqnZFZISJn9NsioJUFSVf7WAx5ZUSaAkMEcY6KQE="
+  }
+}
+```
+
+#### Parameters
+
+N/A
+
+#### Returns
+
+`T_HASH` - txHash
+
+#### EventLog
+
+* Signature: `ICXBurned(Address,int,int)`
+
+| Key         | VALUE Type | Indexed | Description                     |
+|:------------|:-----------|:--------|:--------------------------------|
+| from        | T_ADDRESS  | false   | from address                    |
+| amount      | T_INT      | false   | Amount of coins burned          |
+| totalSupply | T_INT      | false   | totalSupply after burning coins |
