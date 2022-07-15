@@ -4,6 +4,7 @@ import foundation.icon.icx.IconService;
 import foundation.icon.icx.Wallet;
 import foundation.icon.icx.data.Address;
 import foundation.icon.icx.data.Block;
+import foundation.icon.icx.data.TransactionResult;
 import foundation.icon.icx.transport.http.HttpProvider;
 import foundation.icon.icx.transport.jsonrpc.RpcObject;
 import foundation.icon.test.common.Constants;
@@ -163,5 +164,9 @@ public final class Utils {
             amount = amount.subtract(hvh.multiply(ONE_HVH));
         }
         return hvh + " HVH, " + amount + " LOOP";
+    }
+
+    public static BigInteger getTxFee(TransactionResult result) {
+        return result.getStepUsed().multiply(result.getStepPrice());
     }
 }
