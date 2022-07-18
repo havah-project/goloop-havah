@@ -40,7 +40,7 @@
 | privateLockup       | T_INT      | false    |                  360 |  term |
 | issueLimit          | T_INT      | false    |                18000 |  term |
 | issueAmount         | T_INT      | false    | 4_300_000 * 10 ** 18 |   HVH |
-| hooverBudget        | T_INT      | false    | 4_300_000 * 10 ** 18 |   HVH |                                         |
+| hooverBudget        | T_INT      | false    | 4_300_000 * 10 ** 18 |   HVH |
 | usdtPrice           | T_INT      | true     |                    - |   HVH |
 
 * `termPeriod`: Coins for reward are issued every term period in blocks
