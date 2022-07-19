@@ -1,6 +1,5 @@
 package io.havah.test.cases;
 
-import foundation.icon.icx.IconService;
 import foundation.icon.icx.KeyWallet;
 import foundation.icon.icx.Wallet;
 import foundation.icon.icx.data.Address;
@@ -10,7 +9,6 @@ import foundation.icon.test.common.TestBase;
 import foundation.icon.test.common.TransactionHandler;
 import io.havah.test.common.Constants;
 import io.havah.test.common.Utils;
-import io.havah.test.score.ChainScore;
 import io.havah.test.score.IRC2TokenScore;
 import io.havah.test.score.PlanetNFTScore;
 import io.havah.test.score.SustainableFundScore;

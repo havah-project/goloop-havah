@@ -22,6 +22,11 @@ public class PlanetNFTScore extends Score {
     public static final String symbol = "HAPL";
     private final Wallet deployer;
 
+    public static final int PLANETTYPE_PRIVATE = 1;
+    public static final int PLANETTYPE_PUBLIC = 2;
+    public static final int PLANETTYPE_COMPANY = 4;
+
+
     public PlanetNFTScore(Wallet deployer, TransactionHandler txHandler) {
         super(txHandler, Constants.PLANETNFT_ADDRESS);
         this.deployer = deployer;
@@ -144,69 +149,4 @@ public class PlanetNFTScore extends Score {
             this.balance = balance;
         }
     }
-
-    public Bytes requestStartOp(Wallet wallet, BigInteger tokenId, Address agentAddr) throws Exception {
-        RpcObject params = new RpcObject.Builder()
-                .put("_tokenId", new RpcValue(tokenId))
-                .put("_agent", new RpcValue(agentAddr))
-                .build();
-        return invoke(wallet, "requestStartOp", params);
-    }
-
-    public Bytes cancelStartOpReq(Wallet wallet, BigInteger tokenId) throws Exception {
-        RpcObject params = new RpcObject.Builder()
-                .put("_tokenId", new RpcValue(tokenId))
-                .build();
-        return invoke(wallet, "cancelStartOpReq", params);
-    }
-
-    public Bytes rejectStartOpReq(Wallet wallet, BigInteger tokenId) throws Exception {
-        RpcObject params = new RpcObject.Builder()
-                .put("_tokenId", new RpcValue(tokenId))
-                .build();
-        return invoke(wallet, "rejectStartOpReq", params);
-    }
-
-    public Bytes acceptStartOpReq(Wallet wallet, BigInteger tokenId, Address receiver) throws Exception {
-        RpcObject params = new RpcObject.Builder()
-                .put("_tokenId", new RpcValue(tokenId))
-                .put("_receiver", new RpcValue(receiver))
-                .build();
-        return invoke(wallet, "acceptStartOpReq", params);
-    }
-
-    public Bytes requestStopOp(Wallet wallet, BigInteger tokenId) throws Exception {
-        RpcObject params = new RpcObject.Builder()
-                .put("_tokenId", new RpcValue(tokenId))
-                .build();
-        return invoke(wallet, "requestStopOp", params);
-    }
-
-    public Bytes cancelStopOpReq(Wallet wallet, BigInteger tokenId) throws Exception {
-        RpcObject params = new RpcObject.Builder()
-                .put("_tokenId", new RpcValue(tokenId))
-                .build();
-        return invoke(wallet, "cancelStopOpReq", params);
-    }
-
-    public Bytes acceptStopOpReq(Wallet wallet, BigInteger tokenId) throws Exception {
-        RpcObject params = new RpcObject.Builder()
-                .put("_tokenId", new RpcValue(tokenId))
-                .build();
-        return invoke(wallet, "acceptStopOpReq", params);
-    }
-
-    // agent apis
-    // agentBalanceOf
-    // agentOf
-    // requestStartOp
-    // cancelStartOpReq
-    // rejectStartOpReq
-    // acceptStartOpReq
-    // requestStopOp
-    // cancelStopOpReq
-    // acceptStopOpReq
-    // getOpState
-    // lastTokenId
-    // mintedTokenCnt
 }

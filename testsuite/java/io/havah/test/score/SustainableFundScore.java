@@ -89,4 +89,18 @@ public class SustainableFundScore extends Score {
     public Bytes depositFromServiceFee(Wallet wallet, BigInteger value) throws Exception {
         return invoke(wallet, "depositFromServiceFee", null, value);
     }
+
+    public Bytes setTest(Wallet wallet, Address address, BigInteger value) throws IOException {
+        RpcObject.Builder builder = new RpcObject.Builder()
+                .put("address", new RpcValue(address))
+                .put("value", new RpcValue(value));
+        return invoke(wallet, "test", builder.build());
+    }
+
+    public BigInteger getTest(Address address) throws IOException {
+        RpcObject.Builder builder = new RpcObject.Builder()
+                .put("address", new RpcValue(address));
+        return call("getTest", builder.build()).asInteger();
+    }
+
 }

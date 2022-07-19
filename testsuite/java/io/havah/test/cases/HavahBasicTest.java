@@ -25,6 +25,9 @@ import java.math.BigInteger;
 import java.util.List;
 
 import static foundation.icon.test.common.Env.LOG;
+import static io.havah.test.score.PlanetNFTScore.PLANETTYPE_PRIVATE;
+import static io.havah.test.score.PlanetNFTScore.PLANETTYPE_PUBLIC;
+import static io.havah.test.score.PlanetNFTScore.PLANETTYPE_COMPANY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -37,10 +40,6 @@ public class HavahBasicTest extends TestBase {
     private static ChainScore chainScore;
     private static KeyWallet governorWallet;
     private static PlanetNFTScore planetNFTScore;
-
-    private static final int PLANETTYPE_PUBLIC = 2;
-    private static final int PLANETTYPE_PRIVATE = 1;
-    private static final int PLANETTYPE_COMPANY = 4;
 
     @BeforeAll
     public static void setup() throws Exception {

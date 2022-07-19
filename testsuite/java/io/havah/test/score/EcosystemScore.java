@@ -11,8 +11,13 @@ import foundation.icon.test.score.Score;
 import io.havah.test.common.Constants;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.List;
+
+import static foundation.icon.test.common.Env.LOG;
 
 public class EcosystemScore extends Score {
+
     public EcosystemScore(TransactionHandler txHandler) {
         super(txHandler, Constants.ECOSYSTEM_ADDRESS);
     }
@@ -25,7 +30,39 @@ public class EcosystemScore extends Score {
         return invoke(wallet, "transfer", param);
     }
 
-    public RpcArray getLockupSchedule() throws Exception {
-        return call("getLockupSchedule", null).asArray();
+    public List<LockupSchedule> getLockupSchedule() throws Exception {
+        var schedules =  call("getLockupSchedule", null).asArray();
+        List<LockupSchedule> list = new ArrayList<>();
+        for (var s : schedules) {
+            var height = s.asObject().getItem("BLOCK_HEIGHT").asInteger();
+            var amount = s.asObject().getItem("LOCKUP_AMOUNT").asInteger();
+            list.add(new LockupSchedule(height, amount));
+        }
+        return list;
+    }
+
+    public static class LockupSchedule {
+        private final BigInteger blockHeight;
+        private final BigInteger amount;
+        public LockupSchedule(BigInteger blockHeight, BigInteger amount) {
+            this.blockHeight = blockHeight;
+            this.amount = amount;
+        }
+
+        public BigInteger getBlockHeight() {
+            return blockHeight;
+        }
+
+        public BigInteger getAmount() {
+            return amount;
+        }
+
+        @Override
+        public String toString() {
+            return "LockSchedule{" +
+                    "blockHeight=" + blockHeight +
+                    ", amount=" + amount +
+                    '}';
+        }
     }
 }

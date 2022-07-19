@@ -1,9 +1,9 @@
 package io.havah.test.cases;
 
-import foundation.icon.icx.IconService;
 import foundation.icon.icx.KeyWallet;
 import foundation.icon.icx.Wallet;
 import foundation.icon.icx.data.Address;
+import foundation.icon.test.common.TestBase;
 import foundation.icon.test.common.TransactionHandler;
 import io.havah.test.common.Constants;
 import io.havah.test.common.Utils;
@@ -21,7 +21,7 @@ import static foundation.icon.test.common.Env.LOG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Tag(Constants.TAG_HAVAH)
-public class EcosystemTest {
+public class EcosystemTest extends TestBase {
     private static TransactionHandler txHandler;
     private static EcosystemScore ecoScore;
     private static Wallet ecoOwner;
@@ -55,70 +55,46 @@ public class EcosystemTest {
         // test transfer all transferable
         LOG.info("transfer " + maxAmount + " to " + receiver);
         result = txHandler.getResult(ecoScore.transfer(ecoOwner, receiver, maxAmount));
+        assertSuccess(result);
         assertEquals(BigInteger.ONE, result.getStatus());
     }
 
-    // search concurrent in junit
     @Test
     public void checkLockupSchedule() throws Exception {
-        var schedule = ecoScore.getLockupSchedule();
-        List<LockSchedule> list = new ArrayList<>();
-        for (var s : schedule) {
-            LOG.info("s(" + s + ")");
-            var height = s.asObject().getItem("BLOCK_HEIGHT").asInteger();
-            var amount = s.asObject().getItem("LOCKUP_AMOUNT").asInteger();
-            list.add(new LockSchedule(height, amount));
-        }
-        list.sort(Comparator.comparing(a -> a.blockHeight));
+        var schedules = ecoScore.getLockupSchedule();
         var lockedAmount = Constants.ECOSYSTEM_INITIAL_BALANCE;
         Address receiver = wallets[2].getAddress();
-        for (var l : list) {
+        Wallet noPermission = wallets[1];
+        final BigInteger withdrawAmount = BigInteger.valueOf(1);
+        // check height and withdraw
+        for (var schedule : schedules) {
             var cur = Utils.getHeight();
-            if (cur.compareTo(l.blockHeight) < 0) {
-                LOG.info("curHeight(" + cur + ")");
+            LOG.info("curHeight(" + cur + ")");
+            // wait until schedule.blockHeight
+            // cur <= schedule
+            var blockHeight = schedule.getBlockHeight();
+            var amount = schedule.getAmount();
+            if (cur.compareTo(blockHeight) <= 0) {
+
                 // failure case - not owner wallet
-                final BigInteger testAmount = BigInteger.valueOf(1);
-                var result = txHandler.getResult(ecoScore.transfer(wallets[1], receiver, testAmount));
-                assertEquals(BigInteger.ZERO, result.getStatus());
+                var txHash = ecoScore.transfer(noPermission, receiver, withdrawAmount);
+                assertSuccess(txHandler.getResult(txHash));
 
                 // success case - owner wallet
                 var ecoBalance = txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS);
-                result = txHandler.getResult(ecoScore.transfer(ecoOwner, receiver, testAmount));
-                boolean available = ecoBalance.subtract(lockedAmount).compareTo(testAmount) >= 0;
+                txHash = ecoScore.transfer(ecoOwner, receiver, withdrawAmount);
+                var result = txHandler.getResult(txHash);
+                boolean available = ecoBalance.subtract(lockedAmount).compareTo(withdrawAmount) >= 0;
                 assertEquals(available ? BigInteger.ONE : BigInteger.ZERO, result.getStatus(),
                         "balance(" + ecoBalance + "), locked(" + lockedAmount + "), available(" + available + ")");
-
-                 _transferExceedAndMax(receiver, lockedAmount);
-
-                Utils.waitUtil(l.blockHeight);
-                LOG.info("lock amount(" + l.amount + ") from (" + l.blockHeight + ") height");
-                lockedAmount = l.amount;
+                _transferExceedAndMax(receiver, lockedAmount);
+                Utils.waitUtil(blockHeight);
+                lockedAmount = amount;
+                LOG.info("lock amount(" + amount + ") on (" + blockHeight + ") height");
             } else {
                 lockedAmount = BigInteger.ZERO;
             }
         }
         _transferExceedAndMax(receiver, lockedAmount);
-    }
-
-    @Test
-    void transfer() throws Exception {
-
-    }
-
-    static class LockSchedule {
-        private final BigInteger blockHeight;
-        private final BigInteger amount;
-        public LockSchedule(BigInteger blockHeight, BigInteger amount) {
-            this.blockHeight = blockHeight;
-            this.amount = amount;
-        }
-
-        @Override
-        public String toString() {
-            return "LockSchedule{" +
-                    "blockHeight=" + blockHeight +
-                    ", amount=" + amount +
-                    '}';
-        }
     }
 }

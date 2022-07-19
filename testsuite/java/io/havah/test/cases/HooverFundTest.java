@@ -78,14 +78,14 @@ public class HooverFundTest extends TestBase {
     }
 
     static void _mintPlanet(Address holder, BigInteger usdt, BigInteger hvh) throws Exception {
-        Bytes txHash = planetNFTScore.mintPlanet(governor, holder, 2, usdt, hvh);
+        Bytes txHash = planetNFTScore.mintPlanet(governor, holder, PlanetNFTScore.PLANETTYPE_PUBLIC, usdt, hvh);
         TransactionResult result = planetNFTScore.getResult(txHash);
         assertEquals(BigInteger.ONE, result.getStatus(), "failure result(" + result + ")");
     }
 
     BigInteger _chargeableHoover(BigInteger hooverBalance) throws Exception {
         var need = Constants.HOOVER_BUDGET.subtract(hooverBalance);
-        var sfBalance = iconService.getBalance(Constants.SUSTAINABLEFUND_ADDRESS).execute();
+        var sfBalance = txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS);
         var refillAmount = BigInteger.ZERO;
         if (sfBalance.compareTo(need) >= 0) {
             refillAmount = need;
@@ -111,13 +111,15 @@ public class HooverFundTest extends TestBase {
         // 1. calculate guaranteed value
         var usdt = _usdtAmountToGetGuaranteed(guaranteed);
         guaranteed = usdt.multiply(BigInteger.TEN.pow(12)).divide(BigInteger.valueOf(3600));
-        logInfo = String.format("usdt(%s), guaranteed(%s), USDTPrice(%s)", usdt, guaranteed, chainScore.getUSDTPrice());
+        logInfo = String.format("usdt(%s), guaranteed(%s), USDTPrice(%s)", usdt, Utils.printTokenAmount(guaranteed), chainScore.getUSDTPrice());
         // 2.  mint
         _mintPlanet(holder.getAddress(), usdt, usdt.multiply(BigInteger.TEN.pow(12)));
 
         // check current hoover balance and check that hoover is refilled on next term
         var hooverBalance = txHandler.getBalance(Constants.HOOVERFUND_ADDRESS);
         var refilledAmount = _chargeableHoover(hooverBalance);
+        BigInteger supply1 = planetNFTScore.totalSupply();
+        LOG.info("totalSupply before TERM(" + supply1 + ")");
         Utils.waitUtilNextTerm();
         var cur = iconService.getLastBlock().execute().getHeight();
         Utils.waitUtil(cur.add(BigInteger.ONE));
@@ -136,6 +138,7 @@ public class HooverFundTest extends TestBase {
         var fee = txResult.getStepPrice().multiply(txResult.getStepUsed());
         assertEquals(BigInteger.ONE, txResult.getStatus());
         BigInteger supply = planetNFTScore.totalSupply();
+        LOG.info("totalSupply after TERM(" + supply + ")");
         var dailyReward = Constants.TOTAL_REWARD_PER_DAY.divide(supply);
         if (guaranteed.compareTo(dailyReward) > 0) {
             assertEquals(guaranteed, txHandler.getBalance(holder.getAddress()).subtract(holderBalance).add(fee),
@@ -151,7 +154,7 @@ public class HooverFundTest extends TestBase {
      */
     BigInteger _calcExpectedReward(BigInteger guaranteed, BigInteger usdtPrice) {
         var usdt = guaranteed.multiply(BigInteger.valueOf(3600)).divide(BigInteger.TEN.pow(12));
-        return usdt.multiply(BigInteger.TEN.pow(12)).multiply(usdtPrice).divide(ONE_HVH).divide(BigInteger.valueOf(3600));
+        return usdt.multiply(usdtPrice).divide(BigInteger.TEN.pow(6)).divide(BigInteger.valueOf(3600));
     }
 
     BigInteger _calcExpectedReward(BigInteger guaranteed) throws IOException {
@@ -159,7 +162,7 @@ public class HooverFundTest extends TestBase {
     }
 
     void printHooverBalance(String param) throws Exception {
-        LOG.info(param + " HOOVER BALANCE(" + iconService.getBalance(Constants.HOOVERFUND_ADDRESS).execute() + ")");
+        LOG.info(param + " HOOVER BALANCE(" + txHandler.getBalance(Constants.HOOVERFUND_ADDRESS) + ")");
     }
 
     // check after 5 term if reward is valid or not
@@ -176,7 +179,7 @@ public class HooverFundTest extends TestBase {
             List<BigInteger> balanceList = new ArrayList<>();
             // call reportPlanetWork and get balance
             for (int j = 0; j < holderNum; j++) {
-                balanceList.add(iconService.getBalance(tokenInfo[j].wallet.getAddress()).execute());
+                balanceList.add(txHandler.getBalance(tokenInfo[j].wallet.getAddress()));
             }
 
             var txResultList = _reportAndClaimPlanet(tokenInfo);
@@ -210,8 +213,8 @@ public class HooverFundTest extends TestBase {
             Utils.waitUtilNextTerm();
             Utils.waitUtil(Utils.getHeightNext(1));
             assertEquals(0, Constants.HOOVER_BUDGET.compareTo(txHandler.getBalance(Constants.HOOVERFUND_ADDRESS)),
-                    String.format("HV balance(%s), SF balance(%s)", iconService.getBalance(Constants.HOOVERFUND_ADDRESS).execute(),
-                            iconService.getBalance(Constants.SUSTAINABLEFUND_ADDRESS).execute()));
+                    String.format("HV balance(%s), SF balance(%s)", txHandler.getBalance(Constants.HOOVERFUND_ADDRESS),
+                            txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS)));
         }
     }
 
@@ -227,6 +230,7 @@ public class HooverFundTest extends TestBase {
     @Test
     void checkHooverSupport() throws Exception {
         LOG.infoEntering("checkHooverSupport");
+        LOG.info("start HooverSupport token supply(" + planetNFTScore.totalSupply() + ")");
         var startHeight = Utils.startRewardIssueIfNotStarted();
         Utils.waitUtil(startHeight);
         final int holderNum = 5;
@@ -254,6 +258,7 @@ public class HooverFundTest extends TestBase {
             tokenInfo[i].expectedDailyReward = _calcExpectedReward(desiredReward.get(i));
         }
 
+        LOG.info("Planet Supply(" + planetNFTScore.totalSupply() + "), ");
         for (int i = 0; i < holderNum; i++) {
             // mint planet and check first reward
             tokenInfo[i].tokenId = _mintAndCheckReward(holders[i], desiredReward.get(i));
@@ -264,6 +269,75 @@ public class HooverFundTest extends TestBase {
         LOG.infoExiting();
     }
 
+    private BigInteger getTermSequence() throws Exception {
+        RpcObject obj = chainScore.getIssueInfo();
+        return obj.getItem("termSequence").asInteger();
+    }
+
+    void checkIfHooverSupportsUpToTheHVHPurchaseAmount(
+            Wallet[] holders, List<BigInteger> tokenList, List<BigInteger> priceInHavah, BigInteger desiredReward) throws Exception {
+        var testNum = tokenList.size();
+        BigInteger expectedDailyReward = _calcExpectedReward(desiredReward);
+
+        var supply = planetNFTScore.totalSupply();
+        var planetReward = Constants.TOTAL_REWARD_PER_DAY.divide(supply);
+        List<Bytes> txList = new ArrayList<>();
+        var accumulatedReward = new BigInteger[testNum];
+        Arrays.fill(accumulatedReward, BigInteger.ZERO);
+        while (true) {
+            Utils.waitUtilNextTerm();
+            // invoke
+            txList.clear();
+            for (BigInteger bigInteger : tokenList) {
+                txList.add(chainScore.invokeReportPlanetWork(planetManager, bigInteger));
+            }
+
+            for (int j = 0; j < testNum; j++) {
+                var txResult = txHandler.getResult(txList.get(j));
+                assertSuccess(txResult);
+            }
+
+            txList.clear();
+            // claim
+            List<BigInteger> beforeBalance = new ArrayList<>();
+            for (int j = 0; j < testNum; j++) {
+                beforeBalance.add(txHandler.getBalance(holders[j].getAddress()));
+                txList.add(chainScore.invokeClaimPlanetReward(holders[j], new BigInteger[]{tokenList.get(j)}));
+            }
+
+            for (int j = 0; j < testNum; j++) {
+                var result = txHandler.getResult(txList.get(j));
+                var txFee = result.getStepPrice().multiply(result.getStepUsed());
+                beforeBalance.set(j, beforeBalance.get(j).subtract(txFee));
+            }
+
+            int receiveAllGuaranteed = 0;
+            var termSequence = getTermSequence();
+
+            for (int j = 0; j < testNum; j++) {
+                var balance = txHandler.getBalance(holders[j].getAddress());
+                var claimedReward = balance.subtract(beforeBalance.get(j));
+                if (accumulatedReward[j].add(planetReward).compareTo(priceInHavah.get(j)) >= 0) {
+                    LOG.info("NO HF support in " + termSequence + " for " + j);
+                    receiveAllGuaranteed++;
+                    assertTrue(
+                            planetReward.equals(claimedReward) ||
+                                    planetReward.add(BigInteger.ONE).equals(claimedReward),
+                            "beforeBalance(" + beforeBalance + "), afterBalance(" + balance + "), reward(" + planetReward + "),  diff(" + claimedReward + ")");
+                } else {
+                    LOG.info("HF support in " + termSequence + " for " + j);
+                    assertEquals(expectedDailyReward, claimedReward
+                            , "beforeBalance(" + beforeBalance + "), afterBalance(" + balance + "), reward(" + planetReward + "), expected(" + expectedDailyReward + ")," +
+                                    "tokenId(" + tokenList.get(j) + ")");
+                }
+                accumulatedReward[j] = accumulatedReward[j].add(claimedReward);
+            }
+            if (receiveAllGuaranteed == testNum) {
+                LOG.info("No more HF support in " + termSequence);
+                break;
+            }
+        }
+    }
     /*
         daily reward는 planet 구매 시 지불한 USDT를 rewardPlanetWork호출 시
         HVH환율을 이용해 HVH로 변환하여 연 10%에 해당하는 HVH를 지급한다.
@@ -276,39 +350,28 @@ public class HooverFundTest extends TestBase {
     @Test
     void checkEndOfHooverSupport() throws Exception {
         var startHeight = Utils.startRewardIssueIfNotStarted();
-        Utils.waitUtil(startHeight);
-        BigInteger supply = planetNFTScore.totalSupply();
+        Utils.waitUtil(startHeight.add(BigInteger.ONE));
         final int testNum = 5;
-        var expectedPlanetReward = Constants.TOTAL_REWARD_PER_DAY.divide(supply.add(BigInteger.valueOf(testNum)));
-        BigInteger[] desiredReward = new BigInteger[testNum];
-        Arrays.fill(desiredReward, expectedPlanetReward.add(ONE_HVH));
+        BigInteger supply = planetNFTScore.totalSupply();
+        var planetReward = Constants.TOTAL_REWARD_PER_DAY.divide(supply.add(BigInteger.valueOf(testNum)));
+        BigInteger desiredReward = planetReward.add(ONE_HVH); // reward = daily planet reward + ONE HVH
         Wallet[] holders = new Wallet[testNum];
         for (int i = 0; i < testNum; i++) {
             holders[i] = KeyWallet.create();
         }
         Utils.distributeCoin(holders);
 
-        BigInteger[] expectedDailyReward = new BigInteger[desiredReward.length];
-        for (int i = 0; i < desiredReward.length; i++) {
-            expectedDailyReward[i] = _calcExpectedReward(desiredReward[i]);
-            LOG.info("expectedDailyReward[" + i + "] = " + expectedDailyReward[i]);
-        }
-
         List<BigInteger> tokenList = new ArrayList<>();
         List<Bytes> txList = new ArrayList<>();
-        List<BigInteger> usdtList = new ArrayList<>();
-        int index = 1;
-        for (var reward : desiredReward) {
-            usdtList.add(reward.multiply(BigInteger.valueOf(index++)));
-        }
-        LOG.info("supplied planet(" + supply.add(BigInteger.valueOf(testNum)) + "), expectedPlanetReward(" + expectedPlanetReward + ")");
+        List<BigInteger> priceInHavah = new ArrayList<>();
+        LOG.info("supplied planet(" + supply.add(BigInteger.valueOf(testNum)) + "), expectedPlanetReward(" + planetReward + ")");
         for (int i = 0; i < testNum; i++) {
             // mint with guaranteed
-            var usdt = _usdtAmountToGetGuaranteed(desiredReward[i]);
-            // set HVH price to get hoover support util 5 times
-            // TODO change below logic
-            txList.add(planetNFTScore.mintPlanet(governor, holders[i].getAddress(), 2, usdt, usdtList.get(i)));
-            LOG.info("mint usdt(" + usdt + "), havah(" + usdtList.get(i) + "), usdtPrice(" + chainScore.getUSDTPrice() + ")");
+            var usdt = _usdtAmountToGetGuaranteed(desiredReward);
+            var havah = desiredReward.multiply(BigInteger.valueOf(i + 1));
+            priceInHavah.add(havah);
+            txList.add(planetNFTScore.mintPlanet(governor, holders[i].getAddress(), PlanetNFTScore.PLANETTYPE_PUBLIC, usdt, havah));
+            LOG.info("mint usdt(" + usdt + "), havah(" + priceInHavah.get(i) + "), usdtPrice(" + chainScore.getUSDTPrice() + ")");
         }
 
         for (int i = 0; i < testNum; i++) {
@@ -317,67 +380,8 @@ public class HooverFundTest extends TestBase {
             tokenList.add(planetNFTScore.tokenIdsOf(holders[i].getAddress(), 0, 1).tokenIds.get(0));
         }
 
-        supply = planetNFTScore.totalSupply();
-        var planetReward = Constants.TOTAL_REWARD_PER_DAY.divide(supply);
-        LOG.info("total supply(" + supply + "), planetReward(" + planetReward + ")");
+        checkIfHooverSupportsUpToTheHVHPurchaseAmount(holders, tokenList, priceInHavah, desiredReward);
         // 0 ~ 5 will get reward as guaranteed, next will get reward only planet reward
-        var accumulatedReward = new BigInteger[desiredReward.length];
-        Arrays.fill(accumulatedReward, BigInteger.ZERO);
-        while (true) {
-            Utils.waitUtilNextTerm();
-            // invoke
-            txList.clear();
-            for (int j = 0; j < testNum; j++) {
-                txList.add(
-                        chainScore.invokeReportPlanetWork(planetManager, tokenList.get(j)));
-            }
-
-            for (int j = 0; j < testNum; j++) {
-                var txResult = txHandler.getResult(txList.get(j));
-            }
-
-            txList.clear();
-            // claim
-            List<BigInteger> beforeBalance = new ArrayList<>();
-            for (int j = 0; j < testNum; j++) {
-                beforeBalance.add(txHandler.getBalance(holders[j].getAddress()));
-            }
-            for (int j = 0; j < testNum; j++) {
-                txList.add(chainScore.invokeClaimPlanetReward(holders[j], new BigInteger[]{tokenList.get(j)}));
-            }
-
-            for (int j = 0; j < testNum; j++) {
-                var result = txHandler.getResult(txList.get(j));
-                var txFee = result.getStepPrice().multiply(result.getStepUsed());
-                beforeBalance.set(j, beforeBalance.get(j).subtract(txFee));
-            }
-
-            int receiveAllGuaranteed = 0;
-            RpcObject obj = chainScore.getIssueInfo();
-            var termSequence = obj.getItem("termSequence").asInteger();
-
-            for (int j = 0; j < testNum; j++) {
-                var balance = txHandler.getBalance(holders[j].getAddress());
-                var diff = balance.subtract(beforeBalance.get(j));
-                if (accumulatedReward[j].compareTo(usdtList.get(j)) >= 0) {
-                    LOG.info("NO HF support in " + termSequence + " for " + j);
-                    receiveAllGuaranteed++;
-                    assertTrue(
-                            planetReward.equals(diff) ||
-                                    planetReward.add(BigInteger.ONE).equals(diff),
-                            "beforeBalance(" + beforeBalance + "), afterBalance(" + balance + "), reward(" + planetReward + "), diff(" + diff + ")");
-                } else {
-                    LOG.info("HF support in " + termSequence + " for " + j);
-                    assertEquals(expectedDailyReward[j], diff
-                            , "beforeBalance(" + beforeBalance + "), afterBalance(" + balance + "), reward(" + planetReward + "), expected(" + expectedDailyReward[j] + ")");
-                }
-                accumulatedReward[j] = accumulatedReward[j].add(diff);
-            }
-            if (receiveAllGuaranteed == testNum) {
-                LOG.info("No more HF support in " + termSequence);
-                break;
-            }
-        }
     }
 
     private List<TransactionResult[]> _reportAndClaimPlanet(HooverTokenInfo[] tokenInfo) throws Exception {
@@ -438,7 +442,6 @@ public class HooverFundTest extends TestBase {
      */
     @Test
     void notEnoughHVHInSF() throws Exception {
-
         var originUsdtPrice = chainScore.getUSDTPrice();
         // 1 USDT = 10 HVH
         assertEquals(BigInteger.ONE,
@@ -454,7 +457,7 @@ public class HooverFundTest extends TestBase {
         Utils.waitUtil(Utils.getHeightNext(1));
         // transfer SF balance to wallet
         Wallet tmpWallet = KeyWallet.create();
-        var sfBalance = iconService.getBalance(Constants.SUSTAINABLEFUND_ADDRESS).execute();
+        var sfBalance = txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS);
         assertEquals(BigInteger.ONE,
                 txHandler.getResult(
                                 sfScore.transfer(governor, tmpWallet.getAddress(), sfBalance.subtract(BigInteger.valueOf(100))))
@@ -471,15 +474,17 @@ public class HooverFundTest extends TestBase {
     /*
         USDT가격을 term별로 변화시키고 reward를 확인한다.
      */
-    void _changeUSDTPriceAndCheckReward(HooverTokenInfo[] hooverTokenInfos, BigInteger[] usdtPrices,
+    void _changeUSDTPriceAndCheckReward(HooverTokenInfo[] hooverTokenInfos, BigInteger[] changedUsdtPrices,
                                         BigInteger[] desiredReward, BigInteger originUsdtPrice) throws Exception {
+        LOG.info("_changeUSDTPriceAndCheckReward totalSupply(" + planetNFTScore.totalSupply() + ")");
         List<Bytes> txHashList = new ArrayList<>();
         List<Bytes> reportTxHasList = new ArrayList<>();
-        for (int i = 0; i <= usdtPrices.length; i++) {
+        for (int i = 0; i <= changedUsdtPrices.length; i++) {
             Utils.waitUtilNextTerm();
             TransactionResult result;
-            if (i < usdtPrices.length) {
-                result = govScore.setUSDTPrice(governor, usdtPrices[i]);
+            if (i < changedUsdtPrices.length) {
+                result = govScore.setUSDTPrice(governor, changedUsdtPrices[i]);
+                LOG.info("setUSDTPrice(" + changedUsdtPrices[i] + ")");
                 assertEquals(BigInteger.ONE, result.getStatus());
             }
 
@@ -507,24 +512,31 @@ public class HooverFundTest extends TestBase {
                 var todayReward = Constants.TOTAL_REWARD_PER_DAY.divide(supply);
                 if (!expected.equals(BigInteger.ZERO)) {
                     var hooverBalance = txHandler.getBalance(Constants.HOOVERFUND_ADDRESS);
-                    if (!BigInteger.ZERO.equals(hooverBalance)) {
+                    LOG.info("hooverBalance("  + hooverBalance + ")" );
+                    if (hooverBalance.signum() > 0) {
                         BigInteger expectedReward;
                         BigInteger usdtPrice;
                         if (i == 0) {
                             usdtPrice = originUsdtPrice;
                         } else {
-                            usdtPrice = usdtPrices[i - 1];
+                            usdtPrice = changedUsdtPrices[i - 1];
                         }
                         expectedReward = _calcExpectedReward(desiredReward[j], usdtPrice);
-                        expectedReward = expectedReward.compareTo(todayReward) > 0 ? expected : todayReward;
+                        LOG.info("usdtPrice(" + usdtPrice + "), expectedReward(" + expectedReward + "), ");
+                        expectedReward = expectedReward.compareTo(todayReward) > 0 ? expectedReward : todayReward;
                         LOG.info("usdtPrice(" + usdtPrice + "), desiredReward(" + desiredReward[j] + "), expectedReward(" + expectedReward + ")");
                         var finalReward = balances.get(j).subtract(fee).add(expectedReward);
+                        LOG.info("claim result(" + result + ")");
+                        LOG.info("before(" + balances.get(j) + "), current(" + txHandler.getBalance(hooverTokenInfos[j].wallet.getAddress()) + "), txFee(" + fee + ")");
+                        LOG.info("finalReward(" + finalReward + ")");
+                        var log = String.format("LOOP(%d), info(%s), reward before(%s), after(%s), today(%s), txFee(%s), hooverBalance(%s), expectedReward(%s), reportResult(%s)",
+                                i, hooverTokenInfos[j], balances.get(j), txHandler.getBalance(hooverTokenInfos[j].wallet.getAddress()),
+                                todayReward, fee, txHandler.getBalance(Constants.HOOVERFUND_ADDRESS), expectedReward,
+                                txHandler.getResult(reportTxHasList.get(j)));
                         assertTrue(finalReward.equals(txHandler.getBalance(hooverTokenInfos[j].wallet.getAddress()))
                                         || finalReward.add(BigInteger.ONE).equals(txHandler.getBalance(hooverTokenInfos[j].wallet.getAddress())),
-                                String.format("LOOP(%d), info(%s), reward before(%s), after(%s), today(%s), txFee(%s), hooverBalance(%s), expectedReward(%s), reportResult(%s)",
-                                        i, hooverTokenInfos[j], balances.get(j), txHandler.getBalance(hooverTokenInfos[j].wallet.getAddress()),
-                                        todayReward, fee, txHandler.getBalance(Constants.HOOVERFUND_ADDRESS), expectedReward,
-                                        txHandler.getResult(reportTxHasList.get(j))));
+                                log);
+                        LOG.info(log);
                     }
                 } else {
                     var expBalance = balances.get(j).add(todayReward).subtract(fee);
@@ -549,8 +561,8 @@ public class HooverFundTest extends TestBase {
         Wallet notUsed = KeyWallet.create();
         // mint to refill SF.
         // these planets are not be working.
-        for (int i = 0; i < 10; i++) {
-            planetNFTScore.mintPlanet(governor, notUsed.getAddress(), 2, BigInteger.ONE, BigInteger.ONE);
+        for (int i = 0; i < 50; i++) {
+            planetNFTScore.mintPlanet(governor, notUsed.getAddress(), PlanetNFTScore.PLANETTYPE_PUBLIC, BigInteger.ONE, BigInteger.ONE);
         }
         var originUsdtPrice = chainScore.getUSDTPrice();
         var startHeight = Utils.startRewardIssueIfNotStarted();
@@ -558,13 +570,17 @@ public class HooverFundTest extends TestBase {
         // mint
         // 2, 10, 100
         BigInteger supply = planetNFTScore.totalSupply();
-        BigInteger[] desiredReward = new BigInteger[]{
+        LOG.info("checkHooverPaymentsAccordingToUSDTPrice totalSupply(" + supply + ")");
+        BigInteger[] desiredReward = new BigInteger[] {
                 BigInteger.ONE, // not hoover support
                 Constants.TOTAL_REWARD_PER_DAY.divide(supply.add(BigInteger.TWO)), // not hoover support
                 Constants.TOTAL_REWARD_PER_DAY.divide(supply.add(BigInteger.valueOf(3))).add(ONE_HVH), // hoover support
                 Constants.TOTAL_REWARD_PER_DAY.divide(supply.add(BigInteger.valueOf(4))).add(ONE_HVH.multiply(BigInteger.TWO)), // hoover support
                 Constants.TOTAL_REWARD_PER_DAY.divide(supply.add(BigInteger.valueOf(5))).add(ONE_HVH.multiply(BigInteger.valueOf(3))), // hoover support
         };
+
+        var usdt = chainScore.getUSDTPrice();
+        LOG.info("getUSDTPrice(" + usdt + ")");
 
         var hooverTokenInfos = _mintPlanetForHooverTest(desiredReward);
         var usdtPrices = new BigInteger[]{
@@ -581,7 +597,7 @@ public class HooverFundTest extends TestBase {
     /*
         Hoover를 모두 사용했을 때 다른 planet에게 reward를 주지 못하는 지 확인한다.
      */
-    @Test
+//    @Test
     void spendAllHVHInHoover() throws Exception {
         // transfer hoover to one
 
@@ -621,7 +637,8 @@ public class HooverFundTest extends TestBase {
             //  mint with guaranteed
             var usdt = _usdtAmountToGetGuaranteed(desiredReward[i]);
             // set HVH price to get hoover support util 5 times
-            txList.add(planetNFTScore.mintPlanet(governor, holders[i].getAddress(), 2, usdt, expectedDailyReward[i].multiply(BigInteger.valueOf(1000))));
+            LOG.info("MINT_PLANET usdt(" + usdt + ")");
+            txList.add(planetNFTScore.mintPlanet(governor, holders[i].getAddress(), PlanetNFTScore.PLANETTYPE_PUBLIC, usdt, expectedDailyReward[i].multiply(BigInteger.valueOf(1000))));
         }
 
         for (int i = 0; i < testNum; i++) {
