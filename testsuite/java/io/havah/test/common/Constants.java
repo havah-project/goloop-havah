@@ -12,7 +12,7 @@ public class Constants extends foundation.icon.test.common.Constants {
     public static final Address GOV_ADDRESS
             = new Address("cx0000000000000000000000000000000000000001");
 
-    public static final Address TREASURY_ADDRESS
+    public static final Address SYSTEM_TREASURY
             = new Address("hx1000000000000000000000000000000000000000");
 
     public static final Address SUSTAINABLEFUND_ADDRESS
@@ -26,6 +26,9 @@ public class Constants extends foundation.icon.test.common.Constants {
 
     public static final Address PLANETNFT_ADDRESS
             = new Address("cx8000000000000000000000000000000000000000");
+
+    public static final Address SERVICE_TREASURY
+            = new Address("hx9000000000000000000000000000000000000000");
 
     public static final Address VAULT_ADDRESS
             = new Address("cx1100000000000000000000000000000000000000");

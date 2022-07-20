@@ -26,6 +26,7 @@ import java.util.Random;
 
 import static foundation.icon.test.common.Env.LOG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Tag(Constants.TAG_HAVAH)
 public class SustainableFundTest extends TestBase {
@@ -64,7 +65,7 @@ public class SustainableFundTest extends TestBase {
         // inflow - check tx_fee
         // inflow - failed_reward
         // 1. check treasury balance
-        var treasuryBalance = txHandler.getBalance(Constants.TREASURY_ADDRESS);
+        var treasuryBalance = txHandler.getBalance(Constants.SYSTEM_TREASURY);
 
         // 2. send transaction to check increased treasury balance
         BigInteger amount = BigInteger.TEN;
@@ -85,12 +86,12 @@ public class SustainableFundTest extends TestBase {
         assertEquals(tmpBal, txHandler.getBalance(tmp.getAddress()));
 
         // 3. check treasury balance -> before treasury balance + txFee
-        var cmpTreasuryBalance = txHandler.getBalance(Constants.TREASURY_ADDRESS);
+        var cmpTreasuryBalance = txHandler.getBalance(Constants.SYSTEM_TREASURY);
         assertEquals(treasuryBalance.add(txFee), cmpTreasuryBalance,
                 String.format("treasury balance before(%s), after(%s), txFee(%s)", treasuryBalance, cmpTreasuryBalance, txFee));
         var sfBalance = txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS);
         var height = Utils.startRewardIssueIfNotStarted();
-        treasuryBalance = txHandler.getBalance(Constants.TREASURY_ADDRESS);
+        treasuryBalance = txHandler.getBalance(Constants.SYSTEM_TREASURY);
         Utils.waitUtil(height);
         var inflow = sfScore.getInflow();
         Utils.waitUtilNextTerm();
@@ -113,7 +114,7 @@ public class SustainableFundTest extends TestBase {
             var value2 = inflow2.getItem(type.getTypeName()).asInteger();
             LOG.info("value(" + value + "), value2(" + value2 + "), type(" + type.getTypeName() + ")");
             assertEquals(value.add(addedAmount.get(type)), value2, String.format("type(%s), treasuryBalance(%s), cur(%s)",
-                    type.getTypeName(), treasuryBalance, txHandler.getBalance(Constants.TREASURY_ADDRESS)));
+                    type.getTypeName(), treasuryBalance, txHandler.getBalance(Constants.SYSTEM_TREASURY)));
         }
         // outflow - hoover_refill
     }
@@ -212,52 +213,79 @@ public class SustainableFundTest extends TestBase {
         _transferAndCheck(sfOwner, true);
     }
 
-    // 0 - planet sales
-    // 1 - service fee
-    Bytes _inflowFrom(int type, Wallet wallet, BigInteger value) throws Exception {
-        Bytes txHash;
-        if (type == 0) {
-            txHash = sfScore.depositFromPlanetSales(wallet, value);
-        } else {
-            txHash = sfScore.depositFromServiceFee(wallet, value);
-        }
-        return txHash;
-    }
-
-    private static final int DEPOSIT_FROM_PLANET_SALES = 0;
-    private static final int DEPOSIT_FROM_SERVICE_FEE = 1;
-
     @Test
     void checkInflow() throws Exception {
         var inflowObj = sfScore.getInflow();
-        var sfBalance = txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS);
         List<Bytes> txHashList = new ArrayList<>();
         var depositAmountFromPlanetSales = BigInteger.ONE;
-        var depositAmountFromServiceFee = BigInteger.TWO;
         var depositorToSF = wallets[2];
         var bal = txHandler.getBalance(depositorToSF.getAddress());
-        txHashList.add(_inflowFrom(DEPOSIT_FROM_PLANET_SALES, depositorToSF, depositAmountFromPlanetSales));
-        txHashList.add(_inflowFrom(DEPOSIT_FROM_SERVICE_FEE, depositorToSF, depositAmountFromServiceFee));
+        txHashList.add(sfScore.depositFromPlanetSales(depositorToSF, depositAmountFromPlanetSales));
+
         BigInteger txFee = BigInteger.ZERO;
         for (var tx : txHashList) {
             var result = txHandler.getResult(tx);
-            assertEquals(BigInteger.ONE, result.getStatus(), result.toString());
+            assertSuccess(result, result.toString());
             txFee = txFee.add(result.getStepUsed().multiply(result.getStepPrice()));
         }
         // check depositor balance is valid
-        assertEquals(bal.subtract(
-                        depositAmountFromPlanetSales.add(depositAmountFromServiceFee))
-                .subtract(txFee), txHandler.getBalance(depositorToSF.getAddress()));
+        assertEquals(bal.subtract(depositAmountFromPlanetSales).subtract(txFee),
+                txHandler.getBalance(depositorToSF.getAddress()));
         var inflowObj2 = sfScore.getInflow();
         assertEquals(inflowObj.getItem(SF_INFLOW.PLANET_SALES.getTypeName()).asInteger().add(depositAmountFromPlanetSales),
                 inflowObj2.getItem(SF_INFLOW.PLANET_SALES.getTypeName()).asInteger());
-        assertEquals(inflowObj.getItem(SF_INFLOW.SERVICE_FEE.getTypeName()).asInteger().add(depositAmountFromServiceFee),
-                inflowObj2.getItem(SF_INFLOW.SERVICE_FEE.getTypeName()).asInteger());
+    }
+
+    // 1 - SF
+    // 2 - ECO
+    BigInteger _calcRatio(int fundType, BigInteger value) {
+        int ratio = 0;
+        if (fundType == 1) {
+            ratio = 8;
+        } else if (fundType == 2) {
+            ratio = 2;
+        } else {
+            assertTrue(false);
+        }
+        return value.multiply(BigInteger.valueOf(ratio)).divide(BigInteger.TEN);
+    }
+
+    @Test
+    void checkInflowServiceFee() throws Exception {
+        var height = Utils.startRewardIssueIfNotStarted();
+        Utils.waitUtil(height);
+        var serviceFee = BigInteger.TEN;
+        var serviceWallet = wallets[2];
+        var sfBalance = txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS);
+        var ecoBalance = txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS);
+        var txHash =  txHandler.transfer(serviceWallet, Constants.SERVICE_TREASURY, serviceFee);
+        var result = txHandler.getResult(txHash);
+        var inflowAmount = sfScore.getInflowAmount();
+        var inflowServiceFee = sfScore.getInflow().getItem("SERVICE_FEE").asInteger();
+        assertSuccess(result);
+
+        var st = txHandler.getBalance(Constants.SYSTEM_TREASURY);
+        var inflow = serviceFee.add(st);
+        var SFShare = _calcRatio(1, inflow);
+        var ECOShare = _calcRatio(2, inflow);
+        assertEquals(serviceFee, txHandler.getBalance(Constants.SERVICE_TREASURY));
+        Utils.waitUtil(Utils.getHeightUntilNextTerm().add(BigInteger.ONE));
+        var SFDiff = txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS).subtract(sfBalance);
+        var ECODiff = txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS).subtract(ecoBalance);
+        var inflowDiff = sfScore.getInflowAmount().subtract(inflowAmount);
+        inflowServiceFee = sfScore.getInflow().getItem("SERVICE_FEE").asInteger().subtract(inflowServiceFee);
+
+        assertEquals(ECOShare, ECODiff);
+        assertEquals(SFShare, SFDiff.subtract(Constants.INITIAL_ISSUE_AMOUNT));
+        assertEquals(inflowDiff, SFDiff);
+        assertEquals(inflowServiceFee, _calcRatio(1, serviceFee));
+
+        assertEquals(BigInteger.ZERO, txHandler.getBalance(Constants.SERVICE_TREASURY));
     }
 
     @Test
     void checkOutflow() throws Exception {
-        if(Utils.isRewardIssued()) {
+        if (Utils.isRewardIssued()) {
             Utils.waitUtilNextTerm();
             Utils.waitUtil(Utils.getHeightNext(1));
         }
@@ -287,6 +315,7 @@ public class SustainableFundTest extends TestBase {
         var txHash = sfScore.transferToken(wallet, tokenAddr, receiver, amount);
         assertEquals(success ? BigInteger.ONE : BigInteger.ZERO, txHandler.getResult(txHash).getStatus());
     }
+
     @Test
     void checkInflowOutflowInUSDT() throws Exception {
         // check inflowInUSDT
