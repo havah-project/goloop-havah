@@ -39,8 +39,8 @@ public class GovScore extends Score {
     public static final String INSTALL_PATH = "./data/genesisStorage/" + "governance";
     public static final String UPDATE_PATH = getFilePath("governance");
 
-    private final Wallet governorWallet;
     private final ChainScore chainScore;
+    private Wallet governorWallet;
 
     public static class Fee {
         Map<String, BigInteger> stepCosts;
@@ -53,7 +53,7 @@ public class GovScore extends Score {
             "contractCall",
             "contractCreate",
             "contractUpdate",
-            "contractDestruct",
+//            "contractDestruct",
             "contractSet",
             "get",
             "set",
@@ -72,6 +72,10 @@ public class GovScore extends Score {
 
     private Wallet getWallet() {
         return this.governorWallet;
+    }
+
+    public void setWallet(Wallet wallet) {
+        this.governorWallet = wallet;
     }
 
     @Override
