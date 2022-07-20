@@ -91,6 +91,19 @@
     {
       "address": "hx9000000000000000000000000000000000000000",
       "name": "Service Treasury"
+    },
+    {
+      "address": "cx1100000000000000000000000000000000000000",
+      "name": "vault",
+      "balance": "0x1043561a8829300000",
+      "score": {
+        "contentId": "hash:{{hash:vault-optimized.jar}}",
+        "contentType": "application/java",
+        "owner": "hx54f021fc4a755a2a2c9fdda47a16ce4cd3f3b43e",
+        "params": {
+          "_name": "Vault"
+        }
+      }
     }
   ],
   "chain": {
