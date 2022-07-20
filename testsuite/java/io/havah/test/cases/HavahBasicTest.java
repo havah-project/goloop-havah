@@ -25,9 +25,9 @@ import java.math.BigInteger;
 import java.util.List;
 
 import static foundation.icon.test.common.Env.LOG;
-import static io.havah.test.score.PlanetNFTScore.PLANETTYPE_PRIVATE;
-import static io.havah.test.score.PlanetNFTScore.PLANETTYPE_PUBLIC;
-import static io.havah.test.score.PlanetNFTScore.PLANETTYPE_COMPANY;
+import static io.havah.test.score.PlanetNFTScore.PLANET_PRIVATE;
+import static io.havah.test.score.PlanetNFTScore.PLANET_PUBLIC;
+import static io.havah.test.score.PlanetNFTScore.PLANET_COMPANY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -312,7 +312,7 @@ public class HavahBasicTest extends TestBase {
         Utils.distributeCoin(new Wallet[] {planetManagerWallet, planetWallet});
 
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PUBLIC);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANET_PUBLIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
         _getPlanetInfo(planetIds.get(0));
         _getPlanetInfo(BigInteger.valueOf(-1));
@@ -337,7 +337,7 @@ public class HavahBasicTest extends TestBase {
         Utils.distributeCoin(new Wallet[] {planetManagerWallet, planetWallet});
 
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PUBLIC);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANET_PUBLIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
         _getRewardInfo(planetIds.get(0));
         _getRewardInfo(BigInteger.valueOf(-1));
@@ -375,7 +375,7 @@ public class HavahBasicTest extends TestBase {
         Utils.distributeCoin(new Wallet[] {planetManagerWallet, planetWallet, EOAWallet});
 
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PUBLIC);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANET_PUBLIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
 
         _reportPlanetWork(EOAWallet, planetIds.get(0), false);
@@ -398,7 +398,7 @@ public class HavahBasicTest extends TestBase {
         Utils.distributeCoin(new Wallet[] {planetManagerWallet, planetWallet});
 
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PUBLIC);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANET_PUBLIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
 
         Utils.waitUtil(Utils.getHeight().add(termPeriod));
@@ -413,7 +413,7 @@ public class HavahBasicTest extends TestBase {
         _getRewardInfo(planetIds.get(0));
 
         // mint second planet nft
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PUBLIC);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANET_PUBLIC);
         planetIds = _tokenIdsOf(planetWallet.getAddress(), 2, BigInteger.TWO);
 
         Utils.waitUtil(Utils.getHeight().add(termPeriod));
@@ -447,7 +447,7 @@ public class HavahBasicTest extends TestBase {
         Utils.distributeCoin(new Wallet[] {planetManagerWallet, planetWallet});
 
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_COMPANY);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANET_COMPANY);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
 
         _getPlanetInfo(planetIds.get(0));
@@ -497,7 +497,7 @@ public class HavahBasicTest extends TestBase {
         Utils.distributeCoin(new Wallet[] {planetManagerWallet, planetWallet});
 
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PRIVATE);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANET_PRIVATE);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
         BigInteger planetId = planetIds.get(0);
         BigInteger planetHeight = _getPlanetInfo(planetId);
@@ -553,7 +553,7 @@ public class HavahBasicTest extends TestBase {
         LOG.info("issueReductionCycle : " + issueReductionCycle);
 
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
-        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANETTYPE_PUBLIC);
+        _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANET_PUBLIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
 
         _getPlanetInfo(planetIds.get(0));

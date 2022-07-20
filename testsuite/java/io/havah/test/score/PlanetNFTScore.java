@@ -22,9 +22,9 @@ public class PlanetNFTScore extends Score {
     public static final String symbol = "HAPL";
     private final Wallet deployer;
 
-    public static final int PLANETTYPE_PRIVATE = 1;
-    public static final int PLANETTYPE_PUBLIC = 2;
-    public static final int PLANETTYPE_COMPANY = 4;
+    public static final int PLANET_PRIVATE = 1;
+    public static final int PLANET_PUBLIC = 2;
+    public static final int PLANET_COMPANY = 4;
 
 
     public PlanetNFTScore(Wallet deployer, TransactionHandler txHandler) {

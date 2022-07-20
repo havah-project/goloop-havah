@@ -78,7 +78,7 @@ public class HooverFundTest extends TestBase {
     }
 
     static void _mintPlanet(Address holder, BigInteger usdt, BigInteger hvh) throws Exception {
-        Bytes txHash = planetNFTScore.mintPlanet(governor, holder, PlanetNFTScore.PLANETTYPE_PUBLIC, usdt, hvh);
+        Bytes txHash = planetNFTScore.mintPlanet(governor, holder, PlanetNFTScore.PLANET_PUBLIC, usdt, hvh);
         TransactionResult result = planetNFTScore.getResult(txHash);
         assertEquals(BigInteger.ONE, result.getStatus(), "failure result(" + result + ")");
     }
@@ -370,7 +370,7 @@ public class HooverFundTest extends TestBase {
             var usdt = _usdtAmountToGetGuaranteed(desiredReward);
             var havah = desiredReward.multiply(BigInteger.valueOf(i + 1));
             priceInHavah.add(havah);
-            txList.add(planetNFTScore.mintPlanet(governor, holders[i].getAddress(), PlanetNFTScore.PLANETTYPE_PUBLIC, usdt, havah));
+            txList.add(planetNFTScore.mintPlanet(governor, holders[i].getAddress(), PlanetNFTScore.PLANET_PUBLIC, usdt, havah));
             LOG.info("mint usdt(" + usdt + "), havah(" + priceInHavah.get(i) + "), usdtPrice(" + chainScore.getUSDTPrice() + ")");
         }
 
@@ -562,7 +562,7 @@ public class HooverFundTest extends TestBase {
         // mint to refill SF.
         // these planets are not be working.
         for (int i = 0; i < 50; i++) {
-            planetNFTScore.mintPlanet(governor, notUsed.getAddress(), PlanetNFTScore.PLANETTYPE_PUBLIC, BigInteger.ONE, BigInteger.ONE);
+            planetNFTScore.mintPlanet(governor, notUsed.getAddress(), PlanetNFTScore.PLANET_PUBLIC, BigInteger.ONE, BigInteger.ONE);
         }
         var originUsdtPrice = chainScore.getUSDTPrice();
         var startHeight = Utils.startRewardIssueIfNotStarted();
@@ -638,7 +638,7 @@ public class HooverFundTest extends TestBase {
             var usdt = _usdtAmountToGetGuaranteed(desiredReward[i]);
             // set HVH price to get hoover support util 5 times
             LOG.info("MINT_PLANET usdt(" + usdt + ")");
-            txList.add(planetNFTScore.mintPlanet(governor, holders[i].getAddress(), PlanetNFTScore.PLANETTYPE_PUBLIC, usdt, expectedDailyReward[i].multiply(BigInteger.valueOf(1000))));
+            txList.add(planetNFTScore.mintPlanet(governor, holders[i].getAddress(), PlanetNFTScore.PLANET_PUBLIC, usdt, expectedDailyReward[i].multiply(BigInteger.valueOf(1000))));
         }
 
         for (int i = 0; i < testNum; i++) {

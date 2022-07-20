@@ -292,9 +292,9 @@ public class PlanetNFTTest extends TestBase {
         BigInteger usdtPrice = BigInteger.valueOf(111);
         BigInteger havahPrice = BigInteger.valueOf(1110);
         final int[] types = {
-                PlanetNFTScore.PLANETTYPE_PRIVATE,
-                PlanetNFTScore.PLANETTYPE_PUBLIC,
-                PlanetNFTScore.PLANETTYPE_COMPANY,
+                PlanetNFTScore.PLANET_PRIVATE,
+                PlanetNFTScore.PLANET_PUBLIC,
+                PlanetNFTScore.PLANET_COMPANY,
         };
 
         for (var type : types) {
@@ -304,8 +304,8 @@ public class PlanetNFTTest extends TestBase {
 
             assertEquals(havahPrice, tokenInfo.getHavahPrice());
             assertEquals(usdtPrice, tokenInfo.getUsdtPrice());
-            assertEquals(type == PlanetNFTScore.PLANETTYPE_PRIVATE, tokenInfo.isPrivate());
-            assertEquals(type == PlanetNFTScore.PLANETTYPE_COMPANY, tokenInfo.isCompany());
+            assertEquals(type == PlanetNFTScore.PLANET_PRIVATE, tokenInfo.isPrivate());
+            assertEquals(type == PlanetNFTScore.PLANET_COMPANY, tokenInfo.isCompany());
             assertEquals(wallet.getAddress(), tokenInfo.getOwner());
 
             usdtPrice = usdtPrice.add(BigInteger.ONE);

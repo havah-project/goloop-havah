@@ -37,15 +37,32 @@ public class TestBase {
         assertStatus(Constants.STATUS_SUCCESS, result);
     }
 
+    protected static void assertSuccess(TransactionResult result, String msg) {
+        assertStatus(Constants.STATUS_SUCCESS, result, msg);
+    }
+
     protected static void assertFailure(TransactionResult result) {
         assertStatus(Constants.STATUS_FAILURE, result);
         LOG.info("Expected " + result.getFailure());
+    }
+
+    protected static void assertFailure(TransactionResult result, String msg) {
+        assertStatus(Constants.STATUS_FAILURE, result, msg);
     }
 
     protected static void assertFailureCode(int code, TransactionResult result) {
         assertStatus(Constants.STATUS_FAILURE, result);
         assertEquals(code, result.getFailure().getCode().intValue());
         LOG.info("Expected " + result.getFailure());
+    }
+
+    protected static void assertStatus(BigInteger status, TransactionResult result, String msg) {
+        try {
+            assertEquals(status, result.getStatus(), msg);
+        } catch (AssertionFailedError e) {
+            LOG.info("Assertion Failed: result=" + result);
+            fail(e.getMessage());
+        }
     }
 
     protected static void assertStatus(BigInteger status, TransactionResult result) {
