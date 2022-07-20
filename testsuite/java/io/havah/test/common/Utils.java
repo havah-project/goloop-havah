@@ -147,7 +147,7 @@ public final class Utils {
             _govScore.startRewardIssue(_governor, startHeight);
             return startHeight;
         }
-        return termSequence.asInteger();
+        return obj.getItem("issueStart").asInteger();
     }
 
     public static boolean isRewardIssued() throws Exception {
