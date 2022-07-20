@@ -62,8 +62,8 @@ public class HavahBasicTest extends TestBase {
             fail(ex.getMessage());
         }
 
-        Utils.startRewardIssueIfNotStarted();
-        Utils.waitUtil(Utils.getHeight().add(BigInteger.valueOf(5)));
+        var height = Utils.startRewardIssueIfNotStarted();
+        Utils.waitUtil(height);
     }
 
     @AfterAll
@@ -257,7 +257,6 @@ public class HavahBasicTest extends TestBase {
             LOG.info("startRewardIssue not called. termSequence and issueStart is null.");
             return BigInteger.ZERO;
         }
-
         return reward.divide(planetNFTScore.totalSupply());
     }
 
@@ -314,6 +313,10 @@ public class HavahBasicTest extends TestBase {
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
         _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANET_PUBLIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
+        /*
+            comment
+            어떤것을 테스트하는지 모르겠음. 적절한 assert사용필요 & mint, getPlanet정보 비교 필요
+         */
         _getPlanetInfo(planetIds.get(0));
         _getPlanetInfo(BigInteger.valueOf(-1));
         LOG.infoExiting();
@@ -323,6 +326,10 @@ public class HavahBasicTest extends TestBase {
     @Order(3)
     public void getIssueInfoTest() throws Exception {
         LOG.infoEntering("getIssueInfoTest");
+        /*
+            comment
+            어떤것을 테스트하는지 모르겠음. 적절한 assert사용필요 & mint, getPlanet정보 비교 필요
+         */
         _getIssueInfo();
         LOG.infoExiting();
     }
@@ -339,6 +346,10 @@ public class HavahBasicTest extends TestBase {
         _checkPlanetManager(governorWallet, planetManagerWallet.getAddress(), true);
         _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANET_PUBLIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
+        /*
+            comment
+            어떤것을 테스트하는지 모르겠음. 적절한 assert사용필요 & mint, getPlanet정보 비교 필요
+         */
         _getRewardInfo(planetIds.get(0));
         _getRewardInfo(BigInteger.valueOf(-1));
         LOG.infoExiting();
@@ -393,7 +404,7 @@ public class HavahBasicTest extends TestBase {
         LOG.infoEntering("claimPublicPlanetRewardTest");
         KeyWallet planetManagerWallet = KeyWallet.create();
         KeyWallet planetWallet = KeyWallet.create();
-        BigInteger termPeriod = _getTermPeriod();
+//        BigInteger termPeriod = _getTermPeriod();
 
         Utils.distributeCoin(new Wallet[] {planetManagerWallet, planetWallet});
 
@@ -401,26 +412,32 @@ public class HavahBasicTest extends TestBase {
         _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANET_PUBLIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
 
-        Utils.waitUtil(Utils.getHeight().add(termPeriod));
+//        Utils.waitUtil(Utils.getHeight().add(termPeriod));
+        Utils.waitUtilNextTerm();
         _getPlanetInfo(planetIds.get(0));
 
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
+        // KKN getRewardInfo 좋지 않음.
         BigInteger claimable = _getRewardInfo(planetIds.get(0));
         BigInteger expected = _getCurrentPublicReward();
         LOG.info("expected = " + expected);
         assertEquals(0, claimable.compareTo(expected), "claimable is not expected");
         _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, expected, 0);
+        // KKN ???
         _getRewardInfo(planetIds.get(0));
 
         // mint second planet nft
         _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANET_PUBLIC);
         planetIds = _tokenIdsOf(planetWallet.getAddress(), 2, BigInteger.TWO);
 
-        Utils.waitUtil(Utils.getHeight().add(termPeriod));
+        Utils.waitUtilNextTerm();
+//        Utils.waitUtil(Utils.getHeight().add(termPeriod));
 
+        // KKN use for loop
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
         _reportPlanetWork(planetManagerWallet, planetIds.get(1), true);
 
+        // KKN use for loop
         claimable = _getRewardInfo(planetIds.get(0));
         expected = _getCurrentPublicReward();
         LOG.info("expected = " + expected);
@@ -429,6 +446,7 @@ public class HavahBasicTest extends TestBase {
         claimable = _getRewardInfo(planetIds.get(1));
         LOG.info("expected = " + expected);
         assertEquals(0, claimable.compareTo(expected), "claimable is not expected");
+
         expected = expected.multiply(BigInteger.TWO);
         _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0), planetIds.get(1)}, true, expected, 0);
 
@@ -453,7 +471,9 @@ public class HavahBasicTest extends TestBase {
         _getPlanetInfo(planetIds.get(0));
         LOG.info("planetWallet : " + planetWallet.getAddress());
 
-        waitUtilNextHeight();
+        // KKN
+        Utils.waitUtilNextTerm();
+//        waitUtilNextHeight();
 
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
         BigInteger claimable = _getRewardInfo(planetIds.get(0));
@@ -513,7 +533,7 @@ public class HavahBasicTest extends TestBase {
 
         int testTermCycle = 24;
         for (int i = 0; i < testTermCycle; i++) {
-            var nextCycle = lockupHeight.add(termPeriod.multiply(privateReleaseCycle).multiply(BigInteger.valueOf(i + 1)));
+//            var nextCycle = lockupHeight.add(termPeriod.multiply(privateReleaseCycle).multiply(BigInteger.valueOf(i + 1)));
             BigInteger claimable = _getRewardInfo(planetId);
             BigInteger expected = _getCurrentPrivateReward(planetHeight, totalReward).subtract(claimedReward);
             LOG.info("claimable = " + claimable);
@@ -525,7 +545,8 @@ public class HavahBasicTest extends TestBase {
             _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
             totalReward = totalReward.add(_getCurrentPublicReward());
 
-            Utils.waitUtil(nextCycle);
+//            Utils.waitUtil(nextCycle);
+            Utils.waitUtilNextTerm();
         }
         BigInteger claimable = _getRewardInfo(planetId);
         BigInteger expected = totalReward.subtract(claimedReward);
