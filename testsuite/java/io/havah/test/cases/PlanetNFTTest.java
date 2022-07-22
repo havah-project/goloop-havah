@@ -21,10 +21,10 @@ import org.junit.jupiter.api.Test;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import static foundation.icon.test.common.Env.LOG;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 
 @Tag(Constants.TAG_HAVAH)
@@ -272,7 +272,7 @@ public class PlanetNFTTest extends TestBase {
         LOG.info("supply totalSupply(" + planetNFTScore.totalSupply() + ")");
     }
 
-    private Score.TokenInfo getFirstTokenInfo(Address address) throws Exception {
+    private PlanetNFTScore.TokenInfo getFirstTokenInfo(Address address) throws Exception {
         var myToken = planetNFTScore.tokenIdsOf(address, 0, 1);
         var tokenId = myToken.tokenIds.get(0);
         RpcObject params = new RpcObject.Builder()
@@ -284,7 +284,7 @@ public class PlanetNFTTest extends TestBase {
         boolean isPrivate = item.asObject().getItem("isPrivate").asBoolean();
         Address owner = item.asObject().getItem("owner").asAddress();
         var uPrice = item.asObject().getItem("usdtPrice").asInteger();
-        return new Score.TokenInfo(hPrice, isCompany, isPrivate, owner, uPrice);
+        return new PlanetNFTScore.TokenInfo(hPrice, isCompany, isPrivate, owner, uPrice, null);
     }
 
     @Test
@@ -300,7 +300,7 @@ public class PlanetNFTTest extends TestBase {
         for (var type : types) {
             Wallet wallet = KeyWallet.create();
             _mintAndCheckBalance(planetScoreOwner, wallet.getAddress(), type, usdtPrice, havahPrice);
-            var tokenInfo =getFirstTokenInfo(wallet.getAddress());
+            var tokenInfo = getFirstTokenInfo(wallet.getAddress());
 
             assertEquals(havahPrice, tokenInfo.getHavahPrice());
             assertEquals(usdtPrice, tokenInfo.getUsdtPrice());
@@ -314,7 +314,7 @@ public class PlanetNFTTest extends TestBase {
         LOG.info("tokenInfo totalSupply(" + planetNFTScore.totalSupply() + ")");
     }
 
-//    @Test
+    //    @Test
     void planetSupply() throws Exception {
         var totalSupply = planetNFTScore.totalSupply().intValue();
         int testMintCnt = 1000;
@@ -346,5 +346,92 @@ public class PlanetNFTTest extends TestBase {
         LOG.info("token supply(" + successTx + ")");
         Utils.startRewardIssueIfNotStarted();
         Utils.waitUtil(Utils.getHeightNext(5));
+    }
+
+    @Test
+    void mintWithDuplicateNone() throws Exception {
+        BigInteger testNonce = BigInteger.valueOf(1000000001);
+        Wallet holder = KeyWallet.create();
+        // mint with testNonce - success
+        Bytes txHash = planetNFTScore.mintPlanet(
+                planetScoreOwner, holder.getAddress(), PlanetNFTScore.PLANET_PUBLIC, BigInteger.ONE, BigInteger.ONE, testNonce);
+        var result = txHandler.getResult(txHash);
+        assertSuccess(result);
+
+        // mint with testNonce - failure
+        txHash = planetNFTScore.mintPlanet (
+                planetScoreOwner, holder.getAddress(), PlanetNFTScore.PLANET_PUBLIC, BigInteger.ONE, BigInteger.ONE, testNonce);
+        result = txHandler.getResult(txHash);
+        assertFailure(result);
+
+        // mint 10 with random nonce
+        int testNum = 10;
+        List<Bytes> txList = new ArrayList<>();
+        for (int i = 0; i < testNum; i++) {
+            txHash = planetNFTScore.mintPlanet(
+                    planetScoreOwner, holder.getAddress(), PlanetNFTScore.PLANET_PUBLIC, BigInteger.ONE, BigInteger.ONE);
+            txList.add(txHash);
+        }
+
+        // success minting 10
+        for (var hash : txList) {
+            result = txHandler.getResult(hash);
+            assertSuccess(result);
+        }
+
+        // BURN with testNonce
+        var tokenIds = planetNFTScore.tokenIdsOf(holder.getAddress(), 0, 1);
+        var tokenId = tokenIds.tokenIds.get(0);
+        txHash = planetNFTScore.burn(tokenId);
+        result = txHandler.getResult(txHash);
+        assertSuccess(result);
+
+        // mint with any nonce
+        txHash = planetNFTScore.mintPlanet(
+                planetScoreOwner, holder.getAddress(), PlanetNFTScore.PLANET_PUBLIC, BigInteger.ONE, BigInteger.ONE);
+        result = txHandler.getResult(txHash);
+        assertSuccess(result);
+
+        // mint with testNonce
+        txHash = planetNFTScore.mintPlanet(
+                planetScoreOwner, holder.getAddress(), PlanetNFTScore.PLANET_PUBLIC, BigInteger.ONE, BigInteger.ONE, testNonce);
+        result = txHandler.getResult(txHash);
+        assertSuccess(result);
+    }
+
+    @Test
+    void checkNonce() throws Exception {
+        BigInteger testNonce = BigInteger.valueOf(2000000001);
+        Wallet holder = KeyWallet.create();
+        Random rand = new Random(System.currentTimeMillis());
+        BigInteger usdtPrice = BigInteger.valueOf(rand.nextInt());
+        BigInteger hvhPrice = BigInteger.valueOf(rand.nextInt());
+        // mint with testNonce - success
+        Bytes txHash = planetNFTScore.mintPlanet(
+                planetScoreOwner, holder.getAddress(), PlanetNFTScore.PLANET_PUBLIC, usdtPrice, hvhPrice, testNonce);
+        var result = txHandler.getResult(txHash);
+        assertSuccess(result);
+
+        var tokenIds = planetNFTScore.tokenIdsOf(holder.getAddress(), 0, 1);
+        var tokenId = tokenIds.tokenIds.get(0);
+        var object = planetNFTScore.infoOf(tokenId);
+        var tokenInfo = PlanetNFTScore.toTokenInfo(object);
+        assertFalse(tokenInfo.isCompany());
+        assertFalse(tokenInfo.isPrivate());
+        assertEquals(holder.getAddress(), tokenInfo.getOwner());
+        assertEquals(usdtPrice, tokenInfo.getUsdtPrice());
+        assertEquals(hvhPrice, tokenInfo.getHavahPrice());
+        assertEquals(result.getBlockHeight(), tokenInfo.getHeight());
+        assertEquals(testNonce, object.getItem("nonce").asInteger());
+
+        var nonceObject = planetNFTScore.tokenInfoBy(testNonce);
+        var nonceTokenInfo = PlanetNFTScore.toTokenInfo(nonceObject);
+        assertFalse(nonceTokenInfo.isCompany());
+        assertFalse(nonceTokenInfo.isPrivate());
+        assertEquals(holder.getAddress(), nonceTokenInfo.getOwner());
+        assertEquals(usdtPrice, nonceTokenInfo.getUsdtPrice());
+        assertEquals(hvhPrice, nonceTokenInfo.getHavahPrice());
+        assertEquals(result.getBlockHeight(), nonceTokenInfo.getHeight());
+        assertEquals(tokenId, nonceObject.getItem("tokenId").asInteger());
     }
 }

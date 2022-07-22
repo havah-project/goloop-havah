@@ -72,16 +72,28 @@ public class PlanetNFTScore extends Score {
         return call("tokenOfOwnerByIndex", params).asInteger();
     }
 
+    public static BigInteger serialNonce = BigInteger.ZERO;
+    public Bytes mintPlanet(Address _to, int _type, BigInteger _priceInUSDT, BigInteger _priceInHVH, BigInteger _nonce) throws IOException {
+        return mintPlanet(deployer, _to, _type, _priceInUSDT, _priceInHVH, _nonce);
+    }
     public Bytes mintPlanet(Address _to, int _type, BigInteger _priceInUSDT, BigInteger _priceInHVH) throws IOException {
         return mintPlanet(deployer, _to, _type, _priceInUSDT, _priceInHVH);
     }
 
-    public Bytes mintPlanet(Wallet wallet, Address _to, int _type, BigInteger _priceInUSDT, BigInteger _priceInHVH) throws IOException {
+    public Bytes mintPlanet(Wallet wallet, Address _to, int _type,
+                            BigInteger _priceInUSDT, BigInteger _priceInHVH) throws IOException {
+        serialNonce = serialNonce.add(BigInteger.ONE);
+        return mintPlanet(wallet, _to, _type, _priceInUSDT, _priceInHVH, serialNonce);
+    }
+
+    public Bytes mintPlanet(Wallet wallet, Address _to, int _type,
+                            BigInteger _priceInUSDT, BigInteger _priceInHVH, BigInteger _nonce) throws IOException {
         RpcObject params = new RpcObject.Builder()
                 .put("_to", new RpcValue(_to))
                 .put("_type", new RpcValue(BigInteger.valueOf(_type)))
                 .put("_priceInUSDT", new RpcValue(_priceInUSDT))
                 .put("_priceInHVH", new RpcValue(_priceInHVH))
+                .put("_nonce", new RpcValue(_nonce))
                 .build();
         return invoke(wallet, "mintPlanet", params);
     }
@@ -140,6 +152,20 @@ public class PlanetNFTScore extends Score {
         return new TokenIds(ids, object.getItem("balance").asInteger());
     }
 
+    public RpcObject tokenInfoBy(BigInteger nonce) throws Exception {
+        RpcObject params = new RpcObject.Builder()
+                .put("_nonce", new RpcValue(nonce))
+                .build();
+        return call("tokenInfoBy", params).asObject();
+    }
+
+    public RpcObject infoOf(BigInteger tokenId) throws Exception {
+        RpcObject params = new RpcObject.Builder()
+                .put("_tokenId", new RpcValue(tokenId))
+                .build();
+        return call("infoOf", params).asObject();
+    }
+
     public static class TokenIds {
         public final List<BigInteger> tokenIds;
         public final BigInteger balance;
@@ -147,6 +173,59 @@ public class PlanetNFTScore extends Score {
         TokenIds(List<BigInteger> tokenIds, BigInteger balance) {
             this.tokenIds = tokenIds;
             this.balance = balance;
+        }
+    }
+
+    public static TokenInfo toTokenInfo(RpcObject object) {
+        return new TokenInfo(object.getItem("havahPrice").asInteger(), object.getItem("isCompany").asBoolean(),
+                object.getItem("isPrivate").asBoolean(), object.getItem("owner").asAddress(),
+                object.getItem("usdtPrice").asInteger(), object.getItem("height").asInteger());
+    }
+
+    public static class TokenInfo implements Comparable {
+        private final BigInteger havahPrice;
+        private final boolean isCompany;
+        private final boolean isPrivate;
+        private final Address owner;
+        private final BigInteger usdtPrice;
+        private final BigInteger height;
+
+        public TokenInfo(BigInteger havahPrice, boolean isCompany, boolean isPrivate, Address owner, BigInteger usdtPrice, BigInteger height) {
+            this.havahPrice = havahPrice;
+            this.isCompany = isCompany;
+            this.isPrivate = isPrivate;
+            this.owner = owner;
+            this.usdtPrice = usdtPrice;
+            this.height = height;
+        }
+
+        public BigInteger getHavahPrice() {
+            return havahPrice;
+        }
+
+        public boolean isCompany() {
+            return isCompany;
+        }
+
+        public boolean isPrivate() {
+            return isPrivate;
+        }
+
+        public Address getOwner() {
+            return owner;
+        }
+
+        public BigInteger getUsdtPrice() {
+            return usdtPrice;
+        }
+
+        public BigInteger getHeight() {
+            return height;
+        }
+
+        @Override
+        public int compareTo(Object o) {
+            return 0;
         }
     }
 }

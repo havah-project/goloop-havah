@@ -269,6 +269,9 @@ public class SustainableFundTest extends TestBase {
         var SFShare = _calcRatio(1, inflow);
         var ECOShare = _calcRatio(2, inflow);
         assertEquals(serviceFee, txHandler.getBalance(Constants.SERVICE_TREASURY));
+        var planetNum = planetNFTScore.totalSupply();
+        planetNum = planetNum.signum() == 0 ? BigInteger.ONE : planetNum;
+        var missingReward = Constants.INITIAL_ISSUE_AMOUNT.subtract(Constants.INITIAL_ISSUE_AMOUNT.remainder(planetNum));
         Utils.waitUtil(Utils.getHeightUntilNextTerm().add(BigInteger.ONE));
         var SFDiff = txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS).subtract(sfBalance);
         var ECODiff = txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS).subtract(ecoBalance);
@@ -276,7 +279,8 @@ public class SustainableFundTest extends TestBase {
         inflowServiceFee = sfScore.getInflow().getItem("SERVICE_FEE").asInteger().subtract(inflowServiceFee);
 
         assertEquals(ECOShare, ECODiff);
-        assertEquals(SFShare, SFDiff.subtract(Constants.INITIAL_ISSUE_AMOUNT));
+        assertTrue(SFShare.compareTo(SFDiff.subtract(missingReward)) == 0
+            || SFShare.compareTo(SFDiff.subtract(missingReward.add(planetNum))) == 0);
         assertEquals(inflowDiff, SFDiff);
         assertEquals(inflowServiceFee, _calcRatio(1, serviceFee));
 

@@ -205,39 +205,4 @@ public class Score {
         return "SCORE(" + getAddress().toString() + ")";
     }
 
-    public static class TokenInfo {
-        private final BigInteger havahPrice;
-        private final boolean isCompany;
-        private final boolean isPrivate;
-        private final Address owner;
-        private final BigInteger usdtPrice;
-
-        public TokenInfo(BigInteger havahPrice, boolean isCompany, boolean isPrivate, Address owner, BigInteger usdtPrice) {
-            this.havahPrice = havahPrice;
-            this.isCompany = isCompany;
-            this.isPrivate = isPrivate;
-            this.owner = owner;
-            this.usdtPrice = usdtPrice;
-        }
-
-        public BigInteger getHavahPrice() {
-            return havahPrice;
-        }
-
-        public boolean isCompany() {
-            return isCompany;
-        }
-
-        public boolean isPrivate() {
-            return isPrivate;
-        }
-
-        public Address getOwner() {
-            return owner;
-        }
-
-        public BigInteger getUsdtPrice() {
-            return usdtPrice;
-        }
-    }
 }

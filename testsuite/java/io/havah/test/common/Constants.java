@@ -9,6 +9,7 @@ public class Constants extends foundation.icon.test.common.Constants {
 
     public static final Address CHAINSCORE_ADDRESS
             = new Address("cx0000000000000000000000000000000000000000");
+
     public static final Address GOV_ADDRESS
             = new Address("cx0000000000000000000000000000000000000001");
 
