@@ -442,18 +442,17 @@ public class HavahBasicTest extends TestBase {
 
         Utils.waitUtilNextTerm();
 
-        BigInteger totalExpected = BigInteger.ZERO;
         for(int i=0; i<planetIds.size(); i++) {
             _reportPlanetWork(planetManagerWallet, planetIds.get(i), true);
             claimable = (BigInteger) _getRewardInfo(planetIds.get(i)).get("claimable");
             expected = _getCurrentPublicReward();
 
             assertEquals(true, claimable.compareTo(expected) == 0, "claimable is not expected");
-            totalExpected.add(expected);
         }
+        expected = _getCurrentPublicReward().multiply(BigInteger.TWO);
         BigInteger[] planetIdArray = new BigInteger[planetIds.size()];
         planetIds.toArray(planetIdArray);
-        _checkAndClaimPlanetReward(planetWallet, planetIdArray, true, totalExpected, 0);
+        _checkAndClaimPlanetReward(planetWallet, planetIdArray, true, expected, 0);
 
         LOG.infoExiting();
     }
