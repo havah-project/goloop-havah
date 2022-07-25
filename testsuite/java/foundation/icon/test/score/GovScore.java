@@ -49,19 +49,21 @@ public class GovScore extends Score {
     }
 
     public static final String[] stepCostTypes = {
-            "default",
-            "contractCall",
-            "contractCreate",
-            "contractUpdate",
-//            "contractDestruct",
-            "contractSet",
-            "get",
-            "set",
-            "replace",
-            "delete",
-            "input",
-            "eventLog",
-            "apiCall"
+        "default",
+        "contractCall",
+        "contractCreate",
+        "contractUpdate",
+        "contractSet",
+        "getBase",
+        "get",
+        "setBase",
+        "set",
+        "deleteBase",
+        "delete",
+        "input",
+        "logBase",
+        "log",
+        "apiCall"
     };
 
     public GovScore(TransactionHandler txHandler) {

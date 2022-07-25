@@ -46,8 +46,6 @@ public class VaultTest extends TestBase {
         vaultScore = new VaultScore(txHandler);
 
         ownerWallet = Utils.getGovernor();
-        txHandler.transfer(ownerWallet.getAddress(), amount);
-        ensureIcxBalance(txHandler, ownerWallet.getAddress(), BigInteger.ZERO, amount);
     }
 
     BigInteger _getVaultClaimableAmount(Address address) throws IOException {

@@ -7,6 +7,8 @@ import java.math.BigInteger;
 public class Constants extends foundation.icon.test.common.Constants {
     public static final String TAG_HAVAH = "havah";
 
+    public static final String TAG_HAVAH_EXTRA = "havah_extra";
+
     public static final Address CHAINSCORE_ADDRESS
             = new Address("cx0000000000000000000000000000000000000000");
 

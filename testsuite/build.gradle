@@ -222,6 +222,22 @@ task testHavah(type: ChainTest, overwrite: true) {
     testLogging.showStandardStreams = true
 }
 
+task testHavahExtra(type: ChainTest, overwrite: true) {
+    useJUnitPlatform {
+        includeTags "havah_extra"
+    }
+
+    configFile = "./data/config/havah-extra.json"
+    chainDir = ".chain/havah"
+    logFile = ".chain/havah.log"
+    gsDir = "./data/genesisStorage/genesis_havah.json"
+    envFile = "./data/chainenv/havah.props"
+    dockerEnv = "havah"
+
+    dependsOn 'cleanTestHavahExtra'
+    testLogging.showStandardStreams = true
+}
+
 task test(overwrite: true) {
     dependsOn 'testJavaScore', 'testJavaGov', 'testHavah'
 }
