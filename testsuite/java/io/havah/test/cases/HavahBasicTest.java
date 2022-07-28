@@ -125,7 +125,7 @@ public class HavahBasicTest extends TestBase {
         LOG.infoExiting();
     }
 
-    public static TransactionResult  _checkAndClaimPlanetReward(Wallet wallet, BigInteger[] planetIds, boolean success, BigInteger expected, int compare) throws Exception {
+    public static TransactionResult  _checkAndClaimPlanetReward(Wallet wallet, BigInteger[] planetIds, boolean success, BigInteger expected, BigInteger compare) throws Exception {
         LOG.infoEntering("_checkAndClaimPlanetReward");
         BigInteger before = txHandler.getBalance(wallet.getAddress());
         LOG.info("planet balance (before claim) : " + before);
@@ -135,7 +135,8 @@ public class HavahBasicTest extends TestBase {
         BigInteger fee = Utils.getTxFee(result);
         LOG.info("fee : " + fee);
 
-        assertEquals(compare, after.subtract(before).compareTo(expected.subtract(fee)), "claim reward is not expected");
+        assertEquals(true, compare.compareTo(after.subtract(before).subtract(expected.subtract(fee)).abs()) > -1, "claimable is not expected");
+//        assertEquals(compare, after.subtract(before).compareTo(expected.subtract(fee)), "claim reward is not expected");
 
         LOG.infoExiting();
         return result;
@@ -387,8 +388,8 @@ public class HavahBasicTest extends TestBase {
         BigInteger claimable = (BigInteger) _getRewardInfo(planetIds.get(0)).get("claimable");
         BigInteger expected = _getCurrentPublicReward();
 
-        assertEquals(0, claimable.compareTo(expected), "claimable is not expected");
-        _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, expected, 0);
+        assertEquals(true, BigInteger.TWO.compareTo(claimable.subtract(expected).abs()) > -1, "claimable is not expected");
+        _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, expected, BigInteger.TWO);
 
         // mint second planet nft
         _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANET_PUBLIC);
@@ -401,12 +402,12 @@ public class HavahBasicTest extends TestBase {
             claimable = (BigInteger) _getRewardInfo(planetIds.get(i)).get("claimable");
             expected = _getCurrentPublicReward();
 
-            assertEquals(true, claimable.compareTo(expected) == 0, "claimable is not expected");
+            assertEquals(true, BigInteger.TWO.compareTo(claimable.subtract(expected).abs()) > -1, "claimable is not expected");
         }
         expected = _getCurrentPublicReward().multiply(BigInteger.TWO);
         BigInteger[] planetIdArray = new BigInteger[planetIds.size()];
         planetIds.toArray(planetIdArray);
-        _checkAndClaimPlanetReward(planetWallet, planetIdArray, true, expected, 0);
+        _checkAndClaimPlanetReward(planetWallet, planetIdArray, true, expected, BigInteger.TWO);
 
         LOG.infoExiting();
     }
@@ -436,11 +437,12 @@ public class HavahBasicTest extends TestBase {
         LOG.info("Planet = " + expectedPlanet);
         LOG.info("Eco = " + expectedEco);
 
-        assertEquals(true, claimable.compareTo(expectedPlanet) == 0, "claimable is not expected");
+//        assertEquals(true, claimable.compareTo(expectedPlanet) == 0, "claimable is not expected");
+        assertEquals(true, BigInteger.TWO.compareTo(claimable.subtract(expectedPlanet).abs()) > -1, "claimable is not expected");
 
         BigInteger beforeEco = txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS);
         LOG.info("ecosystem balance (before claim) : " + beforeEco);
-        TransactionResult result = _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, expectedPlanet, 0);
+        TransactionResult result = _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, expectedPlanet, BigInteger.TWO);
 
         Utils.waitUtilNextTerm();
 
@@ -489,8 +491,9 @@ public class HavahBasicTest extends TestBase {
             BigInteger expected = _getCurrentPrivateReward(planetHeight, totalReward).subtract(claimedReward);
             LOG.info("claimable = " + claimable);
             LOG.info("expected = " + expected);
-            assertEquals(claimable.compareTo(expected), 0, "private reward is not expected");
-            _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, expected, 0);
+            assertEquals(true, BigInteger.valueOf(4).compareTo(claimable.subtract(expected).abs()) > -1, "private reward is not expected");
+//            assertEquals(claimable.compareTo(expected), 0, "private reward is not expected");
+            _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, expected, BigInteger.valueOf(4));
             claimedReward = claimedReward.add(claimable);
 
             _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
@@ -503,8 +506,10 @@ public class HavahBasicTest extends TestBase {
         LOG.info("last claim!");
         LOG.info("claimable = " + claimable);
         LOG.info("expected = " + expected);
-        assertEquals(claimable.compareTo(expected), 0, "last reward is not expected");
-        _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, expected, 0);
+        assertEquals(true, BigInteger.valueOf(4).compareTo(claimable.subtract(expected).abs()) > -1, "last reward is not expected");
+//        assertEquals(claimable.compareTo(expected), 0, "last reward is not expected");
+
+        _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, expected, BigInteger.valueOf(4));
 
         LOG.infoExiting();
     }

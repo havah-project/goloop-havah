@@ -125,7 +125,7 @@ public class HavahExtraTest extends TestBase {
         BigInteger termReward = _getCurrentPublicReward();
         LOG.info("termReward : " + termReward);
         assertEquals(claimable.compareTo(termReward), 0, "term reward is not equals to claimable");
-        _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, termReward, 0);
+        _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, termReward, BigInteger.TWO);
 
         Utils.waitUtil(((BigInteger)_getIssueInfo().get("issueStart")).add(termPeriod.multiply(issueReductionCycle)));
 
@@ -134,7 +134,7 @@ public class HavahExtraTest extends TestBase {
         termReward = _getCurrentPublicReward();
         LOG.info("reduction termReward : " + termReward);
         assertEquals(claimable.compareTo(termReward), 0, "reduction term reward is not equals to claimable");
-        _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, termReward, 0);
+        _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, termReward,  BigInteger.TWO);
 
         LOG.infoExiting();
     }
