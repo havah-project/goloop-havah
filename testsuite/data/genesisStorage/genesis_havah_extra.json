@@ -109,10 +109,10 @@
   "chain": {
     "platform": "havah",
     "havah": {
-      "termPeriod": "0x4",
+      "termPeriod": "0x8",
       "privateLockup": "0x2",
-      "privateReleaseCycle": "0x2",
-      "issueReductionCycle" : "0x4000",
+      "privateReleaseCycle": "0x3",
+      "issueReductionCycle": "0x20",
       "usdtPrice": "0xde0b6b3a7640000"
     },
     "fee": {

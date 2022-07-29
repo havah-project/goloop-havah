@@ -33,7 +33,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 @Tag(Constants.TAG_HAVAH)
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class HavahBasicTest extends TestBase {
     private static TransactionHandler txHandler;
     private static IconService iconService;

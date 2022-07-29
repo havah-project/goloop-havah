@@ -227,10 +227,10 @@ task testHavahExtra(type: ChainTest, overwrite: true) {
         includeTags "havah_extra"
     }
 
-    configFile = "./data/config/havah-extra.json"
+    configFile = "./data/config/havah.json"
     chainDir = ".chain/havah"
     logFile = ".chain/havah.log"
-    gsDir = "./data/genesisStorage/genesis_havah.json"
+    gsDir = "./data/genesisStorage/genesis_havah_extra.json"
     envFile = "./data/chainenv/havah.props"
     dockerEnv = "havah"
 
