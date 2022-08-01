@@ -293,7 +293,7 @@ public class HavahBasicTest extends TestBase {
     public void getIssueInfoTest() throws Exception {
         LOG.infoEntering("getIssueInfoTest");
         Map<String, Object> info = _getIssueInfo();
-        assertEquals(true, BigInteger.valueOf(4).compareTo((BigInteger) info.get("termPeriod")) == 0);
+        assertEquals(true, BigInteger.valueOf(8).compareTo((BigInteger) info.get("termPeriod")) == 0);
         assertEquals(true, BigInteger.valueOf(16384).compareTo((BigInteger) info.get("issueReductionCycle")) == 0);
         LOG.infoExiting();
     }
