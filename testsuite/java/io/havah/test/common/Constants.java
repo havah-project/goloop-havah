@@ -42,7 +42,7 @@ public class Constants extends foundation.icon.test.common.Constants {
 
     public static final BigInteger PRIVATE_LOCKUP = BigInteger.valueOf(2);
 
-    public static final BigInteger PRIVATE_RELEASE_CYCLE = BigInteger.valueOf(4);
+    public static final BigInteger PRIVATE_RELEASE_CYCLE = BigInteger.valueOf(3);
 
     public static BigInteger TOTAL_REWARD_PER_DAY
             = BigInteger.valueOf(430).multiply(BigInteger.TEN.pow(4)).multiply(BigInteger.TEN.pow(18));
