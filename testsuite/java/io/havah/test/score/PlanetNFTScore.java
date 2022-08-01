@@ -15,8 +15,6 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
-import static foundation.icon.test.common.Env.LOG;
-
 public class PlanetNFTScore extends Score {
     public static final String name = "HAVAH Planet";
     public static final String symbol = "HAPL";
@@ -72,28 +70,30 @@ public class PlanetNFTScore extends Score {
         return call("tokenOfOwnerByIndex", params).asInteger();
     }
 
-    public static BigInteger serialNonce = BigInteger.ZERO;
-    public Bytes mintPlanet(Address _to, int _type, BigInteger _priceInUSDT, BigInteger _priceInHVH, BigInteger _nonce) throws IOException {
-        return mintPlanet(deployer, _to, _type, _priceInUSDT, _priceInHVH, _nonce);
+    public static BigInteger serialTokenId = BigInteger.ZERO;
+
+    public Bytes mintPlanet(Address _to, int _type, BigInteger _priceInUSDT, BigInteger _priceInHVH, BigInteger _tokenId) throws IOException {
+        return mintPlanet(deployer, _to, _type, _priceInUSDT, _priceInHVH, _tokenId);
     }
+
     public Bytes mintPlanet(Address _to, int _type, BigInteger _priceInUSDT, BigInteger _priceInHVH) throws IOException {
         return mintPlanet(deployer, _to, _type, _priceInUSDT, _priceInHVH);
     }
 
     public Bytes mintPlanet(Wallet wallet, Address _to, int _type,
                             BigInteger _priceInUSDT, BigInteger _priceInHVH) throws IOException {
-        serialNonce = serialNonce.add(BigInteger.ONE);
-        return mintPlanet(wallet, _to, _type, _priceInUSDT, _priceInHVH, serialNonce);
+        serialTokenId = serialTokenId.add(BigInteger.ONE);
+        return mintPlanet(wallet, _to, _type, _priceInUSDT, _priceInHVH, serialTokenId);
     }
 
     public Bytes mintPlanet(Wallet wallet, Address _to, int _type,
-                            BigInteger _priceInUSDT, BigInteger _priceInHVH, BigInteger _nonce) throws IOException {
+                            BigInteger _priceInUSDT, BigInteger _priceInHVH, BigInteger _tokenId) throws IOException {
         RpcObject params = new RpcObject.Builder()
                 .put("_to", new RpcValue(_to))
                 .put("_type", new RpcValue(BigInteger.valueOf(_type)))
                 .put("_priceInUSDT", new RpcValue(_priceInUSDT))
                 .put("_priceInHVH", new RpcValue(_priceInHVH))
-                .put("_nonce", new RpcValue(_nonce))
+                .put("_tokenId", new RpcValue(_tokenId))
                 .build();
         return invoke(wallet, "mintPlanet", params);
     }
@@ -152,18 +152,36 @@ public class PlanetNFTScore extends Score {
         return new TokenIds(ids, object.getItem("balance").asInteger());
     }
 
-    public RpcObject tokenInfoBy(BigInteger nonce) throws Exception {
-        RpcObject params = new RpcObject.Builder()
-                .put("_nonce", new RpcValue(nonce))
-                .build();
-        return call("tokenInfoBy", params).asObject();
-    }
-
     public RpcObject infoOf(BigInteger tokenId) throws Exception {
         RpcObject params = new RpcObject.Builder()
                 .put("_tokenId", new RpcValue(tokenId))
                 .build();
         return call("infoOf", params).asObject();
+    }
+
+    public Bytes setTransferable(Wallet wallet, boolean transferable) throws Exception {
+        RpcObject params = new RpcObject.Builder()
+                .put("_transferable", new RpcValue(transferable))
+                .build();
+        return invoke(wallet, "setTransferable", params);
+    }
+
+    public boolean isTransferable() throws Exception {
+        return call("isTransferable", null).asBoolean();
+    }
+
+    public Bytes setAdmin(Wallet wallet, Address admin) throws Exception {
+        RpcObject params = new RpcObject.Builder()
+                .put("_admin", new RpcValue(admin))
+                .build();
+        return invoke(wallet, "setAdmin", params);
+    }
+
+    public Bytes setMintApproval(Wallet wallet, Address approval) throws Exception {
+        RpcObject params = new RpcObject.Builder()
+                .put("_approval", new RpcValue(approval))
+                .build();
+        return invoke(wallet, "setMintApproval", params);
     }
 
     public static class TokenIds {
@@ -182,7 +200,7 @@ public class PlanetNFTScore extends Score {
                 object.getItem("usdtPrice").asInteger(), object.getItem("height").asInteger());
     }
 
-    public static class TokenInfo implements Comparable {
+    public static class TokenInfo {
         private final BigInteger havahPrice;
         private final boolean isCompany;
         private final boolean isPrivate;
@@ -221,11 +239,6 @@ public class PlanetNFTScore extends Score {
 
         public BigInteger getHeight() {
             return height;
-        }
-
-        @Override
-        public int compareTo(Object o) {
-            return 0;
         }
     }
 }

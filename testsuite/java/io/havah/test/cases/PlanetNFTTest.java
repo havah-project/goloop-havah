@@ -69,23 +69,30 @@ public class PlanetNFTTest extends TestBase {
         _mintAndCheckBalance(wallet, to, 1, BigInteger.ONE, BigInteger.ONE);
     }
 
+    void _mintAndCheckBalance(Wallet wallet, Address to, boolean expected) throws Exception {
+        _mintAndCheckBalance(wallet, to, 1, BigInteger.ONE, BigInteger.ONE, expected);
+    }
+
     static void _mintAndCheckBalance(Wallet wallet, Address to, int type, BigInteger usdt, BigInteger havah) throws Exception {
-        boolean success = wallet.equals(planetScoreOwner);
-        LOG.infoEntering("Mint", success ? "success" : "failure");
+        _mintAndCheckBalance(wallet, to, type, usdt, havah, wallet.equals(planetScoreOwner));
+    }
+
+    static void _mintAndCheckBalance(Wallet wallet, Address to, int type, BigInteger usdt, BigInteger havah, boolean expected) throws Exception {
+        LOG.infoEntering("Mint", expected ? "success" : "failure");
 
         // check balance of wallets[0] then compare after mint
         var balance = planetNFTScore.balanceOf(to).intValue();
         var totalSupply = planetNFTScore.totalSupply().intValue();
         Bytes txHash = planetNFTScore.mintPlanet(wallet, to, type, usdt, havah);
         TransactionResult result = planetNFTScore.getResult(txHash);
-        assertEquals(success ? 1 : 0, result.getStatus().intValue(), "failure result(" + result + ")");
+        assertEquals(expected ? 1 : 0, result.getStatus().intValue(), "failure result(" + result + ")");
 
         // compare token balance
-        int expectedBalance = success ? balance + 1 : balance;
+        int expectedBalance = expected ? balance + 1 : balance;
         assertEquals(expectedBalance, planetNFTScore.balanceOf(to).intValue());
 
         // compare total supply
-        int expectedSupply = success ? totalSupply + 1 : totalSupply;
+        int expectedSupply = expected ? totalSupply + 1 : totalSupply;
         assertEquals(expectedSupply, planetNFTScore.totalSupply().intValue());
         LOG.infoExiting();
     }
@@ -147,7 +154,7 @@ public class PlanetNFTTest extends TestBase {
 
     // mint & transfer
     void _mintAndTransfer(Wallet holder, Wallet from, Address to) throws Exception {
-        boolean success = holder.equals(from);
+        boolean success = holder.equals(from) && planetNFTScore.isTransferable();
         LOG.infoEntering("Transfer", success ? "success" : "failure");
         _mintAndCheckBalance(planetScoreOwner, holder.getAddress());
 
@@ -182,15 +189,21 @@ public class PlanetNFTTest extends TestBase {
      */
     @Test
     void transfer() throws Exception {
-        _mintAndTransfer(wallets[0], wallets[1], wallets[2].getAddress()); // failure case
-        _mintAndTransfer(wallets[0], wallets[2], wallets[0].getAddress()); // failure case
-        // check 내가 나에게 주는것....???
-        _mintAndTransfer(wallets[0], wallets[0], wallets[1].getAddress()); // success case
+        boolean isTransferable = false;
+        for (int i = 0; i < 2; i++) {
+            assertEquals(isTransferable, planetNFTScore.isTransferable());
+            _mintAndTransfer(wallets[0], wallets[1], wallets[2].getAddress()); // failure case
+            _mintAndTransfer(wallets[0], wallets[2], wallets[0].getAddress()); // failure case
+            _mintAndTransfer(wallets[0], wallets[0], wallets[1].getAddress()); // success case
+            isTransferable = !isTransferable;
+            var txResult = txHandler.getResult(planetNFTScore.setTransferable(planetScoreOwner, isTransferable));
+            assertSuccess(txResult);
+        }
         LOG.info("transfer totalSupply(" + planetNFTScore.totalSupply() + ")");
     }
 
     void _mintAndTransferFrom(Wallet holder, Wallet approveInvoker, Wallet approval, Wallet transferInvoker, Address to) throws Exception {
-        boolean success = approval.equals(transferInvoker);
+        boolean success = approval.equals(transferInvoker) && planetNFTScore.isTransferable();
         var tokenIds = planetNFTScore.tokenIdsOf(holder.getAddress(), 0, 10);
         var approved = tokenIds.tokenIds.get(0);
         boolean approveSuccess = holder.equals(approveInvoker);
@@ -215,11 +228,52 @@ public class PlanetNFTTest extends TestBase {
             wallet[i] = KeyWallet.create();
         }
         Utils.distributeCoin(wallet);
-        _mintAndCheckBalance(planetScoreOwner, wallet[0].getAddress()); // mint with cnt
-        _mintAndTransferFrom(wallet[0], wallet[1], wallet[2], wallet[3], wallet[4].getAddress()); // failure
-        _mintAndTransferFrom(wallet[0], wallet[0], wallet[1], wallet[2], wallet[4].getAddress()); // failure
-        _mintAndTransferFrom(wallet[0], wallet[0], wallet[1], wallet[1], wallet[4].getAddress()); // success
+        boolean isTransferable = false;
+        for (int i = 0; i < 2; i++) {
+            assertEquals(isTransferable, planetNFTScore.isTransferable());
+            _mintAndCheckBalance(planetScoreOwner, wallet[0].getAddress()); // mint with cnt
+            _mintAndTransferFrom(wallet[0], wallet[1], wallet[2], wallet[3], wallet[4].getAddress()); // failure
+            _mintAndTransferFrom(wallet[0], wallet[0], wallet[1], wallet[2], wallet[4].getAddress()); // failure
+            _mintAndTransferFrom(wallet[0], wallet[0], wallet[1], wallet[1], wallet[4].getAddress()); // success
+            isTransferable = !isTransferable;
+            var txResult = txHandler.getResult(planetNFTScore.setTransferable(planetScoreOwner, isTransferable));
+            assertSuccess(txResult);
+        }
         LOG.info("transferFrom totalSupply(" + planetNFTScore.totalSupply() + ")");
+    }
+
+    void _burnAndCheckBalance(Wallet wallet, Address holder, boolean expected) throws Exception {
+        int balance = planetNFTScore.balanceOf(holder).intValue();
+        int supply = planetNFTScore.totalSupply().intValue();
+        var tokenIdsMap = planetNFTScore.tokenIdsOf(holder, 0, 100);
+        var tokenIds = tokenIdsMap.tokenIds;
+        var burned = tokenIds.get(0);
+        var txHash = planetNFTScore.burn(wallet, burned);
+        var result = planetNFTScore.getResult(txHash);
+        int sub = 0;
+        if (expected) {
+            assertSuccess(result);
+            sub = 1;
+        } else {
+            assertFailure(result);
+        }
+        assertEquals(balance - sub, planetNFTScore.balanceOf(holder).intValue());
+        assertEquals(supply - sub, planetNFTScore.totalSupply().intValue());
+
+        var updated = planetNFTScore.tokenIdsOf(holder, 0, 100);
+        var updatedTokenIds = updated.tokenIds;
+        boolean burningSuccess = true;
+        for (var tokenId : updatedTokenIds) {
+            if (burned.equals(tokenId)) {
+                burningSuccess = false;
+                break;
+            }
+        }
+        if (expected) {
+            assertTrue(burningSuccess);
+        } else {
+            assertFalse(burningSuccess);
+        }
     }
 
     @Test
@@ -228,22 +282,9 @@ public class PlanetNFTTest extends TestBase {
         _mintAndCheckBalance(planetScoreOwner, holder); // success test
         _mintAndCheckBalance(planetScoreOwner, holder); // success test
         // mint 2
-        int balance = planetNFTScore.balanceOf(holder).intValue();
-        int supply = planetNFTScore.totalSupply().intValue();
-        var tokenIdsMap = planetNFTScore.tokenIdsOf(holder, 0, 100);
-        var tokenIds = tokenIdsMap.tokenIds;
-        var burned = tokenIds.get(0);
-        var txHash = planetNFTScore.burn(planetScoreOwner, burned);
-        var result = planetNFTScore.getResult(txHash);
-        assertEquals(1, result.getStatus().intValue());
-        assertEquals(balance - 1, planetNFTScore.balanceOf(holder).intValue());
-        assertEquals(supply - 1, planetNFTScore.totalSupply().intValue());
 
-        var updated = planetNFTScore.tokenIdsOf(holder, 0, 100);
-        var updatedTokenIds = updated.tokenIds;
-        for (var tokenId : updatedTokenIds) {
-            assertNotEquals(burned.intValue(), tokenId.intValue());
-        }
+        _burnAndCheckBalance(wallets[2], holder, false);
+        _burnAndCheckBalance(planetScoreOwner, holder, true);
         LOG.info("burn totalSupply(" + planetNFTScore.totalSupply() + ")");
     }
 
@@ -348,72 +389,20 @@ public class PlanetNFTTest extends TestBase {
         Utils.waitUtil(Utils.getHeightNext(5));
     }
 
-    @Test
-    void mintWithDuplicateNone() throws Exception {
-        BigInteger testNonce = BigInteger.valueOf(1000000001);
-        Wallet holder = KeyWallet.create();
-        // mint with testNonce - success
+    void mintWithTokenId(Wallet holder, BigInteger mintId, BigInteger usdtPrice, BigInteger hvhPrice, boolean expected) throws Exception {
         Bytes txHash = planetNFTScore.mintPlanet(
-                planetScoreOwner, holder.getAddress(), PlanetNFTScore.PLANET_PUBLIC, BigInteger.ONE, BigInteger.ONE, testNonce);
+                planetScoreOwner, holder.getAddress(), PlanetNFTScore.PLANET_PUBLIC, usdtPrice, hvhPrice, mintId);
         var result = txHandler.getResult(txHash);
-        assertSuccess(result);
-
-        // mint with testNonce - failure
-        txHash = planetNFTScore.mintPlanet (
-                planetScoreOwner, holder.getAddress(), PlanetNFTScore.PLANET_PUBLIC, BigInteger.ONE, BigInteger.ONE, testNonce);
-        result = txHandler.getResult(txHash);
-        assertFailure(result);
-
-        // mint 10 with random nonce
-        int testNum = 10;
-        List<Bytes> txList = new ArrayList<>();
-        for (int i = 0; i < testNum; i++) {
-            txHash = planetNFTScore.mintPlanet(
-                    planetScoreOwner, holder.getAddress(), PlanetNFTScore.PLANET_PUBLIC, BigInteger.ONE, BigInteger.ONE);
-            txList.add(txHash);
-        }
-
-        // success minting 10
-        for (var hash : txList) {
-            result = txHandler.getResult(hash);
+        if (expected) {
             assertSuccess(result);
+        } else {
+            assertFailure(result);
+            return;
         }
 
-        // BURN with testNonce
         var tokenIds = planetNFTScore.tokenIdsOf(holder.getAddress(), 0, 1);
         var tokenId = tokenIds.tokenIds.get(0);
-        txHash = planetNFTScore.burn(tokenId);
-        result = txHandler.getResult(txHash);
-        assertSuccess(result);
-
-        // mint with any nonce
-        txHash = planetNFTScore.mintPlanet(
-                planetScoreOwner, holder.getAddress(), PlanetNFTScore.PLANET_PUBLIC, BigInteger.ONE, BigInteger.ONE);
-        result = txHandler.getResult(txHash);
-        assertSuccess(result);
-
-        // mint with testNonce
-        txHash = planetNFTScore.mintPlanet(
-                planetScoreOwner, holder.getAddress(), PlanetNFTScore.PLANET_PUBLIC, BigInteger.ONE, BigInteger.ONE, testNonce);
-        result = txHandler.getResult(txHash);
-        assertSuccess(result);
-    }
-
-    @Test
-    void checkNonce() throws Exception {
-        BigInteger testNonce = BigInteger.valueOf(2000000001);
-        Wallet holder = KeyWallet.create();
-        Random rand = new Random(System.currentTimeMillis());
-        BigInteger usdtPrice = BigInteger.valueOf(rand.nextInt());
-        BigInteger hvhPrice = BigInteger.valueOf(rand.nextInt());
-        // mint with testNonce - success
-        Bytes txHash = planetNFTScore.mintPlanet(
-                planetScoreOwner, holder.getAddress(), PlanetNFTScore.PLANET_PUBLIC, usdtPrice, hvhPrice, testNonce);
-        var result = txHandler.getResult(txHash);
-        assertSuccess(result);
-
-        var tokenIds = planetNFTScore.tokenIdsOf(holder.getAddress(), 0, 1);
-        var tokenId = tokenIds.tokenIds.get(0);
+        assertEquals(mintId, tokenId);
         var object = planetNFTScore.infoOf(tokenId);
         var tokenInfo = PlanetNFTScore.toTokenInfo(object);
         assertFalse(tokenInfo.isCompany());
@@ -422,16 +411,79 @@ public class PlanetNFTTest extends TestBase {
         assertEquals(usdtPrice, tokenInfo.getUsdtPrice());
         assertEquals(hvhPrice, tokenInfo.getHavahPrice());
         assertEquals(result.getBlockHeight(), tokenInfo.getHeight());
-        assertEquals(testNonce, object.getItem("nonce").asInteger());
+    }
 
-        var nonceObject = planetNFTScore.tokenInfoBy(testNonce);
-        var nonceTokenInfo = PlanetNFTScore.toTokenInfo(nonceObject);
-        assertFalse(nonceTokenInfo.isCompany());
-        assertFalse(nonceTokenInfo.isPrivate());
-        assertEquals(holder.getAddress(), nonceTokenInfo.getOwner());
-        assertEquals(usdtPrice, nonceTokenInfo.getUsdtPrice());
-        assertEquals(hvhPrice, nonceTokenInfo.getHavahPrice());
-        assertEquals(result.getBlockHeight(), nonceTokenInfo.getHeight());
-        assertEquals(tokenId, nonceObject.getItem("tokenId").asInteger());
+    @Test
+    void duplicateTokenId() throws Exception {
+        BigInteger testTokenId = BigInteger.valueOf(2000000001);
+        Random rand = new Random(System.currentTimeMillis());
+        Wallet holder = KeyWallet.create();
+        BigInteger usdtPrice = BigInteger.valueOf(rand.nextInt());
+        BigInteger hvhPrice = BigInteger.valueOf(rand.nextInt());
+        // mint with testNonce - success
+        mintWithTokenId(holder, testTokenId, usdtPrice, hvhPrice, true);
+
+        holder = KeyWallet.create();
+        usdtPrice = usdtPrice.add(BigInteger.ONE);
+        hvhPrice = hvhPrice.add(BigInteger.ONE);
+
+        for (int i = 0; i < 2; i++) {
+            mintWithTokenId(holder, testTokenId, usdtPrice, hvhPrice, i == 1);
+            if (i == 0) {
+                var txHash = planetNFTScore.burn(planetScoreOwner, testTokenId);
+                assertSuccess(txHandler.getResult(txHash));
+            }
+        }
+    }
+
+    @Test
+    void checkAdmin() throws Exception {
+        Address holder = KeyWallet.create().getAddress();
+
+        // mint and burn with owner - success
+        _mintAndCheckBalance(planetScoreOwner, holder);
+        _burnAndCheckBalance(planetScoreOwner, holder, true);
+
+        // setAdmin to admin
+        Wallet admin = wallets[2];
+        var txHash = planetNFTScore.setAdmin(planetScoreOwner, admin.getAddress());
+        assertSuccess(txHandler.getResult(txHash));
+        // mint and burn with owner - failure
+        _mintAndCheckBalance(planetScoreOwner, holder, false);
+        // mint and burn with admin - success
+        _mintAndCheckBalance(admin, holder, true);
+        _burnAndCheckBalance(planetScoreOwner, holder, false);
+        _burnAndCheckBalance(admin, holder, true);
+
+        // setAdmin to owner
+        txHash = planetNFTScore.setAdmin(planetScoreOwner, planetScoreOwner.getAddress());
+        assertFailure(txHandler.getResult(txHash));
+
+        txHash = planetNFTScore.setAdmin(admin, planetScoreOwner.getAddress());
+        assertSuccess(txHandler.getResult(txHash));
+        // mint and burn with admin - failure
+        // mint and burn with owner - success
+        _mintAndCheckBalance(admin, holder, false);
+        _mintAndCheckBalance(planetScoreOwner, holder, true);
+        _burnAndCheckBalance(admin, holder, false);
+        _burnAndCheckBalance(planetScoreOwner, holder, true);
+    }
+
+    @Test
+    void setMintApproval() throws Exception {
+        Address holder = KeyWallet.create().getAddress();
+        Wallet caller = wallets[2];
+
+        // mint and burn with owner - success
+        _mintAndCheckBalance(caller, holder, false);
+        var txHash = planetNFTScore.setMintApproval(planetScoreOwner, caller.getAddress());
+        assertSuccess(txHandler.getResult(txHash));
+        _mintAndCheckBalance(caller, holder, true);
+        _mintAndCheckBalance(planetScoreOwner, holder, true);
+    }
+
+    @Test
+    void checkNullParam() throws Exception {
+
     }
 }
