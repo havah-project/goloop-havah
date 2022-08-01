@@ -294,7 +294,7 @@ public class HavahBasicTest extends TestBase {
         LOG.infoEntering("getIssueInfoTest");
         Map<String, Object> info = _getIssueInfo();
         assertEquals(true, BigInteger.valueOf(8).compareTo((BigInteger) info.get("termPeriod")) == 0);
-        assertEquals(true, BigInteger.valueOf(16384).compareTo((BigInteger) info.get("issueReductionCycle")) == 0);
+        assertEquals(true, BigInteger.valueOf(131072).compareTo((BigInteger) info.get("issueReductionCycle")) == 0);
         LOG.infoExiting();
     }
 
@@ -443,6 +443,7 @@ public class HavahBasicTest extends TestBase {
         LOG.info("ecosystem balance (before claim) : " + beforeEco);
         TransactionResult result = _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, expectedPlanet, BigInteger.TWO);
 
+        Utils.waitUtilNextTerm();
         Utils.waitUtilNextTerm();
 
         BigInteger afterEco = txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS);
