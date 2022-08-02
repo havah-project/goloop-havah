@@ -1,6 +1,6 @@
 # TEST Suite
 
-A collection of test suite for goloop.
+A collection of test suite for goloop-havah.
 It includes test cases for continuous integration system.
 
 ## Requirements
@@ -32,12 +32,12 @@ $ ./gradlew <target> --tests <test pattern>
 
 ### Available targets
 
-| Target         | Description                                          |
-|:---------------|:-----------------------------------------------------|
-| testPyScore    | Test features for Python SCORE.                      |
-| testPyGov      | Test governance SCORE written in Python.             |
-| testJavaScore  | Test features for Java SCORE.                        |
-| testJavaGov    | Test governance SCORE written in Java.               |
+| Target         | Description                                                         |
+|:---------------|:--------------------------------------------------------------------|
+| testHavah      | Test features for havah.                                            |
+| testHavahExtra | Test extra features for havah. <I><U>This test is optional.</U></I> |
+| testJavaScore  | Test features for Java SCORE for goloop.                            |
+| testJavaGov    | Test governance SCORE written in Java for goloop.                   |
 
 
 ### Options
@@ -51,7 +51,6 @@ Available options.
 
 | Option      | Targets   | Description                                    |
 |:------------|:----------|:-----------------------------------------------|
-| `AUDIT`     | testPyGov | `true` for testing SCOREs with AUDIT feature   |
 | `NO_SERVER` | all       | `true` for disabling auto start of `gochain`.  |
 | `USE_DOCKER`| all       | `true` for enabling docker container for test. |
 
@@ -59,8 +58,6 @@ To use other nodes than `gochain`, start the servers first, then define
 `NO_SERVER` as `true`.
 
 To run docker container for the node, set `USE_DOCKER` as `true`.
- 
-Set `AUDIT` to `true` to run audit specific feature tests in governance.
 
 ## Structure
 
@@ -80,11 +77,15 @@ Set `AUDIT` to `true` to run audit specific feature tests in governance.
 
 ### Packages
 
-| Package                     | Description                 |
-|:----------------------------|:----------------------------|
-| foundation.icon.test.cases  | Test case classes           |
-| foundation.icon.test.common | Common classes              |
-| foundation.icon.test.scores | Wrapping classes for SCOREs |
+| Package                     | Description                            |
+|:----------------------------|:---------------------------------------|
+| foundation.icon.test.cases  | Test case classes for goloop           |
+| foundation.icon.test.common | Common classes for goloop              |
+| foundation.icon.test.scores | Wrapping classes for SCOREs for goloop |
+| io.havah.test.cases         | Test case classes for havah            |
+| io.havah.test.common        | Common classes for havah               |
+| io.havah.test.scores        | Wrapping classes for SCOREs for havah  |
+
 
 ### Test cases
 
@@ -105,16 +106,16 @@ To identify test cases, following tags are used for each target.
 
 | Target         | Tags            |
 |:---------------|:----------------|
-| testPyScore    | TAG_PY_SCORE    |
-| testPyGov      | TAG_PY_GOV      |
+| testHavah      | TAG_HAVAH       |
+| testHavahExtra | TAG_HAVAH_EXTRA |
 | testJavaScore  | TAG_JAVA_SCORE  |
 | testJavaGov    | TAG_JAVA_GOV    |
 
-> Example of `TAG_PY_SCORE`
+> Example of `TAG_HAVAH`
 ```java
-@Tag(Constants.TAG_PY_SCORE)
+@Tag(Constants.TAG_HAVAH)
 @Test
-void testPythonToPython() throws Exception {
+void addPlanetManagerTest() throws Exception {
     // test codes.
 }
 ```

@@ -27,10 +27,7 @@ import foundation.icon.test.common.TestBase;
 import foundation.icon.test.common.TransactionHandler;
 import foundation.icon.test.score.CrowdSaleScore;
 import foundation.icon.test.score.SampleTokenScore;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -82,17 +79,19 @@ class CrowdsaleTest extends TestBase {
         deployAndStartCrowdsale(Constants.CONTENT_TYPE_JAVA, Constants.CONTENT_TYPE_JAVA);
     }
 
-//    @Tag(Constants.TAG_JAVA_GOV)
-//    @Test
-//    void testPythonToJava() throws Exception {
-//        deployAndStartCrowdsale(Constants.CONTENT_TYPE_PYTHON, Constants.CONTENT_TYPE_JAVA);
-//    }
-//
-//    @Tag(Constants.TAG_JAVA_GOV)
-//    @Test
-//    void testJavaToPython() throws Exception {
-//        deployAndStartCrowdsale(Constants.CONTENT_TYPE_JAVA, Constants.CONTENT_TYPE_PYTHON);
-//    }
+    @Tag(Constants.TAG_JAVA_GOV)
+    @Test
+    @Disabled
+    void testPythonToJava() throws Exception {
+        deployAndStartCrowdsale(Constants.CONTENT_TYPE_PYTHON, Constants.CONTENT_TYPE_JAVA);
+    }
+
+    @Tag(Constants.TAG_JAVA_GOV)
+    @Test
+    @Disabled
+    void testJavaToPython() throws Exception {
+        deployAndStartCrowdsale(Constants.CONTENT_TYPE_JAVA, Constants.CONTENT_TYPE_PYTHON);
+    }
 
     void deployAndStartCrowdsale(String tokenType, String crowdsaleType) throws Exception {
         // deploy token SCORE

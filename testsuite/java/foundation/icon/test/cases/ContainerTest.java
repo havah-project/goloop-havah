@@ -26,10 +26,7 @@ import foundation.icon.test.common.Env;
 import foundation.icon.test.common.TestBase;
 import foundation.icon.test.common.TransactionHandler;
 import foundation.icon.test.score.ContainerScore;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -75,6 +72,7 @@ public class ContainerTest extends TestBase {
     }
 
     @Test
+    @Disabled
     void testPythonToJavaMigration() throws Exception {
         // deploy Python contract first
         ContainerScore testScore = ContainerScore.mustDeploy(txHandler, ownerWallet);

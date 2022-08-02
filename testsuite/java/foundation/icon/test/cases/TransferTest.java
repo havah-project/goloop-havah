@@ -27,11 +27,7 @@ import foundation.icon.icx.transport.http.HttpProvider;
 import foundation.icon.icx.transport.jsonrpc.RpcError;
 import foundation.icon.icx.transport.jsonrpc.RpcObject;
 import foundation.icon.icx.transport.jsonrpc.RpcValue;
-import foundation.icon.test.common.Constants;
-import foundation.icon.test.common.Env;
-import foundation.icon.test.common.ResultTimeoutException;
-import foundation.icon.test.common.TestBase;
-import foundation.icon.test.common.TransactionHandler;
+import foundation.icon.test.common.*;
 import foundation.icon.test.score.ChainScore;
 import foundation.icon.test.score.GovScore;
 import org.junit.jupiter.api.AfterAll;
@@ -46,10 +42,7 @@ import java.util.List;
 import java.util.Random;
 
 import static foundation.icon.test.common.Env.LOG;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Tag(Constants.TAG_PY_GOV)
 @Tag(Constants.TAG_JAVA_GOV)
@@ -137,9 +130,9 @@ public class TransferTest extends TestBase {
         final long newDefStepCost = 100;
         final long newStepPrice = 10;
         LOG.infoEntering("setup", "new stepCosts");
-        govScore.setMaxStepLimit("invoke", BigInteger.valueOf(10000));
         govScore.setStepCost("default", BigInteger.valueOf(newDefStepCost));
         govScore.setStepPrice(BigInteger.valueOf(newStepPrice));
+        govScore.setMaxStepLimit("invoke", BigInteger.valueOf(100000));
         LOG.infoExiting();
 
         KeyWallet testWallet = testWallets[0];
@@ -178,10 +171,9 @@ public class TransferTest extends TestBase {
         }
 
         LOG.infoEntering("restore", "stepCosts");
+        govScore.setMaxStepLimit("invoke", prevMaxStepLimit);
         govScore.setStepPrice(prevStepPrice);
         govScore.setStepCost("default", prevDefStepCost);
-        govScore.setMaxStepLimit("invoke", prevMaxStepLimit);
-        LOG.infoExiting();
         LOG.infoExiting();
     }
 
@@ -274,6 +266,11 @@ public class TransferTest extends TestBase {
     @Test
     public void transferAndCheckBal() throws Exception {
         LOG.infoEntering("transferAndCheckBal");
+
+        ChainScore chainScore = new ChainScore(txHandler);
+        BigInteger prevStepPrice = chainScore.getStepPrice();
+        govScore.setStepPrice(BigInteger.ZERO);
+
         int transferNum = 1000;
         final int testWalletNum = 1000;
         Account[] testAccounts = new Account[testWalletNum];
@@ -317,6 +314,9 @@ public class TransferTest extends TestBase {
             assertTrue(account.checkBalance());
         }
         LOG.infoExiting();
+
+        govScore.setStepPrice(prevStepPrice);
+
         LOG.infoExiting();
     }
 
@@ -336,7 +336,8 @@ public class TransferTest extends TestBase {
                     .from(wallet.getAddress())
                     .to(testWallet.getAddress())
                     .value(BigInteger.ONE)
-                    .stepLimit(BigInteger.valueOf(stepLimit))
+//                    .stepLimit(BigInteger.valueOf(stepLimit))
+                    .stepLimit(Constants.DEFAULT_STEPS)
                     .message(msg)
                     .build();
             msgs[cnt] = msg;

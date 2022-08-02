@@ -30,6 +30,7 @@ import foundation.icon.test.common.TestBase;
 import foundation.icon.test.common.TransactionHandler;
 import foundation.icon.test.score.TBCInterpreterScore;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -89,8 +90,8 @@ public class TBCTest extends TestBase {
         return out;
     }
 
-    @Tag(Constants.TAG_JAVA_GOV)
     @Test
+    @Disabled
     void testSimpleScenario() throws Exception {
         s1 = TBCInterpreterScore.mustDeploy(txHandler, ownerWallet,
                 "s1", Constants.CONTENT_TYPE_JAVA);

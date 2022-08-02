@@ -36,10 +36,7 @@ import foundation.icon.test.score.ChainScore;
 import foundation.icon.test.score.GovScore;
 import foundation.icon.test.score.HelloWorld;
 import foundation.icon.test.score.Score;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
@@ -102,9 +99,9 @@ public class ChainScoreTest extends TestBase {
                 testWallets[i] = KeyWallet.create();
             }
 
-            for (String type : new String[]{"invoke", "query"}) {
-                assertSuccess(govScore.setMaxStepLimit(type, BigInteger.valueOf(10000000)));
-            }
+//            for (String type : new String[]{"invoke", "query"}) {
+//                assertSuccess(govScore.setMaxStepLimit(type, BigInteger.valueOf(10000000)));
+//            }
         } catch (Exception ex) {
             fail(ex.getMessage());
         }
@@ -124,6 +121,7 @@ public class ChainScoreTest extends TestBase {
     }
 
     @Test
+    @Disabled
     public void disableEnableScore() throws Exception {
         LOG.infoEntering("disableEnableScore");
         // deploy new helloWorld score
@@ -188,6 +186,7 @@ public class ChainScoreTest extends TestBase {
 
     @ParameterizedTest(name = "acceptScore {0}")
     @EnumSource(TargetScore.class)
+    @Disabled
     public void acceptScore(TargetScore score) throws Exception {
         assumeTrue(chainScore.isAuditEnabled(), "audit is not enabled");
         LOG.infoEntering("acceptScore");
@@ -246,6 +245,7 @@ public class ChainScoreTest extends TestBase {
 
     @ParameterizedTest(name = "rejectScore {0}")
     @EnumSource(TargetScore.class)
+    @Disabled
     public void rejectScore(TargetScore score) throws Exception {
         assumeTrue(chainScore.isAuditEnabled(), "audit is not enabled");
         LOG.infoEntering("rejectScore");
@@ -293,6 +293,7 @@ public class ChainScoreTest extends TestBase {
 
     @ParameterizedTest(name = "blockUnblockScore {0}")
     @EnumSource(TargetScore.class)
+    @Disabled
     public void blockUnblockScore(TargetScore score) throws Exception {
         LOG.infoEntering("blockUnblockScore");
         HelloWorld helloWorld = HelloWorld.install(txHandler, testWallets[0]);
@@ -365,7 +366,8 @@ public class ChainScoreTest extends TestBase {
     @EnumSource(TargetScore.class)
     public void setStepCost(TargetScore score) throws Exception {
         LOG.infoEntering("setStepCost");
-        KeyWallet wallet = testWallets[0];
+//        KeyWallet wallet = testWallets[0];
+        KeyWallet wallet = governorWallet;
         Score target = new Score(txHandler, score.addr);
         Bytes[] txHashList = new Bytes[GovScore.stepCostTypes.length];
         RpcObject rpcObject = chainScore.call("getStepCosts", null).asObject();
@@ -511,6 +513,7 @@ public class ChainScoreTest extends TestBase {
 
     @ParameterizedTest(name = "addRemoveMember {0}")
     @EnumSource(TargetScore.class)
+    @Disabled
     public void addRemoveMember(TargetScore score) throws Exception {
         LOG.infoEntering("addRemoveMember");
         KeyWallet wallet = testWallets[0];
@@ -608,6 +611,7 @@ public class ChainScoreTest extends TestBase {
     }
 
     @Test
+    @Disabled
     public void getDeployers() throws Exception {
         LOG.infoEntering("check revision");
         final int requiredRevision = 7;

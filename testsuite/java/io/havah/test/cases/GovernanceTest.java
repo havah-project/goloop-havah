@@ -69,10 +69,6 @@ public class GovernanceTest extends TestBase {
             for (int i = 0; i < testWalletNum; i++) {
                 testWallets[i] = KeyWallet.create();
             }
-
-            for (String type : new String[]{"invoke", "query"}) {
-//                assertSuccess(govScore.setMaxStepLimit(type, BigInteger.valueOf(10000000)));
-            }
         } catch (Exception ex) {
             fail(ex.getMessage());
         }
