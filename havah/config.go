@@ -11,7 +11,7 @@ type chainConfig struct {
 	BlockInterval    *common.HexInt32    `json:"blockInterval,omitempty"`
 	Revision         common.HexInt32     `json:"revision,omitempty"`
 	RoundLimitFactor *common.HexInt32    `json:"roundLimitFactor,omitempty"`
-	ValidatorList    []*common.Address   `json:"validators"`
+	ValidatorList    []*common.Address   `json:"validatorList"`
 	Fee              *FeeConfig          `json:"fee,omitempty"`
 	TSThreshold      *common.HexInt32    `json:"timestampThreshold,omitempty"`
 	Havah            *hvh.PlatformConfig `json:"havah"`
