@@ -501,17 +501,7 @@ public class HavahBasicTest extends TestBase {
 
             Utils.waitUtil(nextCycle);
         }
-        /*
-        BigInteger claimable = (BigInteger) _getRewardInfo(planetId).get("claimable");
-        BigInteger expected = totalReward.subtract(claimedReward);
-        LOG.info("last claim!");
-        LOG.info("claimable = " + claimable);
-        LOG.info("expected = " + expected);
-        assertEquals(true, BigInteger.TEN.compareTo(claimable.subtract(expected).abs()) > -1, "last reward is not expected");
-//        assertEquals(claimable.compareTo(expected), 0, "last reward is not expected");
 
-        _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, expected, BigInteger.TEN);
-        */
         LOG.infoExiting();
     }
 }
