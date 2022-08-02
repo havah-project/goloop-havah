@@ -33,10 +33,7 @@ import foundation.icon.test.common.TransactionHandler;
 import foundation.icon.test.score.ChainScore;
 import foundation.icon.test.score.FeeShareScore;
 import foundation.icon.test.score.GovScore;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -110,6 +107,7 @@ public class FeeSharingTest extends TestBase {
 
     @Tag(Constants.TAG_JAVA_GOV)
     @Test
+    @Disabled
     public void testJava() throws Exception {
         deployAndStartTest(Constants.CONTENT_TYPE_JAVA);
     }
@@ -125,6 +123,10 @@ public class FeeSharingTest extends TestBase {
 
     @Test
     public void runTest(FeeShareScore feeShareOwner, BigInteger proportion) throws Exception {
+        ChainScore chainScore = new ChainScore(txHandler);
+        BigInteger prevStepPrice = chainScore.getStepPrice();
+        govScore.setStepPrice(BigInteger.ZERO);
+
         // add alice into the white list
         LOG.infoEntering("invoke", "addToWhitelist(alice)");
         BigInteger ownerBalance = txHandler.getBalance(ownerWallet.getAddress());
@@ -227,6 +229,8 @@ public class FeeSharingTest extends TestBase {
         // check the treasury balance
         ensureIcxBalance(Constants.TREASURY_ADDRESS, addFee(treasuryBalance, result));
         LOG.infoExiting();
+
+        govScore.setStepPrice(prevStepPrice);
     }
 
     private BigInteger addFee(BigInteger balance, TransactionResult result) {
@@ -305,6 +309,7 @@ public class FeeSharingTest extends TestBase {
     }
 
     @Test
+    @Disabled
     public void testSystemDeposit(String contentType) throws Exception {
         LOG.infoEntering("testSystemDeposit:" + contentType);
         var revision = chainScore.getRevision();
