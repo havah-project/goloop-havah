@@ -52,12 +52,19 @@ public class SustainableFundTest extends TestBase {
         sfScore = new SustainableFundScore(txHandler);
     }
 
+    // have to call this method before start of term
+    private BigInteger getExpectedTodayReward() throws Exception {
+        var supply = planetNFTScore.totalSupply();
+        return Constants.TOTAL_REWARD_PER_DAY.subtract(Constants.TOTAL_REWARD_PER_DAY.remainder(supply));
+    }
+
     /*
 
      */
     @Test
     @Order(1)
     void checkTxFee() throws Exception {
+        LOG.infoEntering("checkTxFee");
         if (Utils.isRewardIssued()) {
             LOG.info("reward issued already so skip the SustainableFund.checkTxFee");
             return;
@@ -90,18 +97,17 @@ public class SustainableFundTest extends TestBase {
         assertEquals(treasuryBalance.add(txFee), cmpTreasuryBalance,
                 String.format("treasury balance before(%s), after(%s), txFee(%s)", treasuryBalance, cmpTreasuryBalance, txFee));
         var sfBalance = txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS);
+        var expectedMissingReward = getExpectedTodayReward();
         var height = Utils.startRewardIssueIfNotStarted();
         treasuryBalance = txHandler.getBalance(Constants.SYSTEM_TREASURY);
         Utils.waitUtil(height);
         var inflow = sfScore.getInflow();
         Utils.waitUtilNextTerm();
         Utils.waitUtil(Utils.getHeightNext(1));
-//        var planetAmount = planetNFTScore.totalSupply();
-//        var missingReward = Constants.TOTAL_REWARD_PER_DAY.divide(planetAmount).multiply(planetAmount);
         var inflow2 = sfScore.getInflow();
         Map<SF_INFLOW, BigInteger> addedAmount = Map.of(
                 SF_INFLOW.TX_FEE, treasuryBalance.multiply(BigInteger.valueOf(80)).divide(BigInteger.valueOf(100)), // 80 % of treasury
-                SF_INFLOW.MISSING_REWARD, Constants.TOTAL_REWARD_PER_DAY,
+                SF_INFLOW.MISSING_REWARD, expectedMissingReward,
                 SF_INFLOW.SERVICE_FEE, BigInteger.ZERO,
                 SF_INFLOW.PLANET_SALES, BigInteger.ZERO
         );
@@ -117,6 +123,7 @@ public class SustainableFundTest extends TestBase {
                     type.getTypeName(), treasuryBalance, txHandler.getBalance(Constants.SYSTEM_TREASURY)));
         }
         // outflow - hoover_refill
+        LOG.infoExiting();
     }
 
     @Test
