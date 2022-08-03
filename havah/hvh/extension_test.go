@@ -301,7 +301,7 @@ func TestExtensionStateImpl_Reward0(t *testing.T) {
 	cc = NewCallContext(mcc, pm)
 	assert.NoError(t, es.ReportPlanetWork(cc, id))
 
-	ri0, err := es.GetRewardInfo(cc, id)
+	ri0, err := es.GetRewardInfoOf(cc, id)
 	assert.NoError(t, err)
 	checkRewardInfo(t, ri0, mcc.height,
 		hvhmodule.BigIntInitIssueAmount,
@@ -317,7 +317,7 @@ func TestExtensionStateImpl_Reward0(t *testing.T) {
 	balance := cc.GetBalance(owner)
 	assert.Zero(t, ri0["claimable"].(*big.Int).Cmp(balance))
 
-	ri1, err := es.GetRewardInfo(cc, id)
+	ri1, err := es.GetRewardInfoOf(cc, id)
 	assert.NoError(t, err)
 	checkRewardInfo(t, ri1, mcc.height,
 		ri0["total"].(*big.Int), hvhmodule.BigIntZero, hvhmodule.BigIntZero)
@@ -386,7 +386,7 @@ func TestExtensionStateImpl_Reward1(t *testing.T) {
 	assert.Zero(t, mcc.GetBalance(hvhmodule.HooverFund).Sign())
 	assert.Zero(t, mcc.GetBalance(hvhmodule.PublicTreasury).Cmp(toHVH(5)))
 
-	ri0, err := es.GetRewardInfo(cc, id)
+	ri0, err := es.GetRewardInfoOf(cc, id)
 	assert.NoError(t, err)
 	checkRewardInfo(t, ri0, mcc.height, toHVH(5), toHVH(5), toHVH(5))
 
@@ -404,7 +404,7 @@ func TestExtensionStateImpl_Reward1(t *testing.T) {
 	balance = cc.GetBalance(owner)
 	assert.Zero(t, ri0["claimable"].(*big.Int).Cmp(balance))
 
-	ri1, err := es.GetRewardInfo(cc, id)
+	ri1, err := es.GetRewardInfoOf(cc, id)
 	assert.NoError(t, err)
 	checkRewardInfo(t, ri1, mcc.height,
 		ri0["total"].(*big.Int), hvhmodule.BigIntZero, hvhmodule.BigIntZero)
@@ -452,12 +452,12 @@ func TestExtensionStateImpl_Reward2(t *testing.T) {
 	assert.Equal(t, issueStart+5, mcc.BlockHeight())
 
 	for i := 0; i < hvhmodule.DayPerYear; i++ {
-		ri0, err := es.GetRewardInfo(cc, id)
+		ri0, err := es.GetRewardInfoOf(cc, id)
 		assert.NoError(t, err)
 
 		assert.NoError(t, es.ReportPlanetWork(cc, id))
 
-		ri1, err := es.GetRewardInfo(cc, id)
+		ri1, err := es.GetRewardInfoOf(cc, id)
 		reward := new(big.Int).Sub(ri1["total"].(*big.Int), ri0["total"].(*big.Int))
 		assert.Zero(t, issueAmount.Cmp(reward))
 		assert.Zero(t, ri1["claimable"].(*big.Int).Sign())
@@ -465,7 +465,7 @@ func TestExtensionStateImpl_Reward2(t *testing.T) {
 		goByCount(t, termPeriod, es, mcc, pm)
 	}
 
-	ri2, err := es.GetRewardInfo(cc, id)
+	ri2, err := es.GetRewardInfoOf(cc, id)
 	total := ri2["total"].(*big.Int)
 	claimable := ri2["claimable"].(*big.Int)
 	locked := new(big.Int).Mul(total, big.NewInt(23))
@@ -478,7 +478,7 @@ func TestExtensionStateImpl_Reward2(t *testing.T) {
 	// goByCount(t, termPeriod, es, mcc, pm)
 	// assert.NoError(t, es.ReportPlanetWork(cc, id))
 	//
-	// ri3, err := es.GetRewardInfo(cc, id)
+	// ri3, err := es.GetRewardInfoOf(cc, id)
 	// assert.NoError(t, err)
 	// claimable = ri3["claimable"].(*big.Int)
 	// total := ri3["total"].(*big.Int)
@@ -532,7 +532,7 @@ func TestExtensionStateImpl_Reward3(t *testing.T) {
 	ownerReward := new(big.Int).Sub(issueAmount, ecoReward)
 
 	// Check if reward info is correct
-	jso, err := es.GetRewardInfo(cc, id)
+	jso, err := es.GetRewardInfoOf(cc, id)
 	assert.NoError(t, err)
 	checkRewardInfo(t, jso, cc.BlockHeight(), issueAmount, ownerReward, ownerReward)
 

@@ -290,7 +290,7 @@ var chainMethods = []*chainMethod{
 		nil,
 	}, 0, 0},
 	{scoreapi.Method{
-		scoreapi.Function, "getRewardInfo",
+		scoreapi.Function, "getRewardInfoOf",
 		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 1,
 		[]scoreapi.Parameter{
 			{"id", scoreapi.Integer, nil, nil},

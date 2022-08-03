@@ -584,7 +584,7 @@ func (s *State) GetIssueLimit() int64 {
 	return s.getInt64OrDefault(hvhmodule.VarIssueLimit, hvhmodule.IssueLimit)
 }
 
-func (s *State) GetRewardInfo(height, id int64) (map[string]interface{}, error) {
+func (s *State) GetRewardInfoOf(height, id int64) (map[string]interface{}, error) {
 	pr, err := s.GetPlanetReward(id)
 	if err != nil {
 		return nil, err

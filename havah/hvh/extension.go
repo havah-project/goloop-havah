@@ -417,9 +417,9 @@ func (es *ExtensionStateImpl) ClaimPlanetReward(cc hvhmodule.CallContext, ids []
 	return nil
 }
 
-func (es *ExtensionStateImpl) GetRewardInfo(cc hvhmodule.CallContext, id int64) (map[string]interface{}, error) {
+func (es *ExtensionStateImpl) GetRewardInfoOf(cc hvhmodule.CallContext, id int64) (map[string]interface{}, error) {
 	height := cc.BlockHeight()
-	return es.state.GetRewardInfo(height, id)
+	return es.state.GetRewardInfoOf(height, id)
 }
 
 func (es *ExtensionStateImpl) BurnCoin(cc hvhmodule.CallContext, amount *big.Int) error {
