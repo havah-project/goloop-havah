@@ -41,6 +41,13 @@ public class EcosystemScore extends Score {
         return list;
     }
 
+    public Bytes setAdmin(Wallet wallet, Address admin) throws Exception {
+        RpcObject param = new RpcObject.Builder()
+                .put("_admin", new RpcValue(admin))
+                .build();
+        return invoke(wallet, "setAdmin", param);
+    }
+
     public static class LockupSchedule {
         private final BigInteger blockHeight;
         private final BigInteger amount;

@@ -4,7 +4,6 @@ import foundation.icon.icx.KeyWallet;
 import foundation.icon.icx.Wallet;
 import foundation.icon.icx.data.Address;
 import foundation.icon.test.common.TestBase;
-import foundation.icon.test.common.TransactionHandler;
 import io.havah.test.common.Constants;
 import io.havah.test.common.Utils;
 import io.havah.test.score.EcosystemScore;
@@ -13,9 +12,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
 
 import static foundation.icon.test.common.Env.LOG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,14 +19,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Tag(Constants.TAG_HAVAH)
 public class EcosystemTest extends TestBase {
-    private static TransactionHandler txHandler;
     private static EcosystemScore ecoScore;
     private static Wallet ecoOwner;
     private static Wallet[] wallets;
 
     @BeforeAll
     static void setup() throws Exception {
-        txHandler = Utils.getTxHandler();
         ecoScore = new EcosystemScore(txHandler);
         ecoOwner = Utils.getGovernor();
         wallets = new Wallet[3];
@@ -104,6 +98,52 @@ public class EcosystemTest extends TestBase {
             }
         }
         _transferExceedAndMax(receiver, lockedAmount);
+        // transfer from receiver to ecosystem
+        var receiverWallet = wallets[2];
+        txHandler.transfer(receiverWallet, Constants.ECOSYSTEM_ADDRESS, txHandler.getBalance(receiver).subtract(BigInteger.TEN.pow(20)));
         LOG.infoExiting();
+    }
+
+    void _transferAndCheck(Wallet wallet, Address receiver, BigInteger amount, boolean success) throws Exception {
+        var ecoBal = txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS);
+        var receiverBal = txHandler.getBalance(receiver);
+        var txHash = ecoScore.transfer(wallet, receiver, amount);
+        BigInteger transfered;
+        if (success) {
+            assertSuccess(txHash);
+            transfered = amount;
+        } else {
+            assertFailure(txHash);
+            transfered = BigInteger.ZERO;
+        }
+        assertEquals(ecoBal.subtract(transfered), txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS));
+        assertEquals(receiverBal.add(transfered), txHandler.getBalance(receiver));
+    }
+
+    @Test
+    void setAdmin() throws Exception {
+        BigInteger TRANSFER_AMOUNT = BigInteger.ONE;
+        var adminWallet = wallets[2];
+        Address receiver = KeyWallet.create().getAddress();
+        _transferAndCheck(ecoOwner, receiver, TRANSFER_AMOUNT, true);
+        _transferAndCheck(adminWallet, receiver, TRANSFER_AMOUNT, false);
+
+        var txHash = ecoScore.setAdmin(adminWallet, ecoOwner.getAddress());
+        assertFailure(txHash);
+
+        txHash = ecoScore.setAdmin(ecoOwner, adminWallet.getAddress());
+        assertSuccess(txHash);
+
+        _transferAndCheck(ecoOwner, receiver, TRANSFER_AMOUNT, false);
+        _transferAndCheck(adminWallet, receiver, TRANSFER_AMOUNT, true);
+
+        txHash = ecoScore.setAdmin(ecoOwner, adminWallet.getAddress());
+        assertFailure(txHash);
+
+        txHash = ecoScore.setAdmin(adminWallet, ecoOwner.getAddress());
+        assertSuccess(txHash);
+
+        _transferAndCheck(ecoOwner, receiver, TRANSFER_AMOUNT, true);
+        _transferAndCheck(adminWallet, receiver, TRANSFER_AMOUNT, false);
     }
 }

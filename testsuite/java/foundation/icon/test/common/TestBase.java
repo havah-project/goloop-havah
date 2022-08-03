@@ -19,6 +19,7 @@ package foundation.icon.test.common;
 import foundation.icon.icx.data.Address;
 import foundation.icon.icx.data.Bytes;
 import foundation.icon.icx.data.TransactionResult;
+import io.havah.test.common.Utils;
 import org.opentest4j.AssertionFailedError;
 
 import java.io.IOException;
@@ -31,7 +32,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class TestBase {
+    protected static TransactionHandler txHandler = Utils.getTxHandler();
+
     protected static final BigInteger ICX = BigInteger.TEN.pow(18);
+
+    protected static void assertSuccess(Bytes txHash) throws IOException, ResultTimeoutException {
+        var result = txHandler.getResult(txHash);
+        assertStatus(Constants.STATUS_SUCCESS, result, result.toString());
+    }
 
     protected static void assertSuccess(TransactionResult result) {
         assertStatus(Constants.STATUS_SUCCESS, result);
@@ -39,6 +47,11 @@ public class TestBase {
 
     protected static void assertSuccess(TransactionResult result, String msg) {
         assertStatus(Constants.STATUS_SUCCESS, result, msg);
+    }
+
+    protected static void assertFailure(Bytes txHash) throws IOException, ResultTimeoutException {
+        var result = txHandler.getResult(txHash);
+        assertStatus(Constants.STATUS_FAILURE, result, result.toString());
     }
 
     protected static void assertFailure(TransactionResult result) {

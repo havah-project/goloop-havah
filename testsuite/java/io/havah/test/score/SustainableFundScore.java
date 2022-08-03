@@ -86,21 +86,14 @@ public class SustainableFundScore extends Score {
         return invoke(wallet, "depositFromPlanetSales", null, value);
     }
 
-    public Bytes depositFromServiceFee(Wallet wallet, BigInteger value) throws Exception {
-        return invoke(wallet, "depositFromServiceFee", null, value);
+    public Bytes setAdmin(Wallet wallet, Address admin) throws Exception {
+        RpcObject params = new RpcObject.Builder()
+                .put("_admin", new RpcValue(admin))
+                .build();
+        return invoke(wallet, "setAdmin", params);
     }
 
-    public Bytes setTest(Wallet wallet, Address address, BigInteger value) throws IOException {
-        RpcObject.Builder builder = new RpcObject.Builder()
-                .put("address", new RpcValue(address))
-                .put("value", new RpcValue(value));
-        return invoke(wallet, "test", builder.build());
+    public Address admin() throws Exception {
+        return call("admin", null).asAddress();
     }
-
-    public BigInteger getTest(Address address) throws IOException {
-        RpcObject.Builder builder = new RpcObject.Builder()
-                .put("address", new RpcValue(address));
-        return call("getTest", builder.build()).asInteger();
-    }
-
 }

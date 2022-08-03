@@ -6,7 +6,6 @@ import foundation.icon.icx.data.Address;
 import foundation.icon.icx.data.Bytes;
 import foundation.icon.icx.transport.jsonrpc.RpcObject;
 import foundation.icon.test.common.TestBase;
-import foundation.icon.test.common.TransactionHandler;
 import io.havah.test.common.Constants;
 import io.havah.test.common.Utils;
 import io.havah.test.score.IRC2TokenScore;
@@ -31,14 +30,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @Tag(Constants.TAG_HAVAH)
 public class SustainableFundTest extends TestBase {
     private static PlanetNFTScore planetNFTScore;
-    private static TransactionHandler txHandler;
     private static Wallet[] wallets;
     private static SustainableFundScore sfScore;
     private static Wallet sfOwner;
 
     @BeforeAll
     static void setup() throws Exception {
-        txHandler = Utils.getTxHandler();
         wallets = new Wallet[10];
 
         // init wallets
@@ -180,8 +177,6 @@ public class SustainableFundTest extends TestBase {
     }
 
     private void _transferAndCheck(Wallet wallet, boolean expectedResult) throws Exception {
-        boolean success = wallet.equals(sfOwner);
-        assertEquals(expectedResult, success);
         waitUtilNextTermIfRewardIssued();
 
         var sfBalance = txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS);
@@ -189,13 +184,13 @@ public class SustainableFundTest extends TestBase {
         var addr = wallets[2].getAddress();
         var walletBalance = txHandler.getBalance(addr);
         var result = txHandler.getResult(sfScore.transfer(wallet, addr, amount));
-        assertEquals(success ? BigInteger.ONE : BigInteger.ZERO, result.getStatus());
+        assertEquals(expectedResult ? BigInteger.ONE : BigInteger.ZERO, result.getStatus());
         // check transferred amount from SF
-        walletBalance = success ? walletBalance.add(amount) : walletBalance;
+        walletBalance = expectedResult ? walletBalance.add(amount) : walletBalance;
         assertEquals(walletBalance, txHandler.getBalance(addr));
 
         // check remained amount in SF
-        var expected = success ? sfBalance.subtract(amount) : sfBalance;
+        var expected = expectedResult ? sfBalance.subtract(amount) : sfBalance;
         var now = txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS);
         assertEquals(expected, now, String.format("sf balance before(%s), after(%s)", sfBalance, now));
     }
@@ -266,10 +261,9 @@ public class SustainableFundTest extends TestBase {
         var sfBalance = txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS);
         var ecoBalance = txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS);
         var txHash =  txHandler.transfer(serviceWallet, Constants.SERVICE_TREASURY, serviceFee);
-        var result = txHandler.getResult(txHash);
         var inflowAmount = sfScore.getInflowAmount();
         var inflowServiceFee = sfScore.getInflow().getItem("SERVICE_FEE").asInteger();
-        assertSuccess(result);
+        assertSuccess(txHash);
 
         var st = txHandler.getBalance(Constants.SYSTEM_TREASURY);
         var inflow = serviceFee.add(st);
@@ -367,6 +361,57 @@ public class SustainableFundTest extends TestBase {
         var irc2Deployer = wallets[1];
         IRC2TokenScore irc2 = IRC2TokenScore.mustDeploy(txHandler, irc2Deployer);
         _setUSDT(sfOwner, irc2.getAddress(), true);
+    }
+
+    void _transferTokenAndCheck(IRC2TokenScore irc2, Wallet wallet, Address receiver, boolean success) throws Exception {
+        var sfTokenBalance = irc2.balanceOf(Constants.SUSTAINABLEFUND_ADDRESS);
+        var receiverTokenBalance = irc2.balanceOf(receiver);
+        var transferValue = BigInteger.ONE;
+        var hash = sfScore.transferToken(wallet, irc2.getAddress(), receiver, transferValue);
+        var result = txHandler.getResult(hash);
+        if (success) {
+            assertSuccess(result);
+            assertEquals(sfTokenBalance.subtract(transferValue), irc2.balanceOf(Constants.SUSTAINABLEFUND_ADDRESS));
+            assertEquals(receiverTokenBalance.add(transferValue), irc2.balanceOf(receiver));
+        } else {
+            assertFailure(result);
+            assertEquals(sfTokenBalance, irc2.balanceOf(Constants.SUSTAINABLEFUND_ADDRESS));
+            assertEquals(receiverTokenBalance, irc2.balanceOf(receiver));
+        }
+    }
+
+    @Test
+    void setAdmin() throws Exception {
+        // transfer, transferToken, setAdmin
+        Wallet admin = wallets[1];
+        _transferAndCheck(admin, false);
+        _transferAndCheck(sfOwner, true);
+
+        var txHash = sfScore.setAdmin(sfOwner, admin.getAddress());
+        assertSuccess(txHash);
+        LOG.info("admin(" + sfScore.admin() + "), sfOwner(" + sfOwner.getAddress() + ")");
+
+        _transferAndCheck(sfOwner, false);
+        _transferAndCheck(admin, true);
+
+        var irc2Deployer = wallets[2];
+        var receiver = wallets[3];
+        IRC2TokenScore irc2 = IRC2TokenScore.mustDeploy(txHandler, irc2Deployer);
+        LOG.info("deployed IRC2, address(" + irc2.getAddress() + ")");
+        txHash = irc2.transfer(irc2Deployer, Constants.SUSTAINABLEFUND_ADDRESS, BigInteger.TEN, null);
+        assertSuccess(txHash);
+        // transfer to SF
+        _transferTokenAndCheck(irc2, sfOwner, receiver.getAddress(), false);
+        _transferTokenAndCheck(irc2, admin, receiver.getAddress(), true);
+
+        txHash = sfScore.setAdmin(sfOwner, admin.getAddress());
+        assertFailure(txHandler.getResult(txHash));
+
+        txHash = sfScore.setAdmin(admin, sfOwner.getAddress());
+        assertSuccess(txHash);
+
+        _transferTokenAndCheck(irc2, admin, receiver.getAddress(), false);
+        _transferTokenAndCheck(irc2, sfOwner, receiver.getAddress(), true);
     }
 
     enum SF_INFLOW {
