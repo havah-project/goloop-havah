@@ -1368,7 +1368,7 @@ HAVAH-specific JSON-RPC APIs
 | owner        | T_ADDRESS  | false   | Planet owner claiming rewards |
 | amount       | T_INT      | false   | Claimed reward amount         |
 
-### getRewardInfo
+### getRewardInfoOf
 
 * Returns the information on a planet reward
 
@@ -1383,7 +1383,7 @@ HAVAH-specific JSON-RPC APIs
     "to": "cx0000000000000000000000000000000000000000",
     "dataType": "call",
     "data": {
-      "method": "getRewardInfo",
+      "method": "getRewardInfoOf",
       "params": {
         "id": "0x1"
       }
@@ -1422,6 +1422,57 @@ HAVAH-specific JSON-RPC APIs
 | remain    | T_INT      | true     | Difference between Total Rewards and Claimed Rewards      |
 | claimable | T_INT      | true     | Rewards that a planet owner can receive when claiming now |
 
+### getRewardInfo
+
+* Returns the overall reward information
+* This call returns an error response before the start of the first term
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getRewardInfo"
+    }
+  }
+}
+```
+
+> Response
+
+ ```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "height": "0x3e8",
+    "termSequence": "0x0",
+    "rewardPerActivePlanet": "0xde0b6b3a7640000"
+  }
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+| Key                   | VALUE Type | Required | Description                                            |
+|:----------------------|:-----------|:---------|:-------------------------------------------------------|
+| height                | T_INT      | true     | Current block height                                   |
+| termSequence          | T_INT      | false    | Sequence of a term starting with 0                     |
+| rewardPerActivePlanet | T_INT      | false    | Estimated reward per active planet in the current term |
+
+* `rewardPerActivePlanet` does not include the fund from HooverFund SCORE
+* `rewardPerActivePlanet` is zero if no active planet exists
+ 
 ### getIssueInfo
 
 * Returns the information on issue-related configuration
@@ -1474,11 +1525,9 @@ None
 | issueReductionCycle   | T_INT      | true     | issueAmount is reduced at a fixed rate every cycle     |
 | issueStart            | T_INT      | false    | BlockHeight when issuing coin will begin               |
 | termSequence          | T_INT      | false    | Sequence of a term starting with 0                     |
-| rewardPerActivePlanet | T_INT      | false    | Estimated reward per active planet in the current term |
 
-* `issueStart`, `termSequence` and `rewardPerActivePlanet` is provided after `issueStart` blockHeight
-* `rewardPerActivePlanet` does not include the fund from HooverFund SCORE
-* `rewardPerActivePlanet` will be zero if no active planet exists
+* `issueStart` is provided after the blockHeight has been set by `startRewardIssue` call
+* `termSequence` is provided after the start of the first term
 
 ### getUSDTPrice
 
