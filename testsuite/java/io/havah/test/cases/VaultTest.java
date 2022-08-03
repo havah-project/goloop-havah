@@ -11,9 +11,7 @@ import foundation.icon.test.common.TransactionHandler;
 import io.havah.test.common.Constants;
 import io.havah.test.common.Utils;
 import io.havah.test.score.VaultScore;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -23,6 +21,7 @@ import static foundation.icon.test.common.Env.LOG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 @Tag(Constants.TAG_HAVAH)
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class VaultTest extends TestBase {
     private static TransactionHandler txHandler;
     private static KeyWallet[] wallets;
@@ -76,6 +75,7 @@ public class VaultTest extends TestBase {
         LOG.infoExiting();
     }
     @Test
+    @Order(1)
     void startVault() throws Exception {
         LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
 
@@ -114,5 +114,67 @@ public class VaultTest extends TestBase {
         LOG.info("vestingInfo wallets[1] : " + _getVestingInfo(wallets[1].getAddress()));
         _checkAndClaim(wallets[1]);
         LOG.infoExiting();
+    }
+
+    @Test
+    @Order(2)
+    void setAdmin() throws Exception {
+        KeyWallet[] tmpWallets = new KeyWallet[3];
+        BigInteger amount = ICX.multiply(BigInteger.valueOf(300));
+        for (int i = 0; i < tmpWallets.length; i++) {
+            tmpWallets[i] = KeyWallet.create();
+        }
+
+        LOG.infoEntering("call", "setAdmin()");
+        var txHash = vaultScore.setAdmin(wallets[1], ownerWallet.getAddress());
+        assertFailure(txHash);
+
+        txHash = vaultScore.setAdmin(ownerWallet, wallets[1].getAddress());
+        assertSuccess(txHash);
+        LOG.infoExiting();
+
+        LOG.infoEntering("call", "admin()");
+        assertEquals(false, vaultScore.admin().equals(ownerWallet.getAddress()));
+        assertEquals(true, vaultScore.admin().equals(wallets[1].getAddress()));
+        LOG.infoExiting();
+
+        LOG.infoEntering("call", "setAllocation()");
+        assertFailure(vaultScore.setAllocation(ownerWallet, new VaultScore.VestingAccount(wallets[0].getAddress(), BigInteger.ZERO)));
+        assertFailure(vaultScore.setAllocation(ownerWallet, new VaultScore.VestingAccount(wallets[1].getAddress(), BigInteger.ZERO)));
+        assertFailure(vaultScore.setAllocation(ownerWallet, new VaultScore.VestingAccount(wallets[2].getAddress(), BigInteger.ZERO)));
+        assertSuccess(vaultScore.setAllocation(wallets[1], new VaultScore.VestingAccount(wallets[0].getAddress(), BigInteger.ZERO)));
+        assertSuccess(vaultScore.setAllocation(wallets[1], new VaultScore.VestingAccount(wallets[1].getAddress(), BigInteger.ZERO)));
+        assertSuccess(vaultScore.setAllocation(wallets[1], new VaultScore.VestingAccount(wallets[2].getAddress(), BigInteger.ZERO)));
+        LOG.infoExiting();
+
+        LOG.infoEntering("call", "addAllocation()");
+        VaultScore.VestingAccount[] accounts = {
+                new VaultScore.VestingAccount(tmpWallets[0].getAddress(), ICX.multiply(BigInteger.valueOf(150))),
+                new VaultScore.VestingAccount(tmpWallets[1].getAddress(), ICX.multiply(BigInteger.valueOf(100))),
+                new VaultScore.VestingAccount(tmpWallets[2].getAddress(), ICX.multiply(BigInteger.valueOf(50)))
+        };
+        assertFailure(vaultScore.addAllocation(ownerWallet, accounts));
+        assertSuccess(vaultScore.addAllocation(wallets[1], accounts));
+        LOG.infoExiting();
+
+        LOG.infoEntering("call", "setAllocation()");
+        assertFailure(vaultScore.setAllocation(ownerWallet, new VaultScore.VestingAccount(tmpWallets[0].getAddress(), BigInteger.ZERO)));
+        assertSuccess(vaultScore.setAllocation(wallets[1], new VaultScore.VestingAccount(tmpWallets[0].getAddress(), BigInteger.ZERO)));
+        LOG.infoExiting();
+
+        LOG.infoEntering("call", "setVestingHeights()");
+        BigInteger curHeight = Utils.getHeight();
+        BigInteger[] heights = { curHeight.add(BigInteger.valueOf(10)), curHeight.add(BigInteger.valueOf(20)), curHeight.add(BigInteger.valueOf(30)) };
+        VaultScore.VestingHeight[] schedules = {
+                new VaultScore.VestingHeight(heights[0], BigInteger.valueOf(2500)),
+                new VaultScore.VestingHeight(heights[1], BigInteger.valueOf(5000)),
+                new VaultScore.VestingHeight(heights[2], BigInteger.valueOf(10000))
+        };
+        assertFailure(vaultScore.setVestingHeights(ownerWallet, schedules));
+        assertSuccess(vaultScore.setVestingHeights(wallets[1], schedules));
+        LOG.infoExiting();
+
+        txHash = vaultScore.setAdmin(wallets[1], ownerWallet.getAddress());
+        assertSuccess(txHash);
     }
 }

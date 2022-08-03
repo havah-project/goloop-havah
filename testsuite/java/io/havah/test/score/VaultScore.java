@@ -2,6 +2,7 @@ package io.havah.test.score;
 
 import foundation.icon.icx.Wallet;
 import foundation.icon.icx.data.Address;
+import foundation.icon.icx.data.Bytes;
 import foundation.icon.icx.data.TransactionResult;
 import foundation.icon.icx.transport.jsonrpc.RpcArray;
 import foundation.icon.icx.transport.jsonrpc.RpcObject;
@@ -46,6 +47,19 @@ public class VaultScore extends Score {
         return super.invokeAndWaitResult(wallet, method, params, BigInteger.ZERO, Constants.DEFAULT_STEPS);
     }
 
+    public Bytes setAdmin(Wallet wallet, Address admin) throws Exception {
+        RpcObject param = new RpcObject.Builder()
+                .put("_admin", new RpcValue(admin))
+                .build();
+        return invoke(wallet, "setAdmin", param);
+    }
+
+    public Address admin() throws IOException {
+        RpcObject params = new RpcObject.Builder()
+                .build();
+        return call("admin", params).asAddress();
+    }
+
     public TransactionResult addAllocation(Wallet wallet, VestingAccount[] vestingAccounts)
             throws ResultTimeoutException, IOException {
         var accounts = new RpcArray.Builder();
@@ -63,21 +77,17 @@ public class VaultScore extends Score {
         return invokeAndWaitResult(wallet, "addAllocation", params);
     }
 
-    public TransactionResult setAllocation(Wallet wallet, VestingAccount[] vestingAccounts, VestingHeight[] vestingHeights)
+    public TransactionResult setAllocation(Wallet wallet, VestingAccount vestingAccount)
             throws ResultTimeoutException, IOException {
-        var accounts = new RpcArray.Builder();
-        for (var a : vestingAccounts) {
-            accounts.add(new RpcObject.Builder()
-                    .put("account", new RpcValue(a.account))
-                    .put("amount", new RpcValue(a.amount))
-                    .build());
-        }
 
         RpcObject params = new RpcObject.Builder()
-                .put("vestingAccounts", accounts.build())
+                .put("account", new RpcObject.Builder()
+                        .put("account", new RpcValue(vestingAccount.account))
+                        .put("amount", new RpcValue(vestingAccount.amount))
+                        .build())
                 .build();
 
-        return invokeAndWaitResult(wallet, "addAllocation", params);
+        return invokeAndWaitResult(wallet, "setAllocation", params);
     }
 
     public TransactionResult setVestingHeights(Wallet wallet, VestingHeight[] vestingHeights)
