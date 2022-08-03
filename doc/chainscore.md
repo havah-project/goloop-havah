@@ -1455,7 +1455,8 @@ HAVAH-specific JSON-RPC APIs
     "issueReductionCycle": "0x168",
     "issueStart": "0x14",
     "termPeriod": "0x1e",
-    "termSequence": "0x1"
+    "termSequence": "0x1",
+    "rewardPerActivePlanet": "0xde0b6b3a7640000"
   }
 }
 ```
@@ -1466,13 +1467,18 @@ None
  
 #### Returns
 
-| Key                 | VALUE Type | Required | Description                                        |
-|:--------------------|:-----------|:---------|:---------------------------------------------------|
-| height              | T_INT      | true     | Current block height                               |
-| termPeriod          | T_INT      | true     | Coin issuing term period (unit: block)             |
-| issueReductionCycle | T_INT      | true     | issueAmount is reduced at a fixed rate every cycle |
-| issueStart          | T_INT      | false    | BlockHeight when issuing coin will begin           |
-| termSequence        | T_INT      | false    | Sequence of a term starting with 0                 |
+| Key                   | VALUE Type | Required | Description                                            |
+|:----------------------|:-----------|:---------|:-------------------------------------------------------|
+| height                | T_INT      | true     | Current block height                                   |
+| termPeriod            | T_INT      | true     | Coin issuing term period (unit: block)                 |
+| issueReductionCycle   | T_INT      | true     | issueAmount is reduced at a fixed rate every cycle     |
+| issueStart            | T_INT      | false    | BlockHeight when issuing coin will begin               |
+| termSequence          | T_INT      | false    | Sequence of a term starting with 0                     |
+| rewardPerActivePlanet | T_INT      | false    | Estimated reward per active planet in the current term |
+
+* `issueStart`, `termSequence` and `rewardPerActivePlanet` is provided after `issueStart` blockHeight
+* `rewardPerActivePlanet` does not include the fund from HooverFund SCORE
+* `rewardPerActivePlanet` will be zero if no active planet exists
 
 ### getUSDTPrice
 
