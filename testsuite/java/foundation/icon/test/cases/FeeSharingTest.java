@@ -107,7 +107,7 @@ public class FeeSharingTest extends TestBase {
 
     @Tag(Constants.TAG_JAVA_GOV)
     @Test
-    @Disabled
+    @Disabled("not for Havah")
     public void testJava() throws Exception {
         deployAndStartTest(Constants.CONTENT_TYPE_JAVA);
     }
@@ -309,7 +309,7 @@ public class FeeSharingTest extends TestBase {
     }
 
     @Test
-    @Disabled
+    @Disabled("not for Havah")
     public void testSystemDeposit(String contentType) throws Exception {
         LOG.infoEntering("testSystemDeposit:" + contentType);
         var revision = chainScore.getRevision();

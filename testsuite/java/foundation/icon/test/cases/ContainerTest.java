@@ -72,7 +72,7 @@ public class ContainerTest extends TestBase {
     }
 
     @Test
-    @Disabled
+    @Disabled("not for Havah")
     void testPythonToJavaMigration() throws Exception {
         // deploy Python contract first
         ContainerScore testScore = ContainerScore.mustDeploy(txHandler, ownerWallet);

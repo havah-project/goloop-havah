@@ -121,7 +121,7 @@ public class ChainScoreTest extends TestBase {
     }
 
     @Test
-    @Disabled
+    @Disabled("not for Havah")
     public void disableEnableScore() throws Exception {
         LOG.infoEntering("disableEnableScore");
         // deploy new helloWorld score
@@ -186,7 +186,7 @@ public class ChainScoreTest extends TestBase {
 
     @ParameterizedTest(name = "acceptScore {0}")
     @EnumSource(TargetScore.class)
-    @Disabled
+    @Disabled("not for Havah")
     public void acceptScore(TargetScore score) throws Exception {
         assumeTrue(chainScore.isAuditEnabled(), "audit is not enabled");
         LOG.infoEntering("acceptScore");
@@ -245,7 +245,7 @@ public class ChainScoreTest extends TestBase {
 
     @ParameterizedTest(name = "rejectScore {0}")
     @EnumSource(TargetScore.class)
-    @Disabled
+    @Disabled("not for Havah")
     public void rejectScore(TargetScore score) throws Exception {
         assumeTrue(chainScore.isAuditEnabled(), "audit is not enabled");
         LOG.infoEntering("rejectScore");
@@ -293,7 +293,7 @@ public class ChainScoreTest extends TestBase {
 
     @ParameterizedTest(name = "blockUnblockScore {0}")
     @EnumSource(TargetScore.class)
-    @Disabled
+    @Disabled("not for Havah")
     public void blockUnblockScore(TargetScore score) throws Exception {
         LOG.infoEntering("blockUnblockScore");
         HelloWorld helloWorld = HelloWorld.install(txHandler, testWallets[0]);
@@ -513,7 +513,7 @@ public class ChainScoreTest extends TestBase {
 
     @ParameterizedTest(name = "addRemoveMember {0}")
     @EnumSource(TargetScore.class)
-    @Disabled
+    @Disabled("not for Havah")
     public void addRemoveMember(TargetScore score) throws Exception {
         LOG.infoEntering("addRemoveMember");
         KeyWallet wallet = testWallets[0];
@@ -611,7 +611,7 @@ public class ChainScoreTest extends TestBase {
     }
 
     @Test
-    @Disabled
+    @Disabled("not for Havah")
     public void getDeployers() throws Exception {
         LOG.infoEntering("check revision");
         final int requiredRevision = 7;

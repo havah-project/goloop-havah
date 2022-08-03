@@ -81,14 +81,14 @@ class CrowdsaleTest extends TestBase {
 
     @Tag(Constants.TAG_JAVA_GOV)
     @Test
-    @Disabled
+    @Disabled("not for Havah")
     void testPythonToJava() throws Exception {
         deployAndStartCrowdsale(Constants.CONTENT_TYPE_PYTHON, Constants.CONTENT_TYPE_JAVA);
     }
 
     @Tag(Constants.TAG_JAVA_GOV)
     @Test
-    @Disabled
+    @Disabled("not for Havah")
     void testJavaToPython() throws Exception {
         deployAndStartCrowdsale(Constants.CONTENT_TYPE_JAVA, Constants.CONTENT_TYPE_PYTHON);
     }

@@ -91,7 +91,7 @@ public class TBCTest extends TestBase {
     }
 
     @Test
-    @Disabled
+    @Disabled("not for Havah")
     void testSimpleScenario() throws Exception {
         s1 = TBCInterpreterScore.mustDeploy(txHandler, ownerWallet,
                 "s1", Constants.CONTENT_TYPE_JAVA);
