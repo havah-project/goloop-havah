@@ -185,6 +185,7 @@ func (es *ExtensionStateImpl) GetIssueInfo(cc hvhmodule.CallContext) (map[string
 	if issueStart > 0 {
 		jso["issueStart"] = issueStart
 		jso["termSequence"] = (height - issueStart) / termPeriod
+		jso["rewardPerActivePlanet"] = es.state.GetRewardPerActivePlanet()
 	}
 	return jso, nil
 }
@@ -284,7 +285,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 			"Duplicate reportPlanetWork: tn=%d id=%d", termNumber, id)
 	}
 
-	reward := es.state.GetActivePlanetReward()
+	reward := es.state.GetRewardPerActivePlanet()
 	rewardWithHoover := reward
 
 	if err = es.state.DecreaseRewardRemain(reward); err != nil {

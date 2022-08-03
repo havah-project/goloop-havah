@@ -607,7 +607,7 @@ func (s *State) GetRewardInfo(height, id int64) (map[string]interface{}, error) 
 	}, nil
 }
 
-func (s *State) GetActivePlanetReward() *big.Int {
+func (s *State) GetRewardPerActivePlanet() *big.Int {
 	if s.getBigInt(hvhmodule.VarActivePlanet).Sign() == 0 {
 		return hvhmodule.BigIntZero
 	}
