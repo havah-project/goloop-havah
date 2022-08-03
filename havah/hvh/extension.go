@@ -184,6 +184,8 @@ func (es *ExtensionStateImpl) GetIssueInfo(cc hvhmodule.CallContext) (map[string
 	}
 	if issueStart > 0 {
 		jso["issueStart"] = issueStart
+	}
+	if hvhstate.IsIssueStarted(height, issueStart) {
 		jso["termSequence"] = (height - issueStart) / termPeriod
 	}
 	return jso, nil
