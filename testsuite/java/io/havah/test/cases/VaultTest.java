@@ -120,7 +120,6 @@ public class VaultTest extends TestBase {
     @Order(2)
     void setAdmin() throws Exception {
         KeyWallet[] tmpWallets = new KeyWallet[3];
-        BigInteger amount = ICX.multiply(BigInteger.valueOf(300));
         for (int i = 0; i < tmpWallets.length; i++) {
             tmpWallets[i] = KeyWallet.create();
         }
@@ -155,11 +154,6 @@ public class VaultTest extends TestBase {
         };
         assertFailure(vaultScore.addAllocation(ownerWallet, accounts));
         assertSuccess(vaultScore.addAllocation(wallets[1], accounts));
-        LOG.infoExiting();
-
-        LOG.infoEntering("call", "setAllocation()");
-        assertFailure(vaultScore.setAllocation(ownerWallet, new VaultScore.VestingAccount(tmpWallets[0].getAddress(), BigInteger.ZERO)));
-        assertSuccess(vaultScore.setAllocation(wallets[1], new VaultScore.VestingAccount(tmpWallets[0].getAddress(), BigInteger.ZERO)));
         LOG.infoExiting();
 
         LOG.infoEntering("call", "setVestingHeights()");
