@@ -185,7 +185,6 @@ func (es *ExtensionStateImpl) GetIssueInfo(cc hvhmodule.CallContext) (map[string
 	if issueStart > 0 {
 		jso["issueStart"] = issueStart
 		jso["termSequence"] = (height - issueStart) / termPeriod
-		jso["rewardPerActivePlanet"] = es.state.GetRewardPerActivePlanet()
 	}
 	return jso, nil
 }
