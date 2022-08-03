@@ -140,7 +140,7 @@
         "setBase": "0x2710"
       }
     },
-    "validators": [
+    "validatorList": [
       "hxb6b5791be0b5ef67063b3c10b840fb81514db2fd"
     ]
   },
