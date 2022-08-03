@@ -215,6 +215,17 @@ func (s *chainScore) Ex_getRewardInfoOf(id *common.HexInt) (map[string]interface
 	return es.GetRewardInfoOf(s.newCallContext(), id.Int64())
 }
 
+func (s *chainScore) Ex_getRewardInfo() (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	es, err := s.getExtensionState()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetRewardInfo(s.newCallContext())
+}
+
 func (s *chainScore) Ex_fallback() error {
 	if err := s.tryChargeCall(); err != nil {
 		return err

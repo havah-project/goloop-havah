@@ -422,6 +422,29 @@ func (es *ExtensionStateImpl) GetRewardInfoOf(cc hvhmodule.CallContext, id int64
 	return es.state.GetRewardInfoOf(height, id)
 }
 
+func (es *ExtensionStateImpl) GetRewardInfo(cc hvhmodule.CallContext) (map[string]interface{}, error) {
+	es.Logger().Debugf("GetRewardInfo() start")
+
+	height := cc.BlockHeight()
+	issueStart := es.state.GetIssueStart()
+	if !hvhstate.IsIssueStarted(height, issueStart) {
+		return nil, scoreresult.Errorf(hvhmodule.StatusNotReady, "TermNotReady")
+	}
+
+	reward := es.state.GetRewardPerActivePlanet()
+	termPeriod := es.state.GetTermPeriod()
+	termSequence := (height - issueStart) / termPeriod
+	es.Logger().Infof("GetRewardInfo: height=%d termPeriod=%d termSequence=%d reward=%d",
+		height, termPeriod, termSequence, reward)
+
+	es.Logger().Debugf("GetRewardInfo() end")
+	return map[string]interface{}{
+		"height":                height,
+		"termSequence":          termSequence,
+		"rewardPerActivePlanet": reward,
+	}, nil
+}
+
 func (es *ExtensionStateImpl) BurnCoin(cc hvhmodule.CallContext, amount *big.Int) error {
 	from := cc.From()
 	es.Logger().Debugf("BurnCoin() start: from=%s amount=%d", from, amount)

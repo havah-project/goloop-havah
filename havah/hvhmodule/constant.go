@@ -113,6 +113,7 @@ const (
 	StatusNotFound
 	StatusCriticalError
 	StatusRewardError
+	StatusNotReady
 )
 
 // The following variables are read-only

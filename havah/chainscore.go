@@ -299,6 +299,14 @@ var chainMethods = []*chainMethod{
 			scoreapi.Dict,
 		},
 	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "getRewardInfo",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 0,
+		nil,
+		[]scoreapi.DataType{
+			scoreapi.Dict,
+		},
+	}, 0, 0},
 	{scoreapi.Method{scoreapi.Function, "addDeployer",
 		scoreapi.FlagExternal, 1,
 		[]scoreapi.Parameter{
