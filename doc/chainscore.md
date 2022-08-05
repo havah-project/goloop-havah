@@ -1638,7 +1638,21 @@ HAVAH records the following eventLogs:
 * Logged only when a SCORE transfers coins to an address
 * This eventLog is not recorded when an EOA transfers coins
 * ScoreAddress: `cx0000000000000000000000000000000000000000`
- 
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "Transfer(Address,Address,int)",
+    "cx0f4dbedd2b5cf3323ea23371b84576bcc438140f",
+    "hx0123456789012345678901234567890123456789"
+  ],
+  "data":[
+    "0xde0b6b3a7640000"
+  ]
+}
+```
+
 | Key    | VALUE Type | Indexed | Description                 |
 |:-------|:-----------|:--------|:----------------------------|
 | from   | T_ADDRESS  | true    | from address                |
@@ -1649,6 +1663,20 @@ HAVAH records the following eventLogs:
 
 * Logged on BaseTx when issuing coins each term start
 * ScoreAddress: `cx0000000000000000000000000000000000000000`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "Issued(int,int,int)"
+  ],
+  "data":[
+    "0x1",
+    "0xde0b6b3a7640000",
+    "0x308501e99f05f71326a0914"
+  ]
+}
+```
 
 | Key          | VALUE Type | Indexed | Description                     |
 |:-------------|:-----------|:--------|:--------------------------------|
@@ -1661,6 +1689,20 @@ HAVAH records the following eventLogs:
 * Logged when [burning coins](#fallback)
 * ScoreAddress: `cx0000000000000000000000000000000000000000`
 
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "Burned(Address,int,int)",
+    "hx0123456789012345678901234567890123456789"
+  ],
+  "data":[
+    "0xde0b6b3a7640000",
+    "0x308501e99f05f71326a0914"
+  ]
+}
+```
+
 | Key         | VALUE Type | Indexed | Description                     |
 |:------------|:-----------|:--------|:--------------------------------|
 | from        | T_ADDRESS  | true    | from address                    |
@@ -1671,6 +1713,20 @@ HAVAH records the following eventLogs:
 
 * Logged on BaseTx when hooverFund is refilled each term
 * ScoreAddress: `cx0000000000000000000000000000000000000000`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "HooverRefilled(int,int,int)"
+  ],
+  "data":[
+    "0xde0b6b3a7640000",
+    "0x38e8f7792d79767800000",
+    "0x422ca8b0a00a425000000"
+  ]
+}
+```
 
 | Key                    | VALUE Type | Indexed | Description                            |
 |:-----------------------|:-----------|:--------|:---------------------------------------|
@@ -1683,6 +1739,21 @@ HAVAH records the following eventLogs:
 * Logged when [`reportPlanetWork`](#reportplanetwork) is called
 * ScoreAddress: `cx0000000000000000000000000000000000000000`
 
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "RewardOffered(int,int,int,int)"
+  ],
+  "data":[
+    "0x12",
+    "0x64",
+    "0xde0b6b3a7640000",
+    "0x16345785d8a0000"
+  ]
+}
+```
+
 | Key              | VALUE Type | Indexed | Description                                                              |
 |:-----------------|:-----------|:--------|:-------------------------------------------------------------------------|
 | termSequence     | T_INT      | false   | Term sequence starting with 0                                            |
@@ -1694,6 +1765,21 @@ HAVAH records the following eventLogs:
 
 * Logged when [`claimPlanetReward`](#claimplanetreward) is called
 * ScoreAddress: `cx0000000000000000000000000000000000000000`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "RewardClaimed(Address,int,int,int)",
+    "hx0123456789012345678901234567890123456789"
+  ],
+  "data":[
+    "0x12",
+    "0x64",
+    "0xde0b6b3a7640000"
+  ]
+}
+```
 
 | Key          | VALUE Type | Indexed | Description                   |
 |:-------------|:-----------|:--------|:------------------------------|
