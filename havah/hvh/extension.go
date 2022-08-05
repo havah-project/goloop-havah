@@ -410,8 +410,8 @@ func (es *ExtensionStateImpl) ClaimPlanetReward(cc hvhmodule.CallContext, ids []
 			if err = cc.Transfer(hvhmodule.PublicTreasury, owner, reward); err != nil {
 				return nil
 			}
-			onRewardClaimedEvent(cc, termSeq, id, owner, reward)
-			es.Logger().Debugf("termSeq=%d id=%d owner=%s reward=%s", termSeq, id, owner, reward)
+			onRewardClaimedEvent(cc, owner, termSeq, id, reward)
+			es.Logger().Debugf("owner=%s termSeq=%d id=%d reward=%d", owner, termSeq, id, reward)
 		}
 	}
 
@@ -454,7 +454,7 @@ func (es *ExtensionStateImpl) BurnCoin(cc hvhmodule.CallContext, amount *big.Int
 	if err != nil {
 		return err
 	}
-	onICXBurnedEvent(cc, from, amount, totalSupply)
+	onBurnedEvent(cc, from, amount, totalSupply)
 	es.Logger().Debugf(
 		"BurnCoin() end: from=%s amount=%d ts=%d", from, amount, totalSupply)
 	return nil

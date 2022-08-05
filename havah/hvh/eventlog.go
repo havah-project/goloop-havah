@@ -11,10 +11,10 @@ import (
 
 const (
 	SigRewardOffered  = "RewardOffered(int,int,int,int)"
-	SigRewardClaimed  = "RewardClaimed(int,int,Address,int)"
+	SigRewardClaimed  = "RewardClaimed(Address,int,int,int)"
 	SigTermStarted    = "TermStarted(int)"
-	SigICXIssued      = "ICXIssued(int,int,int)"
-	SigICXBurned      = "ICXBurned(Address,int,int)"
+	SigIssued         = "Issued(int,int,int)"
+	SigBurned         = "Burned(Address,int,int)"
 	SigHooverRefilled = "HooverRefilled(int,int,int)"
 )
 
@@ -34,14 +34,13 @@ func onRewardOfferedEvent(
 }
 
 func onRewardClaimedEvent(
-	cc hvhmodule.CallContext, termSeq, id int64, owner module.Address, amount *big.Int) {
+	cc hvhmodule.CallContext, owner module.Address, termSeq, id int64, amount *big.Int) {
 	cc.OnEvent(
 		state.SystemAddress,
-		[][]byte{[]byte(SigRewardClaimed)},
+		[][]byte{[]byte(SigRewardClaimed), owner.Bytes()},
 		[][]byte{
 			intconv.Int64ToBytes(termSeq),
 			intconv.Int64ToBytes(id),
-			owner.Bytes(),
 			intconv.BigIntToBytes(amount),
 		},
 	)
@@ -55,9 +54,10 @@ func onTermStartedEvent(cc hvhmodule.CallContext, termSeq int64) {
 	)
 }
 
-func onICXIssuedEvent(cc hvhmodule.CallContext, termSeq int64, amount, totalSupply *big.Int) {
-	cc.OnEvent(state.SystemAddress,
-		[][]byte{[]byte(SigICXIssued)},
+func onIssuedEvent(cc hvhmodule.CallContext, termSeq int64, amount, totalSupply *big.Int) {
+	cc.OnEvent(
+		state.SystemAddress,
+		[][]byte{[]byte(SigIssued)},
 		[][]byte{
 			intconv.Int64ToBytes(termSeq),
 			intconv.BigIntToBytes(amount),
@@ -66,11 +66,11 @@ func onICXIssuedEvent(cc hvhmodule.CallContext, termSeq int64, amount, totalSupp
 	)
 }
 
-func onICXBurnedEvent(cc hvhmodule.CallContext, from module.Address, amount, totalSupply *big.Int) {
-	cc.OnEvent(state.SystemAddress,
-		[][]byte{[]byte(SigICXBurned)},
+func onBurnedEvent(cc hvhmodule.CallContext, from module.Address, amount, totalSupply *big.Int) {
+	cc.OnEvent(
+		state.SystemAddress,
+		[][]byte{[]byte(SigBurned), from.Bytes()},
 		[][]byte{
-			from.Bytes(),
 			intconv.BigIntToBytes(amount),
 			intconv.BigIntToBytes(totalSupply),
 		},
@@ -78,7 +78,8 @@ func onICXBurnedEvent(cc hvhmodule.CallContext, from module.Address, amount, tot
 }
 
 func onHooverRefilledEvent(cc hvhmodule.CallContext, amount, hooverBalance, sustainableFundBalance *big.Int) {
-	cc.OnEvent(state.SystemAddress,
+	cc.OnEvent(
+		state.SystemAddress,
 		[][]byte{[]byte(SigHooverRefilled)},
 		[][]byte{
 			intconv.BigIntToBytes(amount),
