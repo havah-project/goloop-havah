@@ -1312,14 +1312,7 @@ HAVAH-specific JSON-RPC APIs
 
 #### EventLog
 
-* Signature: `RewardOffered(int,int,int,int)`
-
-| Key              | VALUE Type | Indexed | Description                                                              |
-|:-----------------|:-----------|:--------|:-------------------------------------------------------------------------|
-| termSequence     | T_INT      | false   | Term sequence starting with 0                                            |
-| id               | T_INT      | false   | Planet ID                                                                |
-| rewardWithHoover | T_INT      | false   | Rewards in HVH that the planet gets including an subsidy from HooverFund |
-| hooverRequest    | T_INT      | false   | Subsidy from HooverFund                                                  |
+* [`RewardOffered(int,int,int,int)`](#rewardofferedintintintint)
 
 ### claimPlanetReward
 
@@ -1359,14 +1352,7 @@ HAVAH-specific JSON-RPC APIs
 
 #### EventLog
 
-* Signature: `RewardClaimed(int,int,Address,int)`
-
-| Key          | VALUE Type | Indexed | Description                   |
-|:-------------|:-----------|:--------|:------------------------------|
-| termSequence | T_INT      | false   | Term sequence starting with 0 |
-| id           | T_INT      | false   | Planet ID                     |
-| owner        | T_ADDRESS  | false   | Planet owner claiming rewards |
-| amount       | T_INT      | false   | Claimed reward amount         |
+* [`RewardClaimed(Address,int,int,int)`](#rewardclaimedaddressintintint)
 
 ### getRewardInfoOf
 
@@ -1641,10 +1627,77 @@ N/A
 
 #### EventLog
 
-* Signature: `ICXBurned(Address,int,int)`
+* [`Burned(Address,int,int)`](#burnedaddressintint)
+
+## EventLogs
+
+HAVAH records the following eventLogs:
+
+### Transfer(Address,Address,int)
+
+* Logged only when a SCORE transfers coins to an address
+* This eventLog is not recorded when an EOA transfers coins
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+ 
+| Key    | VALUE Type | Indexed | Description                 |
+|:-------|:-----------|:--------|:----------------------------|
+| from   | T_ADDRESS  | true    | from address                |
+| to     | T_ADDRESS  | true    | to address                  |
+| amount | T_INT      | false   | Amount of coins transferred |
+ 
+### Issued(int,int,int)
+
+* Logged on BaseTx when issuing coins each term start
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+
+| Key          | VALUE Type | Indexed | Description                     |
+|:-------------|:-----------|:--------|:--------------------------------|
+| termSequence | T_INT      | false   | Term sequence starting with 0   |
+| amount       | T_INT      | false   | Amount of coins issued          |
+| totalSupply  | T_INT      | false   | totalSupply after issuing coins |
+
+### Burned(Address,int,int)
+
+* Logged when [burning coins](#fallback)
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
 
 | Key         | VALUE Type | Indexed | Description                     |
 |:------------|:-----------|:--------|:--------------------------------|
-| from        | T_ADDRESS  | false   | from address                    |
+| from        | T_ADDRESS  | true    | from address                    |
 | amount      | T_INT      | false   | Amount of coins burned          |
 | totalSupply | T_INT      | false   | totalSupply after burning coins |
+
+### HooverRefilled(int,int,int)
+
+* Logged on BaseTx when hooverFund is refilled each term
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+
+| Key                    | VALUE Type | Indexed | Description                            |
+|:-----------------------|:-----------|:--------|:---------------------------------------|
+| amount                 | T_INT      | false   | Amount of refilled funds               |
+| hooverBalance          | T_INT      | false   | HooverFund balance after refilled      |
+| sustainableFundBalance | T_INT      | false   | SustainableFund balance after refilled |
+
+### RewardOffered(int,int,int,int)
+
+* Logged when [`reportPlanetWork`](#reportplanetwork) is called
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+
+| Key              | VALUE Type | Indexed | Description                                                              |
+|:-----------------|:-----------|:--------|:-------------------------------------------------------------------------|
+| termSequence     | T_INT      | false   | Term sequence starting with 0                                            |
+| id               | T_INT      | false   | Planet ID                                                                |
+| rewardWithHoover | T_INT      | false   | Rewards in HVH that the planet gets including an subsidy from HooverFund |
+| hooverRequest    | T_INT      | false   | Subsidy from HooverFund                                                  |
+
+### RewardClaimed(Address,int,int,int)
+
+* Logged when [`claimPlanetReward`](#claimplanetreward) is called
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+
+| Key          | VALUE Type | Indexed | Description                   |
+|:-------------|:-----------|:--------|:------------------------------|
+| owner        | T_ADDRESS  | true    | Planet owner claiming rewards |
+| termSequence | T_INT      | false   | Term sequence starting with 0 |
+| id           | T_INT      | false   | Planet ID                     |
+| amount       | T_INT      | false   | Claimed reward amount         |
