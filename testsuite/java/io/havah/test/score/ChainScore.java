@@ -5,19 +5,14 @@ import foundation.icon.icx.data.Address;
 import foundation.icon.icx.data.Bytes;
 import foundation.icon.icx.data.TransactionResult;
 import foundation.icon.icx.transport.jsonrpc.RpcArray;
-import foundation.icon.icx.transport.jsonrpc.RpcItem;
 import foundation.icon.icx.transport.jsonrpc.RpcObject;
 import foundation.icon.icx.transport.jsonrpc.RpcValue;
 import foundation.icon.test.common.ResultTimeoutException;
 import foundation.icon.test.common.TransactionHandler;
-import foundation.icon.test.score.Score;
 import io.havah.test.common.Constants;
-import score.Context;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.List;
 
 public class ChainScore extends foundation.icon.test.score.ChainScore {
     public ChainScore(TransactionHandler txHandler) {
@@ -94,11 +89,11 @@ public class ChainScore extends foundation.icon.test.score.ChainScore {
         return call("getIssueInfo", params).asObject();
     }
 
-    public RpcObject getRewardInfo(BigInteger planetId) throws IOException {
+    public RpcObject getRewardInfoOf(BigInteger planetId) throws IOException {
         RpcObject params = new RpcObject.Builder()
                 .put("id", new RpcValue(planetId))
                 .build();
-        return call("getRewardInfo", params).asObject();
+        return call("getRewardInfoOf", params).asObject();
     }
 
     ////

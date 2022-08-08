@@ -10,7 +10,6 @@ import foundation.icon.icx.transport.http.HttpProvider;
 import foundation.icon.icx.transport.jsonrpc.RpcError;
 import foundation.icon.icx.transport.jsonrpc.RpcObject;
 import foundation.icon.test.common.Env;
-import foundation.icon.test.common.ResultTimeoutException;
 import foundation.icon.test.common.TestBase;
 import foundation.icon.test.common.TransactionHandler;
 import io.havah.test.common.Constants;
@@ -18,7 +17,9 @@ import io.havah.test.common.Utils;
 import io.havah.test.score.ChainScore;
 import io.havah.test.score.GovScore;
 import io.havah.test.score.PlanetNFTScore;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -26,9 +27,7 @@ import java.util.List;
 import java.util.Map;
 
 import static foundation.icon.test.common.Env.LOG;
-import static io.havah.test.score.PlanetNFTScore.PLANET_PRIVATE;
-import static io.havah.test.score.PlanetNFTScore.PLANET_PUBLIC;
-import static io.havah.test.score.PlanetNFTScore.PLANET_COMPANY;
+import static io.havah.test.score.PlanetNFTScore.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -181,9 +180,9 @@ public class HavahBasicTest extends TestBase {
         return Map.of();
     }
 
-    public static Map<String, Object> _getRewardInfo(BigInteger planetId) throws Exception {
+    public static Map<String, Object> _getRewardInfoOf(BigInteger planetId) throws Exception {
         try {
-            RpcObject obj = chainScore.getRewardInfo(planetId);
+            RpcObject obj = chainScore.getRewardInfoOf(planetId);
             return Map.of(
                     "total", obj.getItem("total").asInteger(),
                     "remain", obj.getItem("remain").asInteger(),
@@ -314,12 +313,12 @@ public class HavahBasicTest extends TestBase {
             Address address = wallets[i].getAddress();
             _checkAndMintPlanetNFT(address, types[i]);
             List<BigInteger> planetIds = _tokenIdsOf(address, 1, BigInteger.ONE);
-            Map<String, Object> info = _getRewardInfo(planetIds.get(0));
+            Map<String, Object> info = _getRewardInfoOf(planetIds.get(0));
             assertEquals(true, BigInteger.ZERO.compareTo((BigInteger) info.get("total")) == 0);
             assertEquals(true, BigInteger.ZERO.compareTo((BigInteger) info.get("remain")) == 0);
             assertEquals(true, BigInteger.ZERO.compareTo((BigInteger) info.get("claimable")) == 0);
         }
-        Map<String, Object> info = _getRewardInfo(BigInteger.valueOf(-1));
+        Map<String, Object> info = _getRewardInfoOf(BigInteger.valueOf(-1));
         assertEquals(true, info.isEmpty());
 
         LOG.infoExiting();
@@ -344,7 +343,7 @@ public class HavahBasicTest extends TestBase {
 
             List<BigInteger> planetIds = _tokenIdsOf(wallets[i].getAddress(), 1, BigInteger.ONE);
             _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
-            Map<String, Object> info = _getRewardInfo(planetIds.get(0));
+            Map<String, Object> info = _getRewardInfoOf(planetIds.get(0));
             assertEquals(true, BigInteger.ZERO.compareTo((BigInteger) info.get("total")) == 0);
         }
 
@@ -355,13 +354,13 @@ public class HavahBasicTest extends TestBase {
             _reportPlanetWork(EOAWallet, planetIds.get(0), false);
             _reportPlanetWork(planetManagerWallet, BigInteger.valueOf(-1), false);
 
-            Map<String, Object> info = _getRewardInfo(planetIds.get(0));
+            Map<String, Object> info = _getRewardInfoOf(planetIds.get(0));
             BigInteger before = (BigInteger) info.get("total");
             assertEquals(true, BigInteger.ZERO.compareTo((BigInteger) info.get("total")) == 0);
 
             _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
 
-            info = _getRewardInfo(planetIds.get(0));
+            info = _getRewardInfoOf(planetIds.get(0));
             assertEquals(true, before.compareTo((BigInteger) info.get("total")) < 0);
         }
         LOG.infoExiting();
@@ -384,7 +383,7 @@ public class HavahBasicTest extends TestBase {
 
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
 
-        BigInteger claimable = (BigInteger) _getRewardInfo(planetIds.get(0)).get("claimable");
+        BigInteger claimable = (BigInteger) _getRewardInfoOf(planetIds.get(0)).get("claimable");
         BigInteger expected = _getCurrentPublicReward();
 
         assertEquals(true, BigInteger.TWO.compareTo(claimable.subtract(expected).abs()) > -1, "claimable is not expected");
@@ -398,7 +397,7 @@ public class HavahBasicTest extends TestBase {
 
         for(int i=0; i<planetIds.size(); i++) {
             _reportPlanetWork(planetManagerWallet, planetIds.get(i), true);
-            claimable = (BigInteger) _getRewardInfo(planetIds.get(i)).get("claimable");
+            claimable = (BigInteger) _getRewardInfoOf(planetIds.get(i)).get("claimable");
             expected = _getCurrentPublicReward();
 
             assertEquals(true, BigInteger.TWO.compareTo(claimable.subtract(expected).abs()) > -1, "claimable is not expected");
@@ -428,7 +427,7 @@ public class HavahBasicTest extends TestBase {
         Utils.waitUtilNextTerm();
 
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
-        BigInteger claimable = (BigInteger) _getRewardInfo(planetIds.get(0)).get("claimable");
+        BigInteger claimable = (BigInteger) _getRewardInfoOf(planetIds.get(0)).get("claimable");
         BigInteger reward = _getCurrentPublicReward();
         BigInteger expectedPlanet = reward.multiply(BigInteger.valueOf(4)).divide(BigInteger.TEN);
         BigInteger expectedEco = reward.multiply(BigInteger.valueOf(6)).divide(BigInteger.TEN);
@@ -487,7 +486,7 @@ public class HavahBasicTest extends TestBase {
         int testTermCycle = 10;
         for (int i = 0; i < testTermCycle; i++) {
             var nextCycle = lockupHeight.add(termPeriod.multiply(privateReleaseCycle).multiply(BigInteger.valueOf(i + 1)));
-            BigInteger claimable = (BigInteger) _getRewardInfo(planetId).get("claimable");
+            BigInteger claimable = (BigInteger) _getRewardInfoOf(planetId).get("claimable");
             BigInteger expected = _getCurrentPrivateReward(planetHeight, totalReward).subtract(claimedReward);
             LOG.info("claimable = " + claimable);
             LOG.info("expected = " + expected);

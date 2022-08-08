@@ -159,7 +159,7 @@ public class HavahExtraTest extends TestBase {
 
     public static Map<String, Object> _getRewardInfo(BigInteger planetId) throws Exception {
         try {
-            RpcObject obj = chainScore.getRewardInfo(planetId);
+            RpcObject obj = chainScore.getRewardInfoOf(planetId);
             return Map.of(
                     "total", obj.getItem("total").asInteger(),
                     "remain", obj.getItem("remain").asInteger(),
