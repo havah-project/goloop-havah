@@ -10,7 +10,6 @@ import foundation.icon.icx.transport.jsonrpc.RpcObject;
 import foundation.icon.icx.transport.jsonrpc.RpcValue;
 import foundation.icon.test.common.TestBase;
 import foundation.icon.test.common.TransactionHandler;
-import foundation.icon.test.score.Score;
 import io.havah.test.common.Constants;
 import io.havah.test.common.Utils;
 import io.havah.test.score.PlanetNFTScore;
@@ -202,12 +201,12 @@ public class PlanetNFTTest extends TestBase {
         LOG.info("transfer totalSupply(" + planetNFTScore.totalSupply() + ")");
     }
 
-    void _mintAndTransferFrom(Wallet holder, Wallet approveInvoker, Wallet approval, Wallet transferInvoker, Address to) throws Exception {
-        boolean success = approval.equals(transferInvoker) && planetNFTScore.isTransferable();
+    void _mintAndTransferFrom(Wallet holder, Wallet approveInvoker, Wallet approver, Wallet transferInvoker, Address to) throws Exception {
+        boolean success = approver.equals(transferInvoker) && planetNFTScore.isTransferable();
         var tokenIds = planetNFTScore.tokenIdsOf(holder.getAddress(), 0, 10);
         var approved = tokenIds.tokenIds.get(0);
         boolean approveSuccess = holder.equals(approveInvoker);
-        var txHash = planetNFTScore.approve(approveInvoker, approval.getAddress(), approved); // approve From
+        var txHash = planetNFTScore.approve(approveInvoker, approver.getAddress(), approved); // approve From
         assertEquals(approveSuccess ? 1 : 0, planetNFTScore.getResult(txHash).getStatus().intValue());
         if (!approveSuccess) {
             return;
@@ -470,13 +469,13 @@ public class PlanetNFTTest extends TestBase {
     }
 
     @Test
-    void setMintApproval() throws Exception {
+    void setMintApprover() throws Exception {
         Address holder = KeyWallet.create().getAddress();
         Wallet caller = wallets[2];
 
         // mint and burn with owner - success
         _mintAndCheckBalance(caller, holder, false);
-        var txHash = planetNFTScore.setMintApproval(planetScoreOwner, caller.getAddress());
+        var txHash = planetNFTScore.setMintApprover(planetScoreOwner, caller.getAddress());
         assertSuccess(txHandler.getResult(txHash));
         _mintAndCheckBalance(caller, holder, true);
         _mintAndCheckBalance(planetScoreOwner, holder, true);
@@ -485,5 +484,16 @@ public class PlanetNFTTest extends TestBase {
     @Test
     void checkNullParam() throws Exception {
 
+    }
+
+    @Test
+    void rewardInf() throws Exception {
+        Wallet holder = KeyWallet.create();
+        _mintAndCheckBalance(planetScoreOwner, holder.getAddress(), true);
+
+        var height = Utils.startRewardIssueIfNotStarted();
+        Utils.waitUtil(height);
+
+        _burnAndCheckBalance(planetScoreOwner, holder.getAddress(), true);
     }
 }

@@ -105,6 +105,9 @@ public class EcosystemTest extends TestBase {
     }
 
     void _transferAndCheck(Wallet wallet, Address receiver, BigInteger amount, boolean success) throws Exception {
+        if (Utils.isRewardIssued()) {
+            Utils.waitUtil(Utils.getHeightUntilNextTerm().add(BigInteger.ONE));
+        }
         var ecoBal = txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS);
         var receiverBal = txHandler.getBalance(receiver);
         var txHash = ecoScore.transfer(wallet, receiver, amount);

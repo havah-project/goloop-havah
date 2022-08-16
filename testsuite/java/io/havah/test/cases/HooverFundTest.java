@@ -120,7 +120,7 @@ public class HooverFundTest extends TestBase {
         var refilledAmount = _chargeableHoover(hooverBalance);
         BigInteger supply1 = planetNFTScore.totalSupply();
         LOG.info("totalSupply before TERM(" + supply1 + ")");
-        Utils.waitUtilNextTerm();
+        Utils.waitUntilNextTerm();
         var cur = iconService.getLastBlock().execute().getHeight();
         Utils.waitUtil(cur.add(BigInteger.ONE));
         assertEquals(hooverBalance.add(refilledAmount), txHandler.getBalance(Constants.HOOVERFUND_ADDRESS),
@@ -170,7 +170,7 @@ public class HooverFundTest extends TestBase {
         var holderNum = tokenInfo.length;
         BigInteger supply = planetNFTScore.totalSupply();
         BigInteger dailyReward = Constants.TOTAL_REWARD_PER_DAY.divide(supply);
-        Utils.waitUtilNextTerm();
+        Utils.waitUntilNextTerm();
         Utils.waitUtil(Utils.getHeightNext(1));
 
         final int TEST_TERM = 5;
@@ -210,7 +210,7 @@ public class HooverFundTest extends TestBase {
             }
             printHooverBalance("after claimPlanet");
             assertTrue(Constants.HOOVER_BUDGET.compareTo(txHandler.getBalance(Constants.HOOVERFUND_ADDRESS)) > 0);
-            Utils.waitUtilNextTerm();
+            Utils.waitUntilNextTerm();
             Utils.waitUtil(Utils.getHeightNext(1));
             assertEquals(0, Constants.HOOVER_BUDGET.compareTo(txHandler.getBalance(Constants.HOOVERFUND_ADDRESS)),
                     String.format("HV balance(%s), SF balance(%s)", txHandler.getBalance(Constants.HOOVERFUND_ADDRESS),
@@ -285,7 +285,7 @@ public class HooverFundTest extends TestBase {
         var accumulatedReward = new BigInteger[testNum];
         Arrays.fill(accumulatedReward, BigInteger.ZERO);
         while (true) {
-            Utils.waitUtilNextTerm();
+            Utils.waitUntilNextTerm();
             // invoke
             txList.clear();
             for (BigInteger bigInteger : tokenList) {
@@ -417,7 +417,7 @@ public class HooverFundTest extends TestBase {
             var bInflow = sfScore.getInflow();
             _reportAndClaimPlanet(tokenInfo);
             var hfBalance = txHandler.getBalance(Constants.HOOVERFUND_ADDRESS);
-            Utils.waitUtilNextTerm();
+            Utils.waitUntilNextTerm();
             Utils.waitUtil(Utils.getHeightNext(1));
             var aHooverBalance = txHandler.getBalance(Constants.HOOVERFUND_ADDRESS);
             var aSfBalance = txHandler.getBalance(Constants.SUSTAINABLEFUND_ADDRESS);
@@ -453,7 +453,7 @@ public class HooverFundTest extends TestBase {
         // check HOW to refill Hoover
         Utils.waitUtil(Utils.startRewardIssueIfNotStarted());
 
-        Utils.waitUtilNextTerm();
+        Utils.waitUntilNextTerm();
         Utils.waitUtil(Utils.getHeightNext(1));
         // transfer SF balance to wallet
         Wallet tmpWallet = KeyWallet.create();
@@ -480,7 +480,7 @@ public class HooverFundTest extends TestBase {
         List<Bytes> txHashList = new ArrayList<>();
         List<Bytes> reportTxHasList = new ArrayList<>();
         for (int i = 0; i <= changedUsdtPrices.length; i++) {
-            Utils.waitUtilNextTerm();
+            Utils.waitUntilNextTerm();
             TransactionResult result;
             if (i < changedUsdtPrices.length) {
                 result = govScore.setUSDTPrice(governor, changedUsdtPrices[i]);

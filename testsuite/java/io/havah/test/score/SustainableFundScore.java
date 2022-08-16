@@ -52,11 +52,11 @@ public class SustainableFundScore extends Score {
         return call("getOutflowInUSDT", null).asObject();
     }
 
-    public Bytes setUsdt(Wallet wallet, Address address) throws Exception {
+    public Bytes setUSDT(Wallet wallet, Address address) throws Exception {
         RpcObject params = new RpcObject.Builder()
                 .put("_address", new RpcValue(address))
                 .build();
-        return invoke(wallet, "setUsdt", params);
+        return invoke(wallet, "setUSDT", params);
     }
 
     public Bytes transfer(Wallet wallet, Address to, BigInteger value) throws Exception {

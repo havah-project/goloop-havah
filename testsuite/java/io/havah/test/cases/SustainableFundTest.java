@@ -99,7 +99,7 @@ public class SustainableFundTest extends TestBase {
         treasuryBalance = txHandler.getBalance(Constants.SYSTEM_TREASURY);
         Utils.waitUtil(height);
         var inflow = sfScore.getInflow();
-        Utils.waitUtilNextTerm();
+        Utils.waitUntilNextTerm();
         Utils.waitUtil(Utils.getHeightNext(1));
         var inflow2 = sfScore.getInflow();
         Map<SF_INFLOW, BigInteger> addedAmount = Map.of(
@@ -197,7 +197,7 @@ public class SustainableFundTest extends TestBase {
 
     void waitUtilNextTermIfRewardIssued() throws Exception {
         if (Utils.isRewardIssued()) {
-            Utils.waitUtilNextTerm();
+            Utils.waitUntilNextTerm();
             Utils.waitUtil(Utils.getHeightNext(1));
         }
     }
@@ -291,7 +291,7 @@ public class SustainableFundTest extends TestBase {
     @Test
     void checkOutflow() throws Exception {
         if (Utils.isRewardIssued()) {
-            Utils.waitUtilNextTerm();
+            Utils.waitUntilNextTerm();
             Utils.waitUtil(Utils.getHeightNext(1));
         }
         final String CUSTOM = SustainableFundScore.OUTFLOW_CUSTOM;
@@ -312,7 +312,7 @@ public class SustainableFundTest extends TestBase {
     }
 
     void _setUSDT(Wallet wallet, Address address, boolean success) throws Exception {
-        var result = txHandler.getResult(sfScore.setUsdt(wallet, address)); // failure
+        var result = txHandler.getResult(sfScore.setUSDT(wallet, address)); // failure
         assertEquals(success ? BigInteger.ONE : BigInteger.ZERO, result.getStatus());
     }
 

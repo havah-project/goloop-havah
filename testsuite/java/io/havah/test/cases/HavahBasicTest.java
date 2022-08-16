@@ -347,7 +347,7 @@ public class HavahBasicTest extends TestBase {
             assertEquals(true, BigInteger.ZERO.compareTo((BigInteger) info.get("total")) == 0);
         }
 
-        Utils.waitUtilNextTerm();
+        Utils.waitUntilNextTerm();
 
         for(int i=0;i<types.length;i++) {
             List<BigInteger> planetIds = _tokenIdsOf(wallets[i].getAddress(), 1, BigInteger.ONE);
@@ -378,7 +378,7 @@ public class HavahBasicTest extends TestBase {
         _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANET_PUBLIC);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
 
-        Utils.waitUtilNextTerm();
+        Utils.waitUntilNextTerm();
         _getPlanetInfo(planetIds.get(0));
 
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
@@ -393,7 +393,7 @@ public class HavahBasicTest extends TestBase {
         _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANET_PUBLIC);
         planetIds = _tokenIdsOf(planetWallet.getAddress(), 2, BigInteger.TWO);
 
-        Utils.waitUtilNextTerm();
+        Utils.waitUntilNextTerm();
 
         for(int i=0; i<planetIds.size(); i++) {
             _reportPlanetWork(planetManagerWallet, planetIds.get(i), true);
@@ -424,7 +424,7 @@ public class HavahBasicTest extends TestBase {
 
         _getPlanetInfo(planetIds.get(0));
 
-        Utils.waitUtilNextTerm();
+        Utils.waitUntilNextTerm();
 
         _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
         BigInteger claimable = (BigInteger) _getRewardInfoOf(planetIds.get(0)).get("claimable");
@@ -442,8 +442,8 @@ public class HavahBasicTest extends TestBase {
         LOG.info("ecosystem balance (before claim) : " + beforeEco);
         TransactionResult result = _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, expectedPlanet, BigInteger.TWO);
 
-        Utils.waitUtilNextTerm();
-        Utils.waitUtilNextTerm();
+        Utils.waitUntilNextTerm();
+        Utils.waitUntilNextTerm();
 
         BigInteger afterEco = txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS);
         LOG.info("ecosystem balance (after claim) : " + afterEco);
@@ -473,7 +473,7 @@ public class HavahBasicTest extends TestBase {
         BigInteger planetId = planetIds.get(0);
         BigInteger planetHeight = (BigInteger) _getPlanetInfo(planetId).get("height");
 
-        Utils.waitUtilNextTerm();
+        Utils.waitUntilNextTerm();
 
         _reportPlanetWork(planetManagerWallet, planetId, true);
         BigInteger totalReward = _getCurrentPublicReward();
@@ -502,5 +502,41 @@ public class HavahBasicTest extends TestBase {
         }
 
         LOG.infoExiting();
+    }
+
+    @Test
+    void rewardInfo() throws Exception {
+        Wallet holder = KeyWallet.create();
+        for (var type : new int[]{PLANET_PUBLIC, PLANET_PRIVATE, PLANET_COMPANY}) {
+            _mintPlanetNFT(governorWallet, holder.getAddress(), type, true);
+        }
+
+        var issue = chainScore.getIssueInfo();
+        LOG.info("1 - getIssueInfo(" + issue + ")");
+
+//        Utils.waitUntilNextTerm();
+//        Utils.waitUtil(Utils.getHeightNext(1));
+        var height = Utils.startRewardIssueIfNotStarted();
+        Utils.waitUtil(height.add(BigInteger.ONE));
+
+        var obj = chainScore.getRewardInfo();
+        var num = planetNFTScore.totalSupply();
+        var expected = Constants.INITIAL_ISSUE_AMOUNT.divide(num);
+        LOG.info("num(" + num + "), expected(" + expected + "), getRewardInfo(" + obj + ")");
+        var reward = obj.getItem("rewardPerActivePlanet").asInteger();
+        assertEquals(expected, reward);
+
+        for (var type : new int[]{PLANET_PUBLIC, PLANET_PRIVATE, PLANET_COMPANY}) {
+            _mintPlanetNFT(governorWallet, holder.getAddress(), type, true);
+        }
+        Utils.waitUntilNextTerm();
+        Utils.waitUtil(Utils.getHeightNext(1));
+
+        num = planetNFTScore.totalSupply();
+        expected = Constants.INITIAL_ISSUE_AMOUNT.divide(num);
+        obj = chainScore.getRewardInfo();
+        reward = obj.getItem("rewardPerActivePlanet").asInteger();
+        LOG.info("num(" + num + "), expected(" + expected + "), getRewardInfo2(" + obj + ")");
+        assertEquals(expected, reward);
     }
 }

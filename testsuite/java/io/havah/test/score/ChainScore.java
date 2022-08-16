@@ -96,6 +96,10 @@ public class ChainScore extends foundation.icon.test.score.ChainScore {
         return call("getRewardInfoOf", params).asObject();
     }
 
+    public RpcObject getRewardInfo() throws IOException {
+        return call("getRewardInfo", null).asObject();
+    }
+
     ////
     public TransactionResult setMaxStepLimit(Wallet wallet, String type, BigInteger cost) throws ResultTimeoutException, IOException {
         RpcObject params = new RpcObject.Builder()

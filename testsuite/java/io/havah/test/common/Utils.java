@@ -89,7 +89,7 @@ public final class Utils {
         return height.add(termPeriod.subtract(getHeight().subtract(issueStart).remainder(termPeriod)));
     }
 
-    public static void waitUtilNextTerm() throws Exception {
+    public static void waitUntilNextTerm() throws Exception {
         var nextTerm = getHeightUntilNextTerm();
         waitUtil(nextTerm);
     }

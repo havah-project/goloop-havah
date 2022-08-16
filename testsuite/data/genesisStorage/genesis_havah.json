@@ -56,7 +56,7 @@
           "_name": "Eco-System",
           "_schedules": [
             {
-              "blockHeight": "0xa",
+              "blockHeight": "0x1",
               "ratio": "20"
             },
             {

@@ -177,11 +177,11 @@ public class PlanetNFTScore extends Score {
         return invoke(wallet, "setAdmin", params);
     }
 
-    public Bytes setMintApproval(Wallet wallet, Address approval) throws Exception {
+    public Bytes setMintApprover(Wallet wallet, Address approver) throws Exception {
         RpcObject params = new RpcObject.Builder()
-                .put("_approval", new RpcValue(approval))
+                .put("_approver", new RpcValue(approver))
                 .build();
-        return invoke(wallet, "setMintApproval", params);
+        return invoke(wallet, "setMintApprover", params);
     }
 
     public static class TokenIds {

@@ -100,7 +100,7 @@ public class ChainScoreTest extends TestBase {
     public void burnHVH() throws Exception {
         LOG.infoEntering("BURN HVH");
         if (Utils.isRewardIssued()) {
-            Utils.waitUtilNextTerm();
+            Utils.waitUntilNextTerm();
             Utils.waitUtil(Utils.getHeightNext(1));
         }
         var supply = iconService.getTotalSupply().execute();
