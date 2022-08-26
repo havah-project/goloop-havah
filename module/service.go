@@ -232,6 +232,10 @@ type APIInfo interface {
 	ToJSON(JSONVersion) (interface{}, error)
 }
 
+type SCOREStatus interface {
+	ToJSON(height int64, version JSONVersion) (interface{}, error)
+}
+
 // Options for finalize
 const (
 	FinalizeNormalTransaction = 1 << iota
@@ -275,7 +279,7 @@ type TransitionManager interface {
 	// bi is the block info of the block that contains the patches,
 	// or nil if the patches are already prevalidated.
 	PatchTransition(transition Transition, patches TransactionList, bi BlockInfo) Transition
-	CreateSyncTransition(transition Transition, result []byte, vlHash []byte) Transition
+	CreateSyncTransition(transition Transition, result []byte, vlHash []byte, noBuffer bool) Transition
 	// Finalize finalizes data related to the transition. It usually stores
 	// data to a persistent storage. opt indicates which data are finalized.
 	// It should be called for every transition.
@@ -339,6 +343,9 @@ type ServiceManager interface {
 
 	// GetAPIInfo returns API info of the contract
 	GetAPIInfo(result []byte, addr Address) (APIInfo, error)
+
+	// GetSCOREStatus returns status of the contract
+	GetSCOREStatus(result []byte, addr Address) (SCOREStatus, error)
 
 	// GetMembers returns network member list
 	GetMembers(result []byte) (MemberList, error)

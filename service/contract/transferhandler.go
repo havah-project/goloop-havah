@@ -7,6 +7,7 @@ import (
 	"github.com/icon-project/goloop/common/intconv"
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/scoreresult"
+	"github.com/icon-project/goloop/service/state"
 	"github.com/icon-project/goloop/service/txresult"
 )
 
@@ -42,6 +43,10 @@ func (h *TransferHandler) DoExecuteSync(cc CallContext) (err error, ro *codec.Ty
 		return scoreresult.InvalidParameterError.Errorf(
 			"InvalidAddress(%s)", h.From.String()), nil, nil
 	}
+	if h.Value.Sign() == -1 {
+		return scoreresult.InvalidParameterError.Errorf(
+			"InvalidValue(value=%s)", h.Value.String()), nil, nil
+	}
 	bal1 := as1.GetBalance()
 	if bal1.Cmp(h.Value) < 0 {
 		return scoreresult.ErrOutOfBalance, nil, nil
@@ -57,12 +62,15 @@ func (h *TransferHandler) DoExecuteSync(cc CallContext) (err error, ro *codec.Ty
 	as2.SetBalance(new(big.Int).Add(bal2, h.Value))
 
 	if h.From.IsContract() && h.Value.Sign() > 0 {
-		indexed := make([][]byte, 4, 4)
-		indexed[0] = []byte(txresult.EventLogICXTransfer)
-		indexed[1] = h.From.Bytes()
-		indexed[2] = h.To.Bytes()
-		indexed[3] = intconv.BigIntToBytes(h.Value)
-		cc.OnEvent(h.From, indexed, make([][]byte, 0))
+		cc.OnEvent(
+			state.SystemAddress,
+			[][]byte{
+				[]byte(txresult.EventLogTransfer),
+				h.From.Bytes(),
+				h.To.Bytes(),
+			},
+			[][]byte{intconv.BigIntToBytes(h.Value)},
+		)
 	}
 
 	return nil, nil, nil

@@ -127,12 +127,15 @@ func (ctx *callContextImpl) Transfer(from module.Address, to module.Address, amo
 	if err = ctx.addBalance(to, amount); err != nil {
 		return
 	}
-	ctx.CallContext.OnEvent(state.SystemAddress, [][]byte{
-		[]byte(txresult.EventLogICXTransfer),
-		from.Bytes(),
-		to.Bytes(),
-		intconv.BigIntToBytes(amount),
-	}, [][]byte{})
+	ctx.CallContext.OnEvent(
+		state.SystemAddress,
+		[][]byte{
+			[]byte(txresult.EventLogTransfer),
+			from.Bytes(),
+			to.Bytes(),
+		},
+		[][]byte{intconv.BigIntToBytes(amount)},
+	)
 	return
 }
 

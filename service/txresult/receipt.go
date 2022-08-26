@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	EventLogICXTransfer = "ICXTransfer(Address,Address,int)"
+	EventLogTransfer = "Transfer(Address,Address,int)"
 )
 
 var ReceiptType = reflect.TypeOf((*receipt)(nil))

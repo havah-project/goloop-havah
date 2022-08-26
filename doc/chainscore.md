@@ -1312,14 +1312,7 @@ HAVAH-specific JSON-RPC APIs
 
 #### EventLog
 
-* Signature: `RewardOffered(int,int,int,int)`
-
-| Key              | VALUE Type | Indexed | Description                                                              |
-|:-----------------|:-----------|:--------|:-------------------------------------------------------------------------|
-| termSequence     | T_INT      | false   | Term sequence starting with 0                                            |
-| id               | T_INT      | false   | Planet ID                                                                |
-| rewardWithHoover | T_INT      | false   | Rewards in HVH that the planet gets including an subsidy from HooverFund |
-| hooverRequest    | T_INT      | false   | Subsidy from HooverFund                                                  |
+* [`RewardOffered(int,int,int,int)`](#rewardofferedintintintint)
 
 ### claimPlanetReward
 
@@ -1359,16 +1352,9 @@ HAVAH-specific JSON-RPC APIs
 
 #### EventLog
 
-* Signature: `RewardClaimed(int,int,Address,int)`
+* [`RewardClaimed(Address,int,int,int)`](#rewardclaimedaddressintintint)
 
-| Key          | VALUE Type | Indexed | Description                   |
-|:-------------|:-----------|:--------|:------------------------------|
-| termSequence | T_INT      | false   | Term sequence starting with 0 |
-| id           | T_INT      | false   | Planet ID                     |
-| owner        | T_ADDRESS  | false   | Planet owner claiming rewards |
-| amount       | T_INT      | false   | Claimed reward amount         |
-
-### getRewardInfo
+### getRewardInfoOf
 
 * Returns the information on a planet reward
 
@@ -1383,7 +1369,7 @@ HAVAH-specific JSON-RPC APIs
     "to": "cx0000000000000000000000000000000000000000",
     "dataType": "call",
     "data": {
-      "method": "getRewardInfo",
+      "method": "getRewardInfoOf",
       "params": {
         "id": "0x1"
       }
@@ -1422,6 +1408,57 @@ HAVAH-specific JSON-RPC APIs
 | remain    | T_INT      | true     | Difference between Total Rewards and Claimed Rewards      |
 | claimable | T_INT      | true     | Rewards that a planet owner can receive when claiming now |
 
+### getRewardInfo
+
+* Returns the overall reward information
+* This call returns an error response before the start of the first term
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getRewardInfo"
+    }
+  }
+}
+```
+
+> Response
+
+ ```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "height": "0x3e8",
+    "termSequence": "0x0",
+    "rewardPerActivePlanet": "0xde0b6b3a7640000"
+  }
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+| Key                   | VALUE Type | Required | Description                                            |
+|:----------------------|:-----------|:---------|:-------------------------------------------------------|
+| height                | T_INT      | true     | Current block height                                   |
+| termSequence          | T_INT      | false    | Sequence of a term starting with 0                     |
+| rewardPerActivePlanet | T_INT      | false    | Estimated reward per active planet in the current term |
+
+* `rewardPerActivePlanet` does not include the fund from HooverFund SCORE
+* `rewardPerActivePlanet` is zero if no active planet exists
+ 
 ### getIssueInfo
 
 * Returns the information on issue-related configuration
@@ -1455,7 +1492,8 @@ HAVAH-specific JSON-RPC APIs
     "issueReductionCycle": "0x168",
     "issueStart": "0x14",
     "termPeriod": "0x1e",
-    "termSequence": "0x1"
+    "termSequence": "0x1",
+    "rewardPerActivePlanet": "0xde0b6b3a7640000"
   }
 }
 ```
@@ -1466,13 +1504,16 @@ None
  
 #### Returns
 
-| Key                 | VALUE Type | Required | Description                                        |
-|:--------------------|:-----------|:---------|:---------------------------------------------------|
-| height              | T_INT      | true     | Current block height                               |
-| termPeriod          | T_INT      | true     | Coin issuing term period (unit: block)             |
-| issueReductionCycle | T_INT      | true     | issueAmount is reduced at a fixed rate every cycle |
-| issueStart          | T_INT      | false    | BlockHeight when issuing coin will begin           |
-| termSequence        | T_INT      | false    | Sequence of a term starting with 0                 |
+| Key                   | VALUE Type | Required | Description                                            |
+|:----------------------|:-----------|:---------|:-------------------------------------------------------|
+| height                | T_INT      | true     | Current block height                                   |
+| termPeriod            | T_INT      | true     | Coin issuing term period (unit: block)                 |
+| issueReductionCycle   | T_INT      | true     | issueAmount is reduced at a fixed rate every cycle     |
+| issueStart            | T_INT      | false    | BlockHeight when issuing coin will begin               |
+| termSequence          | T_INT      | false    | Sequence of a term starting with 0                     |
+
+* `issueStart` is provided after the blockHeight has been set by `startRewardIssue` call
+* `termSequence` is provided after the start of the first term
 
 ### getUSDTPrice
 
@@ -1586,10 +1627,163 @@ N/A
 
 #### EventLog
 
-* Signature: `ICXBurned(Address,int,int)`
+* [`Burned(Address,int,int)`](#burnedaddressintint)
+
+## EventLogs
+
+HAVAH records the following eventLogs:
+
+### Transfer(Address,Address,int)
+
+* Logged only when a SCORE transfers coins to an address
+* This eventLog is not recorded when an EOA transfers coins
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "Transfer(Address,Address,int)",
+    "cx0f4dbedd2b5cf3323ea23371b84576bcc438140f",
+    "hx0123456789012345678901234567890123456789"
+  ],
+  "data":[
+    "0xde0b6b3a7640000"
+  ]
+}
+```
+
+| Key    | VALUE Type | Indexed | Description                 |
+|:-------|:-----------|:--------|:----------------------------|
+| from   | T_ADDRESS  | true    | from address                |
+| to     | T_ADDRESS  | true    | to address                  |
+| amount | T_INT      | false   | Amount of coins transferred |
+ 
+### Issued(int,int,int)
+
+* Logged on BaseTx when issuing coins each term start
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "Issued(int,int,int)"
+  ],
+  "data":[
+    "0x1",
+    "0xde0b6b3a7640000",
+    "0x308501e99f05f71326a0914"
+  ]
+}
+```
+
+| Key          | VALUE Type | Indexed | Description                     |
+|:-------------|:-----------|:--------|:--------------------------------|
+| termSequence | T_INT      | false   | Term sequence starting with 0   |
+| amount       | T_INT      | false   | Amount of coins issued          |
+| totalSupply  | T_INT      | false   | totalSupply after issuing coins |
+
+### Burned(Address,int,int)
+
+* Logged when [burning coins](#fallback)
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "Burned(Address,int,int)",
+    "hx0123456789012345678901234567890123456789"
+  ],
+  "data":[
+    "0xde0b6b3a7640000",
+    "0x308501e99f05f71326a0914"
+  ]
+}
+```
 
 | Key         | VALUE Type | Indexed | Description                     |
 |:------------|:-----------|:--------|:--------------------------------|
-| from        | T_ADDRESS  | false   | from address                    |
+| from        | T_ADDRESS  | true    | from address                    |
 | amount      | T_INT      | false   | Amount of coins burned          |
 | totalSupply | T_INT      | false   | totalSupply after burning coins |
+
+### HooverRefilled(int,int,int)
+
+* Logged on BaseTx when hooverFund is refilled each term
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "HooverRefilled(int,int,int)"
+  ],
+  "data":[
+    "0xde0b6b3a7640000",
+    "0x38e8f7792d79767800000",
+    "0x422ca8b0a00a425000000"
+  ]
+}
+```
+
+| Key                    | VALUE Type | Indexed | Description                            |
+|:-----------------------|:-----------|:--------|:---------------------------------------|
+| amount                 | T_INT      | false   | Amount of refilled funds               |
+| hooverBalance          | T_INT      | false   | HooverFund balance after refilled      |
+| sustainableFundBalance | T_INT      | false   | SustainableFund balance after refilled |
+
+### RewardOffered(int,int,int,int)
+
+* Logged when [`reportPlanetWork`](#reportplanetwork) is called
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "RewardOffered(int,int,int,int)"
+  ],
+  "data":[
+    "0x12",
+    "0x64",
+    "0xde0b6b3a7640000",
+    "0x16345785d8a0000"
+  ]
+}
+```
+
+| Key              | VALUE Type | Indexed | Description                                                              |
+|:-----------------|:-----------|:--------|:-------------------------------------------------------------------------|
+| termSequence     | T_INT      | false   | Term sequence starting with 0                                            |
+| id               | T_INT      | false   | Planet ID                                                                |
+| rewardWithHoover | T_INT      | false   | Rewards in HVH that the planet gets including an subsidy from HooverFund |
+| hooverRequest    | T_INT      | false   | Subsidy from HooverFund                                                  |
+
+### RewardClaimed(Address,int,int,int)
+
+* Logged when [`claimPlanetReward`](#claimplanetreward) is called
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "RewardClaimed(Address,int,int,int)",
+    "hx0123456789012345678901234567890123456789"
+  ],
+  "data":[
+    "0x12",
+    "0x64",
+    "0xde0b6b3a7640000"
+  ]
+}
+```
+
+| Key          | VALUE Type | Indexed | Description                   |
+|:-------------|:-----------|:--------|:------------------------------|
+| owner        | T_ADDRESS  | true    | Planet owner claiming rewards |
+| termSequence | T_INT      | false   | Term sequence starting with 0 |
+| id           | T_INT      | false   | Planet ID                     |
+| amount       | T_INT      | false   | Claimed reward amount         |

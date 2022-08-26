@@ -584,7 +584,7 @@ func (s *State) GetIssueLimit() int64 {
 	return s.getInt64OrDefault(hvhmodule.VarIssueLimit, hvhmodule.IssueLimit)
 }
 
-func (s *State) GetRewardInfo(height, id int64) (map[string]interface{}, error) {
+func (s *State) GetRewardInfoOf(height, id int64) (map[string]interface{}, error) {
 	pr, err := s.GetPlanetReward(id)
 	if err != nil {
 		return nil, err
@@ -607,7 +607,7 @@ func (s *State) GetRewardInfo(height, id int64) (map[string]interface{}, error) 
 	}, nil
 }
 
-func (s *State) GetActivePlanetReward() *big.Int {
+func (s *State) GetRewardPerActivePlanet() *big.Int {
 	if s.getBigInt(hvhmodule.VarActivePlanet).Sign() == 0 {
 		return hvhmodule.BigIntZero
 	}

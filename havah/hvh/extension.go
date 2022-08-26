@@ -184,6 +184,8 @@ func (es *ExtensionStateImpl) GetIssueInfo(cc hvhmodule.CallContext) (map[string
 	}
 	if issueStart > 0 {
 		jso["issueStart"] = issueStart
+	}
+	if hvhstate.IsIssueStarted(height, issueStart) {
 		jso["termSequence"] = (height - issueStart) / termPeriod
 	}
 	return jso, nil
@@ -284,7 +286,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 			"Duplicate reportPlanetWork: tn=%d id=%d", termNumber, id)
 	}
 
-	reward := es.state.GetActivePlanetReward()
+	reward := es.state.GetRewardPerActivePlanet()
 	rewardWithHoover := reward
 
 	if err = es.state.DecreaseRewardRemain(reward); err != nil {
@@ -408,8 +410,8 @@ func (es *ExtensionStateImpl) ClaimPlanetReward(cc hvhmodule.CallContext, ids []
 			if err = cc.Transfer(hvhmodule.PublicTreasury, owner, reward); err != nil {
 				return nil
 			}
-			onRewardClaimedEvent(cc, termSeq, id, owner, reward)
-			es.Logger().Debugf("termSeq=%d id=%d owner=%s reward=%s", termSeq, id, owner, reward)
+			onRewardClaimedEvent(cc, owner, termSeq, id, reward)
+			es.Logger().Debugf("owner=%s termSeq=%d id=%d reward=%d", owner, termSeq, id, reward)
 		}
 	}
 
@@ -417,9 +419,32 @@ func (es *ExtensionStateImpl) ClaimPlanetReward(cc hvhmodule.CallContext, ids []
 	return nil
 }
 
-func (es *ExtensionStateImpl) GetRewardInfo(cc hvhmodule.CallContext, id int64) (map[string]interface{}, error) {
+func (es *ExtensionStateImpl) GetRewardInfoOf(cc hvhmodule.CallContext, id int64) (map[string]interface{}, error) {
 	height := cc.BlockHeight()
-	return es.state.GetRewardInfo(height, id)
+	return es.state.GetRewardInfoOf(height, id)
+}
+
+func (es *ExtensionStateImpl) GetRewardInfo(cc hvhmodule.CallContext) (map[string]interface{}, error) {
+	es.Logger().Debugf("GetRewardInfo() start")
+
+	height := cc.BlockHeight()
+	issueStart := es.state.GetIssueStart()
+	if !hvhstate.IsIssueStarted(height, issueStart) {
+		return nil, scoreresult.Errorf(hvhmodule.StatusNotReady, "TermNotReady")
+	}
+
+	reward := es.state.GetRewardPerActivePlanet()
+	termPeriod := es.state.GetTermPeriod()
+	termSequence := (height - issueStart) / termPeriod
+	es.Logger().Infof("GetRewardInfo: height=%d termPeriod=%d termSequence=%d reward=%d",
+		height, termPeriod, termSequence, reward)
+
+	es.Logger().Debugf("GetRewardInfo() end")
+	return map[string]interface{}{
+		"height":                height,
+		"termSequence":          termSequence,
+		"rewardPerActivePlanet": reward,
+	}, nil
 }
 
 func (es *ExtensionStateImpl) BurnCoin(cc hvhmodule.CallContext, amount *big.Int) error {
@@ -429,7 +454,7 @@ func (es *ExtensionStateImpl) BurnCoin(cc hvhmodule.CallContext, amount *big.Int
 	if err != nil {
 		return err
 	}
-	onICXBurnedEvent(cc, from, amount, totalSupply)
+	onBurnedEvent(cc, from, amount, totalSupply)
 	es.Logger().Debugf(
 		"BurnCoin() end: from=%s amount=%d ts=%d", from, amount, totalSupply)
 	return nil

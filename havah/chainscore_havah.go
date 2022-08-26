@@ -204,7 +204,7 @@ func (s *chainScore) Ex_claimPlanetReward(ids []interface{}) error {
 	return es.ClaimPlanetReward(s.newCallContext(), planetIds)
 }
 
-func (s *chainScore) Ex_getRewardInfo(id *common.HexInt) (map[string]interface{}, error) {
+func (s *chainScore) Ex_getRewardInfoOf(id *common.HexInt) (map[string]interface{}, error) {
 	if err := s.tryChargeCall(); err != nil {
 		return nil, err
 	}
@@ -212,7 +212,18 @@ func (s *chainScore) Ex_getRewardInfo(id *common.HexInt) (map[string]interface{}
 	if err != nil {
 		return nil, err
 	}
-	return es.GetRewardInfo(s.newCallContext(), id.Int64())
+	return es.GetRewardInfoOf(s.newCallContext(), id.Int64())
+}
+
+func (s *chainScore) Ex_getRewardInfo() (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	es, err := s.getExtensionState()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetRewardInfo(s.newCallContext())
 }
 
 func (s *chainScore) Ex_fallback() error {
