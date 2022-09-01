@@ -3,6 +3,7 @@ package io.havah.test.score;
 import foundation.icon.icx.Wallet;
 import foundation.icon.icx.data.Address;
 import foundation.icon.icx.data.Bytes;
+import foundation.icon.icx.transport.jsonrpc.RpcArray;
 import foundation.icon.icx.transport.jsonrpc.RpcItem;
 import foundation.icon.icx.transport.jsonrpc.RpcObject;
 import foundation.icon.icx.transport.jsonrpc.RpcValue;
@@ -55,9 +56,9 @@ public class PlanetNFTScore extends Score {
         return call("totalSupply", null).asInteger();
     }
 
-    public BigInteger tokenByIndex(int index) throws IOException {
+    public BigInteger tokenByIndex(BigInteger index) throws IOException {
         RpcObject params = new RpcObject.Builder()
-                .put("_index", new RpcValue(BigInteger.valueOf(index)))
+                .put("_index", new RpcValue(index))
                 .build();
         return call("tokenByIndex", params).asInteger();
     }
@@ -88,12 +89,35 @@ public class PlanetNFTScore extends Score {
 
     public Bytes mintPlanet(Wallet wallet, Address _to, int _type,
                             BigInteger _priceInUSDT, BigInteger _priceInHVH, BigInteger _tokenId) throws IOException {
-        RpcObject params = new RpcObject.Builder()
-                .put("_to", new RpcValue(_to))
-                .put("_type", new RpcValue(BigInteger.valueOf(_type)))
+        var mintInfo = new RpcArray.Builder();
+        mintInfo.add(new RpcObject.Builder()
                 .put("_priceInUSDT", new RpcValue(_priceInUSDT))
                 .put("_priceInHVH", new RpcValue(_priceInHVH))
                 .put("_tokenId", new RpcValue(_tokenId))
+                .build());
+
+        RpcObject params = new RpcObject.Builder()
+                .put("_to", new RpcValue(_to))
+                .put("_type", new RpcValue(BigInteger.valueOf(_type)))
+                .put("_info", mintInfo.build())
+                .build();
+        return invoke(wallet, "mintPlanet", params);
+    }
+
+    public Bytes mintPlanet(Wallet wallet, List<MintInfo> _info, Address _to, int _type) throws IOException {
+        var mintInfo = new RpcArray.Builder();
+        for (var param : _info) {
+            mintInfo.add(new RpcObject.Builder()
+                    .put("_priceInUSDT", new RpcValue(param.getPriceInUSDT()))
+                    .put("_priceInHVH", new RpcValue(param.getPriceInHVH()))
+                    .put("_tokenId", new RpcValue(param.getTokenId()))
+                    .build());
+        }
+
+        RpcObject params = new RpcObject.Builder()
+                .put("_info", mintInfo.build())
+                .put("_to", new RpcValue(_to))
+                .put("_type", new RpcValue(BigInteger.valueOf(_type)))
                 .build();
         return invoke(wallet, "mintPlanet", params);
     }
@@ -167,7 +191,8 @@ public class PlanetNFTScore extends Score {
     }
 
     public boolean isTransferable() throws Exception {
-        return call("isTransferable", null).asBoolean();
+        var result = call("isTransferable", null).asBoolean();
+        return result;
     }
 
     public Bytes setAdmin(Wallet wallet, Address admin) throws Exception {
@@ -177,11 +202,27 @@ public class PlanetNFTScore extends Score {
         return invoke(wallet, "setAdmin", params);
     }
 
-    public Bytes setMintApprover(Wallet wallet, Address approver) throws Exception {
+    public Bytes addMintingApprover(Wallet wallet, Address approver) throws IOException {
         RpcObject params = new RpcObject.Builder()
-                .put("_approver", new RpcValue(approver))
+                .put("_address", new RpcValue(approver))
                 .build();
-        return invoke(wallet, "setMintApprover", params);
+        return invoke(wallet, "addMintingApprover", params);
+    }
+
+    public Bytes removeMintingApprover(Wallet wallet, Address approver) throws Exception {
+        RpcObject params = new RpcObject.Builder()
+                .put("_address", new RpcValue(approver))
+                .build();
+        return invoke(wallet, "removeMintingApprover", params);
+    }
+
+    public List<Address> getMintingApprover() throws IOException {
+        var array = call("mintingApprover", null).asArray();
+        List<Address> approvers = new ArrayList<>();
+        for (RpcItem rpcItem : array) {
+            approvers.add(rpcItem.asAddress());
+        }
+        return approvers;
     }
 
     public static class TokenIds {
@@ -240,5 +281,33 @@ public class PlanetNFTScore extends Score {
         public BigInteger getHeight() {
             return height;
         }
+    }
+
+    public static class MintInfo {
+        private final BigInteger tokenId;
+        private final BigInteger priceInUSDT;
+        private final BigInteger priceInHVH;
+
+        public MintInfo(BigInteger tokenId, BigInteger priceInUSDT, BigInteger priceInHVH) {
+            this.tokenId = tokenId;
+            this.priceInUSDT = priceInUSDT;
+            this.priceInHVH = priceInHVH;
+        }
+
+        public BigInteger getTokenId() {
+            return tokenId;
+        }
+
+        public BigInteger getPriceInUSDT() {
+            return priceInUSDT;
+        }
+
+        public BigInteger getPriceInHVH() {
+            return priceInHVH;
+        }
+    }
+
+    public static MintInfo mintInfo(BigInteger tokenId, BigInteger priceInUSDT, BigInteger priceInHVH) {
+        return new MintInfo(tokenId, priceInUSDT, priceInHVH);
     }
 }
