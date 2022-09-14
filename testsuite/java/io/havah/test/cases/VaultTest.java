@@ -47,21 +47,9 @@ public class VaultTest extends TestBase {
         ownerWallet = Utils.getGovernor();
     }
 
-    BigInteger _getVaultClaimableAmount(Address address) throws IOException {
-        var vestingInfo = vaultScore.getVestingInfo(address);
-        if(vestingInfo.containsKey("claimable")) {
-            return (BigInteger) vestingInfo.get("claimable");
-        }
-        return BigInteger.ZERO;
-    }
-
-    Map<String, Object> _getVestingInfo(Address address) throws IOException {
-        return vaultScore.getVestingInfo(address);
-    }
-
     void _checkAndClaim(KeyWallet wallet) throws IOException, ResultTimeoutException {
         LOG.infoEntering("_checkAndClaim", "claim : " + wallet.getAddress());
-        BigInteger claimable = _getVaultClaimableAmount(wallet.getAddress());
+        BigInteger claimable = vaultScore.getClaimable(wallet.getAddress());
         BigInteger balance = txHandler.getBalance(wallet.getAddress());
         TransactionResult result = vaultScore.claim(wallet);
         assertSuccess(result);
@@ -79,40 +67,50 @@ public class VaultTest extends TestBase {
     void startVault() throws Exception {
         LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
 
-        LOG.infoEntering("call", "addAllocation()");
-        VaultScore.VestingAccount[] accounts = {
-                new VaultScore.VestingAccount(wallets[0].getAddress(), ICX.multiply(BigInteger.valueOf(150))),
-                new VaultScore.VestingAccount(wallets[1].getAddress(), ICX.multiply(BigInteger.valueOf(100))),
-                new VaultScore.VestingAccount(wallets[2].getAddress(), ICX.multiply(BigInteger.valueOf(50)))
-        };
-        vaultScore.addAllocation(ownerWallet, accounts);
-        LOG.infoExiting();
-
-        LOG.infoEntering("call", "setVestingHeights()");
-        BigInteger curHeight = Utils.getHeight();
-        BigInteger[] heights = { curHeight.add(BigInteger.valueOf(10)), curHeight.add(BigInteger.valueOf(20)), curHeight.add(BigInteger.valueOf(30)) };
-        VaultScore.VestingHeight[] schedules = {
-                new VaultScore.VestingHeight(heights[0], BigInteger.valueOf(2500)),
-                new VaultScore.VestingHeight(heights[1], BigInteger.valueOf(5000)),
-                new VaultScore.VestingHeight(heights[2], BigInteger.valueOf(10000))
-        };
-        vaultScore.setVestingHeights(ownerWallet, schedules);
-        LOG.infoExiting();
-
         LOG.infoEntering("transfer icx", "transfer 100 ICX to vault score from account");
         Bytes txHash = txHandler.transfer(wallets[0], vaultScore.getAddress(), ICX.multiply(BigInteger.valueOf(100)));
         assertFailure(txHandler.getResult(txHash));
         LOG.infoExiting();
 
-        LOG.info("vestingInfo wallets[0] : " + _getVestingInfo(wallets[0].getAddress()));
+        LOG.infoEntering("call", "addAllocation()");
+        BigInteger[] allocations = { ICX.multiply(BigInteger.valueOf(150)), ICX.multiply(BigInteger.valueOf(100))};
+        VaultScore.VestingAccount[] accounts = {
+                new VaultScore.VestingAccount(wallets[0].getAddress(), allocations[0]),
+                new VaultScore.VestingAccount(wallets[1].getAddress(), allocations[1])
+        };
+        vaultScore.addAllocation(ownerWallet, accounts);
+        LOG.infoExiting();
+
+        LOG.infoEntering("get", "getAllocation()");
+        assertEquals(allocations[0], vaultScore.getAllocation(wallets[0].getAddress()));
+        assertEquals(allocations[1], vaultScore.getAllocation(wallets[1].getAddress()));
+        assertEquals(BigInteger.ZERO, vaultScore.getAllocation(wallets[2].getAddress()));
+        LOG.infoExiting();
+
+        assertEquals(BigInteger.ZERO, vaultScore.getClaimable(wallets[0].getAddress()));
+
+        LOG.infoEntering("call", "setVestingSchedules()");
+        BigInteger curTimestamp = Utils.getTimestamp();
+        BigInteger[] timeStamps = { curTimestamp.add(BigInteger.valueOf(1500)), curTimestamp.add(BigInteger.valueOf(3000)), curTimestamp.add(BigInteger.valueOf(4500)) };
+        VaultScore.VestingSchedule[] schedules = {
+                new VaultScore.VestingSchedule(timeStamps[0], BigInteger.valueOf(100), BigInteger.valueOf(25)),
+                new VaultScore.VestingSchedule(timeStamps[1], BigInteger.valueOf(100), BigInteger.valueOf(50)),
+                new VaultScore.VestingSchedule(timeStamps[2], BigInteger.valueOf(100), BigInteger.valueOf(100))
+        };
+        vaultScore.setVestingSchedules(ownerWallet, wallets[0].getAddress(), schedules);
+        vaultScore.setVestingSchedules(ownerWallet, wallets[1].getAddress(), schedules);
+        LOG.infoExiting();
 
         LOG.infoEntering("claim", "claim vault");
-        for(int i=0; i<heights.length; i++) {
-            Utils.waitUtil(heights[i]);
+        for(int i=0; i<schedules.length; i++) {
+            Utils.waitUtilTime(timeStamps[i]);
             _checkAndClaim(wallets[0]);
         }
-        LOG.info("vestingInfo wallets[1] : " + _getVestingInfo(wallets[1].getAddress()));
         _checkAndClaim(wallets[1]);
+
+        TransactionResult result = vaultScore.claim(wallets[2]);
+        assertFailure(result);
+
         LOG.infoExiting();
     }
 
@@ -137,35 +135,31 @@ public class VaultTest extends TestBase {
         assertEquals(true, vaultScore.admin().equals(wallets[1].getAddress()));
         LOG.infoExiting();
 
-        LOG.infoEntering("call", "setAllocation()");
-        assertFailure(vaultScore.setAllocation(ownerWallet, new VaultScore.VestingAccount(wallets[0].getAddress(), BigInteger.ZERO)));
-        assertFailure(vaultScore.setAllocation(ownerWallet, new VaultScore.VestingAccount(wallets[1].getAddress(), BigInteger.ZERO)));
-        assertFailure(vaultScore.setAllocation(ownerWallet, new VaultScore.VestingAccount(wallets[2].getAddress(), BigInteger.ZERO)));
-        assertSuccess(vaultScore.setAllocation(wallets[1], new VaultScore.VestingAccount(wallets[0].getAddress(), BigInteger.ZERO)));
-        assertSuccess(vaultScore.setAllocation(wallets[1], new VaultScore.VestingAccount(wallets[1].getAddress(), BigInteger.ZERO)));
-        assertSuccess(vaultScore.setAllocation(wallets[1], new VaultScore.VestingAccount(wallets[2].getAddress(), BigInteger.ZERO)));
-        LOG.infoExiting();
-
         LOG.infoEntering("call", "addAllocation()");
         VaultScore.VestingAccount[] accounts = {
-                new VaultScore.VestingAccount(tmpWallets[0].getAddress(), ICX.multiply(BigInteger.valueOf(150))),
-                new VaultScore.VestingAccount(tmpWallets[1].getAddress(), ICX.multiply(BigInteger.valueOf(100))),
-                new VaultScore.VestingAccount(tmpWallets[2].getAddress(), ICX.multiply(BigInteger.valueOf(50)))
+                new VaultScore.VestingAccount(tmpWallets[0].getAddress(), BigInteger.ZERO),
+                new VaultScore.VestingAccount(tmpWallets[1].getAddress(), BigInteger.ZERO),
+                new VaultScore.VestingAccount(tmpWallets[2].getAddress(), BigInteger.ZERO)
         };
         assertFailure(vaultScore.addAllocation(ownerWallet, accounts));
         assertSuccess(vaultScore.addAllocation(wallets[1], accounts));
         LOG.infoExiting();
 
-        LOG.infoEntering("call", "setVestingHeights()");
-        BigInteger curHeight = Utils.getHeight();
-        BigInteger[] heights = { curHeight.add(BigInteger.valueOf(10)), curHeight.add(BigInteger.valueOf(20)), curHeight.add(BigInteger.valueOf(30)) };
-        VaultScore.VestingHeight[] schedules = {
-                new VaultScore.VestingHeight(heights[0], BigInteger.valueOf(2500)),
-                new VaultScore.VestingHeight(heights[1], BigInteger.valueOf(5000)),
-                new VaultScore.VestingHeight(heights[2], BigInteger.valueOf(10000))
+        LOG.infoEntering("call", "setAllocation()");
+        assertFailure(vaultScore.setAllocation(ownerWallet, new VaultScore.VestingAccount(wallets[0].getAddress(), BigInteger.ZERO)));
+        assertSuccess(vaultScore.setAllocation(wallets[1], new VaultScore.VestingAccount(wallets[0].getAddress(), BigInteger.ZERO)));
+        LOG.infoExiting();
+
+        LOG.infoEntering("call", "setVestingSchedules()");
+        BigInteger curTimestamp = Utils.getTimestamp();
+        BigInteger[] timeStamps = { curTimestamp.add(BigInteger.valueOf(1500)), curTimestamp.add(BigInteger.valueOf(3000)), curTimestamp.add(BigInteger.valueOf(4500)) };
+        VaultScore.VestingSchedule[] schedules = {
+                new VaultScore.VestingSchedule(timeStamps[0], BigInteger.valueOf(100), BigInteger.valueOf(25)),
+                new VaultScore.VestingSchedule(timeStamps[1], BigInteger.valueOf(100), BigInteger.valueOf(50)),
+                new VaultScore.VestingSchedule(timeStamps[2], BigInteger.valueOf(100), BigInteger.valueOf(100))
         };
-        assertFailure(vaultScore.setVestingHeights(ownerWallet, schedules));
-        assertSuccess(vaultScore.setVestingHeights(wallets[1], schedules));
+        assertFailure(vaultScore.setVestingSchedules(ownerWallet, wallets[0].getAddress(), schedules));
+        assertSuccess(vaultScore.setVestingSchedules(wallets[1], wallets[1].getAddress(), schedules));
         LOG.infoExiting();
 
         txHash = vaultScore.setAdmin(wallets[1], ownerWallet.getAddress());

@@ -59,6 +59,11 @@ public final class Utils {
         return lastBlk.getHeight();
     }
 
+    public static BigInteger getTimestamp() throws IOException {
+        Block lastBlk = _iconService.getLastBlock().execute();
+        return lastBlk.getTimestamp();
+    }
+
     public static BigInteger getHeightNext(int number) throws IOException {
         return getHeight().add(BigInteger.valueOf(number));
     }
@@ -69,6 +74,15 @@ public final class Utils {
             LOG.info("now(" + now + "), wait(" + height + ")");
             Thread.sleep(1200);
             now = getHeight();
+        }
+    }
+
+    public static void waitUtilTime(BigInteger timestamp) throws Exception {
+        var now = getTimestamp();
+        while (now.compareTo(timestamp) < 0) {
+            LOG.info("now(" + now + ") wait(" + timestamp + ")");
+            Thread.sleep(1200);
+            now = getTimestamp();
         }
     }
 
