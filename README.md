@@ -1,7 +1,5 @@
 # GOLOOP
 
-[![build status](https://repo.theloop.co.kr/arch/goloop/badges/base/build.svg)](https://repo.theloop.co.kr/arch/goloop/commits/base)
-
 ## Introduction
 
 GOLOOP is blockchain node server.
