@@ -484,24 +484,16 @@ func (s *State) calcClaimableReward(height int64, p *Planet, pr *planetReward) (
 		return claimableReward, nil
 	}
 
-	termPeriod := s.GetTermPeriod()
-	privateLockupTerm := s.getInt64OrDefault(
-		hvhmodule.VarPrivateLockup, hvhmodule.PrivateLockup)
-
-	// All rewards have been locked
-	lockupTerm := (height - p.Height() - 1) / termPeriod
-	if lockupTerm < privateLockupTerm {
-		return hvhmodule.BigIntZero, nil
+	num, denom := s.GetPrivateClaimableRate()
+	if !validatePrivateClaimableRate(num, denom) {
+		return nil, scoreresult.InvalidParameterError.Errorf(
+			"InvalidPrivateClaimableRate: num=%d denom=%d", num, denom)
 	}
 
-	privateReleaseCycle := s.getInt64OrDefault(
-		hvhmodule.VarPrivateReleaseCycle, hvhmodule.PrivateReleaseCycle)
-	releaseDivision := (lockupTerm-privateLockupTerm)/privateReleaseCycle + 1
-
-	if releaseDivision < hvhmodule.PrivateReleaseDivision {
-		lockedReward := big.NewInt(hvhmodule.PrivateReleaseDivision - releaseDivision)
+	if num < denom {
+		lockedReward := big.NewInt(denom - num)
 		lockedReward.Mul(lockedReward, pr.Total())
-		lockedReward.Div(lockedReward, big.NewInt(hvhmodule.PrivateReleaseDivision))
+		lockedReward.Div(lockedReward, big.NewInt(denom))
 
 		claimableReward = new(big.Int).Sub(claimableReward, lockedReward)
 		if claimableReward.Sign() < 0 {
@@ -699,6 +691,41 @@ func (s *State) printInitState() {
 		s.getBigIntOrDefault(hvhmodule.VarIssueAmount, hvhmodule.BigIntInitIssueAmount),
 		s.GetHooverBudget(),
 		s.GetUSDTPrice())
+}
+
+func (s *State) SetPrivateClaimableRate(num, denom int64) error {
+	if !validatePrivateClaimableRate(num, denom) {
+		return scoreresult.InvalidParameterError.Errorf(
+			"InvalidPrivateClaimableRate: num=%d denom=%d", num, denom)
+	}
+
+	if err := s.setInt64(hvhmodule.VarPrivateClaimableRateNum, num); err != nil {
+		return err
+	}
+	if err := s.setInt64(hvhmodule.VarPrivateClaimableRateDenom, denom); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *State) GetPrivateClaimableRate() (int64, int64) {
+	denom := s.getInt64OrDefault(
+		hvhmodule.VarPrivateClaimableRateDenom, hvhmodule.PrivateClaimableRateDenom)
+	num := s.getInt64OrDefault(hvhmodule.VarPrivateClaimableRateNum, 0)
+	return num, denom
+}
+
+func validatePrivateClaimableRate(num, denom int64) bool {
+	if denom <= 0 || denom > 10000 {
+		return false
+	}
+	if num < 0 {
+		return false
+	}
+	if num > denom {
+		return false
+	}
+	return true
 }
 
 func validatePlanetId(id int64) error {

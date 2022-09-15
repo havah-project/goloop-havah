@@ -79,6 +79,7 @@ func (pr *planetReward) increment(tn int64, amount *big.Int, total *big.Int) err
 		return scoreresult.Errorf(
 			hvhmodule.StatusIllegalArgument, "Invalid termNumber: tn=%d lastTN=%d", tn, pr.lastTN)
 	}
+	// amount is different from total only if the planet is a company planet
 	pr.total = new(big.Int).Add(pr.total, total)
 	pr.current = new(big.Int).Add(pr.current, amount)
 	pr.lastTN = tn

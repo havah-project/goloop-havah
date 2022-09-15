@@ -445,3 +445,54 @@ func TestState_ClaimPlanetReward(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Zero(t, reward.Sign())
 }
+
+func TestState_SetPrivateClaimableRate(t *testing.T) {
+	var err error
+	var num, denom int64
+	var expNum, expDenom int64
+	state := newDummyState()
+
+	// Check default value
+	expNum = int64(0)
+	expDenom = int64(hvhmodule.PrivateClaimableRateDenom)
+	num, denom = state.GetPrivateClaimableRate()
+	assert.Zero(t, num)
+	assert.Equal(t, expDenom, denom)
+
+	// Error cases
+	// num, denom
+	ins := [][]int64{
+		{0, 0},
+		{1, 0},
+		{-2, 10},
+		{2, -10},
+		{-3, -20},
+		{10, 5},
+		{10, 10001},
+	}
+	for _, in := range ins {
+		err = state.SetPrivateClaimableRate(in[0], in[1])
+		assert.Error(t, err)
+
+		num, denom = state.GetPrivateClaimableRate()
+		assert.Zero(t, num)
+		assert.Equal(t, expDenom, denom)
+	}
+
+	ins = [][]int64{
+		{0, 100},
+		{1, 100},
+		{10000, 10000},
+		{23, 24},
+		{24, 24},
+	}
+	for _, in := range ins {
+		expNum, expDenom = in[0], in[1]
+		err = state.SetPrivateClaimableRate(expNum, expDenom)
+		assert.NoError(t, err)
+
+		num, denom = state.GetPrivateClaimableRate()
+		assert.Equal(t, expNum, num)
+		assert.Equal(t, expDenom, denom)
+	}
+}
