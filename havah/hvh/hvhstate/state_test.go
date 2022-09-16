@@ -337,16 +337,12 @@ func TestState_InitState(t *testing.T) {
 	cfg.TermPeriod = &common.HexInt64{Value: 100}
 	cfg.HooverBudget = common.NewHexInt(1_000_000)
 	cfg.IssueReductionCycle = &common.HexInt64{Value: 180}
-	cfg.PrivateLockup = &common.HexInt64{Value: 100}
-	cfg.PrivateReleaseCycle = &common.HexInt64{Value: 12}
 	cfg.USDTPrice = common.NewHexInt(200_000)
 
 	assert.NoError(t, state.InitState(cfg))
 	assert.Equal(t, cfg.TermPeriod.Value, state.GetTermPeriod())
 	assert.Zero(t, state.GetHooverBudget().Cmp(cfg.HooverBudget.Value()))
 	assert.Equal(t, cfg.IssueReductionCycle.Value, state.GetIssueReductionCycle())
-	assert.Equal(t, cfg.PrivateLockup.Value, state.getInt64(hvhmodule.VarPrivateLockup))
-	assert.Equal(t, cfg.PrivateReleaseCycle.Value, state.getInt64(hvhmodule.VarPrivateReleaseCycle))
 	assert.Zero(t, state.GetIssueReductionRate().Cmp(hvhmodule.BigRatIssueReductionRate))
 }
 

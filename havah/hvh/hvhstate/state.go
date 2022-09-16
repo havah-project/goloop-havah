@@ -612,8 +612,6 @@ func (s *State) GetRewardPerActivePlanet() *big.Int {
 type StateConfig struct {
 	TermPeriod          *common.HexInt64 `json:"termPeriod,omitempty"`          // 43200 in block
 	IssueReductionCycle *common.HexInt64 `json:"issueReductionCycle,omitempty"` // 360 in term
-	PrivateReleaseCycle *common.HexInt64 `json:"privateReleaseCycle,omitempty"` // 30 in term (1 month)
-	PrivateLockup       *common.HexInt64 `json:"privateLockup,omitempty"`       // 360 in term
 	IssueLimit          *common.HexInt64 `json:"issueLimit,omitempty"`
 
 	IssueAmount  *common.HexInt `json:"issueAmount,omitempty"`  // 5M in HVH
@@ -631,16 +629,6 @@ func (s *State) InitState(cfg *StateConfig) error {
 	}
 	if cfg.IssueReductionCycle != nil {
 		if err = s.setInt64(hvhmodule.VarIssueReductionCycle, cfg.IssueReductionCycle.Value); err != nil {
-			return err
-		}
-	}
-	if cfg.PrivateReleaseCycle != nil {
-		if err = s.setInt64(hvhmodule.VarPrivateReleaseCycle, cfg.PrivateReleaseCycle.Value); err != nil {
-			return err
-		}
-	}
-	if cfg.PrivateLockup != nil {
-		if err = s.setInt64(hvhmodule.VarPrivateLockup, cfg.PrivateLockup.Value); err != nil {
 			return err
 		}
 	}
@@ -679,15 +667,11 @@ func (s *State) printInitState() {
 	s.logger.Infof("Initial platform configuration\n"+
 		"TermPeriod: %d\n"+
 		"IssueReductionCycle: %d\n"+
-		"PrivateReleaseCycle: %d\n"+
-		"PrivateLockup: %d\n"+
 		"IssueAmount: %d\n"+
 		"HooverBudget: %d\n"+
 		"USDTPrice: %d\n",
 		s.GetTermPeriod(),
 		s.GetIssueReductionCycle(),
-		s.getInt64OrDefault(hvhmodule.VarPrivateReleaseCycle, hvhmodule.PrivateReleaseCycle),
-		s.getInt64OrDefault(hvhmodule.VarPrivateLockup, hvhmodule.PrivateLockup),
 		s.getBigIntOrDefault(hvhmodule.VarIssueAmount, hvhmodule.BigIntInitIssueAmount),
 		s.GetHooverBudget(),
 		s.GetUSDTPrice())

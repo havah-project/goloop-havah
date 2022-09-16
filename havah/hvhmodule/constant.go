@@ -66,12 +66,9 @@ const (
 
 // PlatformConfig default values
 const (
-	TermPeriod                = DayBlock    // unit: block
-	IssueAmount               = 4_300_000   // unit: HVH, IssueAmount per term
-	IssueReductionCycle       = DayPerYear  // 1 year (360) in term
-	PrivateLockup             = DayPerYear  // 1 year (360) in term
-	PrivateReleaseCycle       = DayPerMonth // unit: term
-	PrivateReleaseDivision    = MonthPerYear * 2
+	TermPeriod                = DayBlock                 // unit: block
+	IssueAmount               = 4_300_000                // unit: HVH, IssueAmount per term
+	IssueReductionCycle       = DayPerYear               // 1 year (360) in term
 	HooverBudget              = 4_300_000                // unit: HVH
 	IssueLimit                = 50 * IssueReductionCycle // unit: term
 	PrivateClaimableRateDenom = MonthPerYear * 2
@@ -84,8 +81,6 @@ const (
 	VarIssueLimit                = "issue_limit"           // unit: term
 	VarTermPeriod                = "term_period"           // unit: block
 	VarIssueReductionCycle       = "issue_reduction_cycle" // unit: term
-	VarPrivateReleaseCycle       = "private_release_cycle" // unit: term
-	VarPrivateLockup             = "private_lockup"        // unit: term
 	VarHooverBudget              = "hoover_budget"         // unit: hvh
 	VarUSDTPrice                 = "usdt_price"            // unit: hvh
 	VarActiveUSDTPrice           = "active_usdt_price"     // unit: hvh
