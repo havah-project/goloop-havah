@@ -682,20 +682,14 @@ func (s *State) SetPrivateClaimableRate(num, denom int64) error {
 		return scoreresult.InvalidParameterError.Errorf(
 			"InvalidPrivateClaimableRate: num=%d denom=%d", num, denom)
 	}
-
-	if err := s.setInt64(hvhmodule.VarPrivateClaimableRateNum, num); err != nil {
-		return err
-	}
-	if err := s.setInt64(hvhmodule.VarPrivateClaimableRateDenom, denom); err != nil {
-		return err
-	}
-	return nil
+	return s.setInt64(hvhmodule.VarPrivateClaimableRate, num<<16|denom)
 }
 
 func (s *State) GetPrivateClaimableRate() (int64, int64) {
-	denom := s.getInt64OrDefault(
-		hvhmodule.VarPrivateClaimableRateDenom, hvhmodule.PrivateClaimableRateDenom)
-	num := s.getInt64OrDefault(hvhmodule.VarPrivateClaimableRateNum, 0)
+	value := s.getInt64OrDefault(
+		hvhmodule.VarPrivateClaimableRate, hvhmodule.PrivateClaimableRate)
+	num := value >> 16
+	denom := value & 0xffff
 	return num, denom
 }
 

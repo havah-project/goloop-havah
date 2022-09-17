@@ -450,7 +450,7 @@ func TestState_SetPrivateClaimableRate(t *testing.T) {
 
 	// Check default value
 	expNum = int64(0)
-	expDenom = int64(hvhmodule.PrivateClaimableRateDenom)
+	expDenom = int64(hvhmodule.PrivateClaimableRate)
 	num, denom = state.GetPrivateClaimableRate()
 	assert.Zero(t, num)
 	assert.Equal(t, expDenom, denom)
@@ -465,6 +465,7 @@ func TestState_SetPrivateClaimableRate(t *testing.T) {
 		{-3, -20},
 		{10, 5},
 		{10, 10001},
+		{10001, 10001},
 	}
 	for _, in := range ins {
 		err = state.SetPrivateClaimableRate(in[0], in[1])

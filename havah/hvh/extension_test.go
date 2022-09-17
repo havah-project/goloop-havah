@@ -480,7 +480,7 @@ func TestExtensionStateImpl_Reward2(t *testing.T) {
 	assert.NoError(t, err)
 	num, denom := getPrivateClaimableRate(jso)
 	assert.Zero(t, int64(0), num)
-	assert.Equal(t, int64(hvhmodule.PrivateClaimableRateDenom), denom)
+	assert.Equal(t, int64(hvhmodule.PrivateClaimableRate), denom)
 }
 
 // Case 3
