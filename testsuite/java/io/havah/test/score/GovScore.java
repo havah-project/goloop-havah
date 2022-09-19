@@ -2,22 +2,16 @@ package io.havah.test.score;
 
 import foundation.icon.icx.Wallet;
 import foundation.icon.icx.data.Address;
-import foundation.icon.icx.data.Bytes;
 import foundation.icon.icx.data.TransactionResult;
-import foundation.icon.icx.transport.jsonrpc.RpcItem;
 import foundation.icon.icx.transport.jsonrpc.RpcObject;
 import foundation.icon.icx.transport.jsonrpc.RpcValue;
 import foundation.icon.test.common.ResultTimeoutException;
-import foundation.icon.test.common.TransactionFailureException;
 import foundation.icon.test.common.TransactionHandler;
 import foundation.icon.test.score.Score;
 import io.havah.test.common.Constants;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 public class GovScore extends Score {
@@ -244,5 +238,13 @@ public class GovScore extends Score {
                 .put("height", new RpcValue(height))
                 .build();
         return invokeAndWaitResult(wallet, "startRewardIssue", params);
+    }
+
+    public TransactionResult setPrivateClaimableRate(Wallet wallet, BigInteger denominator, BigInteger numerator) throws IOException, ResultTimeoutException {
+        RpcObject params = new RpcObject.Builder()
+                .put("denominator", new RpcValue(denominator))
+                .put("numerator", new RpcValue(numerator))
+                .build();
+        return invokeAndWaitResult(wallet, "setPrivateClaimableRate", params);
     }
 }

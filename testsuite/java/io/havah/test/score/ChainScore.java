@@ -108,5 +108,9 @@ public class ChainScore extends foundation.icon.test.score.ChainScore {
                 .build();
         return invokeAndWaitResult(wallet, "setMaxStepLimit", params);
     }
+
+    public RpcObject getPrivateClaimableRate() throws IOException {
+        return call("getPrivateClaimableRate", null).asObject();
+    }
 }
 

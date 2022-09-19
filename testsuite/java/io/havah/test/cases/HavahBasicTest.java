@@ -10,6 +10,7 @@ import foundation.icon.icx.transport.http.HttpProvider;
 import foundation.icon.icx.transport.jsonrpc.RpcError;
 import foundation.icon.icx.transport.jsonrpc.RpcObject;
 import foundation.icon.test.common.Env;
+import foundation.icon.test.common.Log;
 import foundation.icon.test.common.TestBase;
 import foundation.icon.test.common.TransactionHandler;
 import io.havah.test.common.Constants;
@@ -132,7 +133,7 @@ public class HavahBasicTest extends TestBase {
         BigInteger fee = Utils.getTxFee(result);
         LOG.info("fee : " + fee);
 
-        assertEquals(true, compare.compareTo(after.subtract(before).subtract(expected.subtract(fee)).abs()) > -1, "claimable is not expected");
+        assertEquals(true, compare.compareTo(after.subtract(before).subtract(expected.subtract(fee)).abs()) < 1, "claimable is not expected");
 //        assertEquals(compare, after.subtract(before).compareTo(expected.subtract(fee)), "claim reward is not expected");
 
         LOG.infoExiting();
@@ -219,31 +220,32 @@ public class HavahBasicTest extends TestBase {
         return reward.divide(planetNFTScore.totalSupply());
     }
 
-    public static BigInteger _getCurrentPrivateReward(BigInteger planetStart, BigInteger total) throws IOException {
+    public static TransactionResult _setPrivateClaimableRate(Wallet wallet, BigInteger denominator, BigInteger numerator, boolean success) throws Exception {
+        TransactionResult result = govScore.setPrivateClaimableRate(wallet, denominator, numerator);
+        assertEquals(success ? Constants.STATUS_SUCCESS : Constants.STATUS_FAILURE, result.getStatus(), "failure result(" + result + ")");
+        return result;
+    }
+
+    public static Map<String, Object> _getPrivateClaimableRate() throws IOException {
         try {
-            RpcObject obj = chainScore.getIssueInfo();
-            BigInteger termPeriod = obj.getItem("termPeriod").asInteger();
-            BigInteger height = obj.getItem("height").asInteger();
-
-            BigInteger privateLockup = Constants.PRIVATE_LOCKUP;
-            BigInteger privateReleaseCycle = Constants.PRIVATE_RELEASE_CYCLE;
-
-            BigInteger lockupTerm = height.subtract(planetStart).subtract(BigInteger.ONE).divide(termPeriod);
-
-            if (lockupTerm.compareTo(privateLockup) < 0)
-                return BigInteger.ZERO;
-
-            BigInteger releaseCycle = lockupTerm.subtract(privateLockup).divide(privateReleaseCycle).add(BigInteger.ONE);
-            BigInteger reward = total;
-            LOG.info("releaseCycle : " + releaseCycle);
-            if (releaseCycle.compareTo(BigInteger.valueOf(25)) < 0)  {
-                reward = total.subtract(total.multiply(BigInteger.valueOf(24).subtract(releaseCycle)).divide(BigInteger.valueOf(24)));
-            }
-            return reward;
-        } catch (NullPointerException e) {
-            LOG.info("getIssueInfo has null infomation.");
-            return BigInteger.ZERO;
+            RpcObject obj = chainScore.getPrivateClaimableRate();
+            return Map.of(
+                    "denominator", obj.getItem("denominator").asInteger(),
+                    "numerator", obj.getItem("numerator").asInteger()
+            );
+        } catch (RpcError e) {
+            assertEquals(Constants.RPC_ERROR_INVALID_ID, e.getCode());
+            LOG.info("Expected RpcError: code=" + e.getCode() + ", msg=" + e.getMessage());
         }
+        return Map.of();
+    }
+
+    public static boolean checkPrivateClaimableRatio(BigInteger denominator, BigInteger numerator) throws IOException {
+        Map<String, Object> claimratio = _getPrivateClaimableRate();
+        if(denominator.compareTo((BigInteger) claimratio.get("denominator")) == 0) return true;
+        if(numerator.compareTo((BigInteger) claimratio.get("numerator")) == 0) return true;
+
+        return false;
     }
 
     @Test
@@ -454,15 +456,9 @@ public class HavahBasicTest extends TestBase {
     @Test
     public void claimPrivatePlanetRewardTest() throws Exception {
         LOG.infoEntering("claimPrivatePlanetRewardTest");
+        // setup
         KeyWallet planetManagerWallet = KeyWallet.create();
         KeyWallet planetWallet = KeyWallet.create();
-        BigInteger termPeriod = _getTermPeriod();
-        BigInteger privateLockup = Constants.PRIVATE_LOCKUP;
-        BigInteger privateReleaseCycle = Constants.PRIVATE_RELEASE_CYCLE;
-
-        LOG.info("termPeriod : " + termPeriod);
-        LOG.info("privateLockup : " + privateLockup);
-        LOG.info("privateReleaseCycle : " + privateReleaseCycle);
 
         Utils.distributeCoin(new Wallet[] {planetManagerWallet, planetWallet});
 
@@ -470,35 +466,91 @@ public class HavahBasicTest extends TestBase {
         _checkAndMintPlanetNFT(planetWallet.getAddress(), PLANET_PRIVATE);
         List<BigInteger> planetIds = _tokenIdsOf(planetWallet.getAddress(), 1, BigInteger.ONE);
         BigInteger planetId = planetIds.get(0);
-        BigInteger planetHeight = (BigInteger) _getPlanetInfo(planetId).get("height");
 
         Utils.waitUntilNextTerm();
 
-        _reportPlanetWork(planetManagerWallet, planetId, true);
-        BigInteger totalReward = _getCurrentPublicReward();
-        BigInteger claimedReward = BigInteger.ZERO;
-
-        var lockupHeight = _getStartHeightOfTerm(privateLockup, termPeriod, planetHeight.add(BigInteger.ONE));
-        LOG.info("lockupHeight = " + lockupHeight);
-        Utils.waitUtil(lockupHeight);
-
-        int testTermCycle = 10;
-        for (int i = 0; i < testTermCycle; i++) {
-            var nextCycle = lockupHeight.add(termPeriod.multiply(privateReleaseCycle).multiply(BigInteger.valueOf(i + 1)));
-            BigInteger claimable = (BigInteger) _getRewardInfoOf(planetId).get("claimable");
-            BigInteger expected = _getCurrentPrivateReward(planetHeight, totalReward).subtract(claimedReward);
-            LOG.info("claimable = " + claimable);
-            LOG.info("expected = " + expected);
-            assertEquals(true, BigInteger.TEN.compareTo(claimable.subtract(expected).abs()) > -1, "private reward is not expected");
-//            assertEquals(claimable.compareTo(expected), 0, "private reward is not expected");
-            _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, expected, BigInteger.TEN);
-            claimedReward = claimedReward.add(claimable);
-
-            _reportPlanetWork(planetManagerWallet, planetIds.get(0), true);
+        // report planet work 2 times
+        BigInteger totalReward = BigInteger.ZERO;
+        for (int i = 0; i < 2; i++) {
+            _reportPlanetWork(planetManagerWallet, planetId, true);
             totalReward = totalReward.add(_getCurrentPublicReward());
-
-            Utils.waitUtil(nextCycle);
+            Utils.waitUntilNextTerm();
         }
+        LOG.info("totalReward : " + totalReward);
+
+        // check reward info before setPrivateClaimableRatio
+        Map<String, Object> info = _getRewardInfoOf(planetId);
+        LOG.info("claimable before set rate: " + info.get("claimable"));
+        LOG.info("remain before set rate: " + info.get("remain"));
+        LOG.info("total before set rate: " + info.get("total"));
+        assertEquals(true, totalReward.compareTo((BigInteger) _getRewardInfoOf(planetId).get("total")) == 0);
+        assertEquals(true, BigInteger.ZERO.compareTo((BigInteger) _getRewardInfoOf(planetId).get("claimable")) == 0);
+
+        // check setPrivateClaimableRatio param
+        _setPrivateClaimableRate(planetWallet, BigInteger.valueOf(1000), BigInteger.ONE, false);
+        _setPrivateClaimableRate(governorWallet, BigInteger.ZERO, BigInteger.ONE, false);
+        _setPrivateClaimableRate(governorWallet, BigInteger.valueOf(1000), BigInteger.valueOf(11115), false);
+
+        BigInteger denominator = BigInteger.valueOf(100);
+        BigInteger numerator = BigInteger.ONE;
+        _setPrivateClaimableRate(governorWallet, denominator, numerator, true);
+        assertEquals(true, checkPrivateClaimableRatio(denominator, numerator));
+
+        Utils.waitUntilNextTerm();
+
+        // check reward is expected
+        info = _getRewardInfoOf(planetId);
+        BigInteger expected = totalReward.divide(denominator);
+        LOG.info("claimable before change rate: " + info.get("claimable"));
+        LOG.info("remain before change rate: " + info.get("remain"));
+        LOG.info("total before change rate: " + info.get("total"));
+        assertEquals(true, expected.compareTo((BigInteger) _getRewardInfoOf(planetId).get("claimable")) == 0);
+
+        // change private claimable ratio
+        numerator = BigInteger.TEN;
+        _setPrivateClaimableRate(governorWallet, denominator, numerator, true);
+        assertEquals(true, checkPrivateClaimableRatio(denominator, numerator));
+
+        info = _getRewardInfoOf(planetId);
+        LOG.info("claimable after change rate: " + info.get("claimable"));
+        LOG.info("remain after change rate: " + info.get("remain"));
+        LOG.info("total after change rate: " + info.get("total"));
+
+        Utils.waitUntilNextTerm();
+
+        // check reward is expected
+        expected = totalReward.multiply(numerator).divide(denominator);
+        info = _getRewardInfoOf(planetId);
+        BigInteger claimable = (BigInteger) info.get("claimable");
+        LOG.info("expected : " + expected);
+        LOG.info("claimable before claim: " + info.get("claimable"));
+        LOG.info("remain before claim: " + info.get("remain"));
+        LOG.info("total before claim: " + info.get("total"));
+        assertEquals(true, expected.compareTo(claimable) == 0);
+
+        // claim reward
+        _checkAndClaimPlanetReward(governorWallet, new BigInteger[] {planetId}, true, expected, BigInteger.TWO);
+        BigInteger claimedReward = claimable;
+
+        info = _getRewardInfoOf(planetId);
+        LOG.info("claimable after claim: " + info.get("claimable"));
+        LOG.info("remain after claim: " + info.get("remain"));
+        LOG.info("total after claim: " + info.get("total"));
+
+        Utils.waitUntilNextTerm();
+
+        // change private claimable ratio
+        numerator = BigInteger.valueOf(15);
+        _setPrivateClaimableRate(governorWallet, denominator, numerator, true);
+        assertEquals(true, checkPrivateClaimableRatio(denominator, numerator));
+
+        // check reward is expected
+        expected = totalReward.multiply(numerator).divide(denominator).subtract(claimedReward);
+        claimable = (BigInteger) _getRewardInfoOf(planetId).get("claimable");
+
+        assertEquals(true, expected.compareTo(claimable) == 0);
+
+        //Utils.waitUntilNextTerm();
 
         LOG.infoExiting();
     }
