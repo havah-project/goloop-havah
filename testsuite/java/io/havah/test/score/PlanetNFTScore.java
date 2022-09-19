@@ -89,17 +89,12 @@ public class PlanetNFTScore extends Score {
 
     public Bytes mintPlanet(Wallet wallet, Address _to, int _type,
                             BigInteger _priceInUSDT, BigInteger _priceInHVH, BigInteger _tokenId) throws IOException {
-        var mintInfo = new RpcArray.Builder();
-        mintInfo.add(new RpcObject.Builder()
+        RpcObject params = new RpcObject.Builder()
                 .put("_priceInUSDT", new RpcValue(_priceInUSDT))
                 .put("_priceInHVH", new RpcValue(_priceInHVH))
                 .put("_tokenId", new RpcValue(_tokenId))
-                .build());
-
-        RpcObject params = new RpcObject.Builder()
                 .put("_to", new RpcValue(_to))
                 .put("_type", new RpcValue(BigInteger.valueOf(_type)))
-                .put("_info", mintInfo.build())
                 .build();
         return invoke(wallet, "mintPlanet", params);
     }
@@ -119,7 +114,7 @@ public class PlanetNFTScore extends Score {
                 .put("_to", new RpcValue(_to))
                 .put("_type", new RpcValue(BigInteger.valueOf(_type)))
                 .build();
-        return invoke(wallet, "mintPlanet", params);
+        return invoke(wallet, "mintPlanetBatch", params);
     }
 
     public Bytes burn(BigInteger tokenId) throws IOException {
