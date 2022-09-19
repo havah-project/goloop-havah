@@ -239,7 +239,7 @@ func (s *chainScore) Ex_fallback() error {
 
 func (s *chainScore) Ex_setPrivateClaimableRate(
 	numerator *common.HexInt, denominator *common.HexInt) error {
-	if err := s.tryChargeCall(); err != nil {
+	if err := s.checkGovernance(true); err != nil {
 		return err
 	}
 	es, err := s.getExtensionState()
