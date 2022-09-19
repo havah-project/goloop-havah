@@ -1629,6 +1629,90 @@ N/A
 
 * [`Burned(Address,int,int)`](#burnedaddressintint)
 
+### setPrivateClaimableRate
+
+* Sets claimable rate for a private planet
+* Called by Governance SCORE
+
+> Request
+
+```json
+{
+  "id": 1234,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "setPrivateClaimableRate",
+      "params": {
+        "numerator": "0x1",
+        "denominator": "0x18"
+      }
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key         | VALUE Type | Required | Description                         |
+|:------------|:-----------|:---------|:------------------------------------|
+| numerator   | T_INT      | true     | Numerator of PrivateClaimableRate   |
+| denominator | T_INT      | true     | Denominator of PrivateClaimableRate |
+
+* 0 <= numerator <= 10000
+* 0 < denominator <= 10000
+* numerator <= denominator
+
+#### Returns
+
+`T_HASH` - txHash
+
+### getPrivateClaimableRate
+
+* Returns claimable rate for a private planet
+* If PrivateClaimableRate has not changed, this call returns numerator=0, denominator=24 as default
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getPrivateClaimableRate"
+    }
+  }
+}
+```
+
+> Response
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "numerator": "0x0",
+    "denominator": "0x18"
+  }
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+`T_DICT` - numerator and denominator representing PrivateClaimableRate
+
 ## EventLogs
 
 HAVAH records the following eventLogs:
