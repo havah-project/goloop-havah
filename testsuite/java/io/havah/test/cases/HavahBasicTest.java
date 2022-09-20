@@ -10,7 +10,6 @@ import foundation.icon.icx.transport.http.HttpProvider;
 import foundation.icon.icx.transport.jsonrpc.RpcError;
 import foundation.icon.icx.transport.jsonrpc.RpcObject;
 import foundation.icon.test.common.Env;
-import foundation.icon.test.common.Log;
 import foundation.icon.test.common.TestBase;
 import foundation.icon.test.common.TransactionHandler;
 import io.havah.test.common.Constants;
@@ -133,7 +132,7 @@ public class HavahBasicTest extends TestBase {
         BigInteger fee = Utils.getTxFee(result);
         LOG.info("fee : " + fee);
 
-        assertEquals(true, compare.compareTo(after.subtract(before).subtract(expected.subtract(fee)).abs()) > -1, "claimable is not expected");
+        assertTrue(compareWithBuffer(after.subtract(before), expected.subtract(fee), compare), "claimable is not expected");
 
         LOG.infoExiting();
         return result;
@@ -239,15 +238,15 @@ public class HavahBasicTest extends TestBase {
         return Map.of();
     }
 
-    public static boolean checkPrivateClaimableRatio(BigInteger denominator, BigInteger numerator) throws IOException {
-        Map<String, Object> claimratio = _getPrivateClaimableRate();
-        if(denominator.compareTo((BigInteger) claimratio.get("denominator")) == 0 &&
-                numerator.compareTo((BigInteger) claimratio.get("numerator")) == 0) return true;
+    public static boolean checkPrivateClaimableRate(BigInteger denominator, BigInteger numerator) throws IOException {
+        Map<String, Object> claimableRate = _getPrivateClaimableRate();
+        if(denominator.compareTo((BigInteger) claimableRate.get("denominator")) == 0 &&
+                numerator.compareTo((BigInteger) claimableRate.get("numerator")) == 0) return true;
 
         return false;
     }
 
-    private boolean compareWithBuffer(BigInteger left, BigInteger right, BigInteger buf) {
+    public static boolean compareWithBuffer(BigInteger left, BigInteger right, BigInteger buf) {
         return left.subtract(right).abs().compareTo(buf) < 1;
     }
 
@@ -488,7 +487,7 @@ public class HavahBasicTest extends TestBase {
         BigInteger denominator = BigInteger.valueOf(100);
         BigInteger numerator = BigInteger.ONE;
         _setPrivateClaimableRate(governorWallet, denominator, numerator, true);
-        assertTrue(checkPrivateClaimableRatio(denominator, numerator));
+        assertTrue(checkPrivateClaimableRate(denominator, numerator));
 
         Utils.waitUntilNextTerm();
 
@@ -497,10 +496,10 @@ public class HavahBasicTest extends TestBase {
         BigInteger expected = totalReward.divide(denominator);
         assertEquals(true, compareWithBuffer(expected, (BigInteger) info.get("claimable"), BigInteger.TWO));
 
-        // change private claimable ratio
+        // change private claimable rate
         numerator = BigInteger.TEN;
         _setPrivateClaimableRate(governorWallet, denominator, numerator, true);
-        assertTrue(checkPrivateClaimableRatio(denominator, numerator));
+        assertTrue(checkPrivateClaimableRate(denominator, numerator));
 
         Utils.waitUntilNextTerm();
 
@@ -520,18 +519,25 @@ public class HavahBasicTest extends TestBase {
 
         Utils.waitUntilNextTerm();
 
-        // change private claimable ratio
+        // change private claimable rate
         numerator = BigInteger.valueOf(15);
         _setPrivateClaimableRate(governorWallet, denominator, numerator, true);
-        assertTrue(checkPrivateClaimableRatio(denominator, numerator));
+        assertTrue(checkPrivateClaimableRate(denominator, numerator));
 
-        // check reward is expected
+        // check claimable is expected
         expected = totalReward.multiply(numerator).divide(denominator).subtract(claimedReward);
         claimable = (BigInteger) _getRewardInfoOf(planetId).get("claimable");
+        assertTrue(compareWithBuffer(expected, claimable, BigInteger.TWO));
 
-        assertEquals(true, compareWithBuffer(expected, claimable, BigInteger.TWO));
+        // reportPlanetWork
+        _reportPlanetWork(planetManagerWallet, planetId, true);
+        totalReward = totalReward.add(_getCurrentPublicReward());
+        Utils.waitUntilNextTerm();
 
-        //Utils.waitUntilNextTerm();
+        // check claimable is expected
+        expected = totalReward.multiply(numerator).divide(denominator).subtract(claimedReward);
+        claimable = (BigInteger) _getRewardInfoOf(planetId).get("claimable");
+        assertTrue(compareWithBuffer(expected, claimable, BigInteger.TWO));
 
         LOG.infoExiting();
     }
