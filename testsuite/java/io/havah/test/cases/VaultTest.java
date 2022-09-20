@@ -2,7 +2,6 @@ package io.havah.test.cases;
 
 import foundation.icon.icx.KeyWallet;
 import foundation.icon.icx.Wallet;
-import foundation.icon.icx.data.Address;
 import foundation.icon.icx.data.Bytes;
 import foundation.icon.icx.data.TransactionResult;
 import foundation.icon.test.common.ResultTimeoutException;
@@ -15,7 +14,6 @@ import org.junit.jupiter.api.*;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.Map;
 
 import static foundation.icon.test.common.Env.LOG;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -27,7 +25,7 @@ public class VaultTest extends TestBase {
     private static KeyWallet[] wallets;
     private static VaultScore vaultScore;
 
-    private static Wallet ownerWallet;
+    private static Wallet governorWallet;
 
     @BeforeAll
     static void setup() throws Exception {
@@ -44,7 +42,7 @@ public class VaultTest extends TestBase {
 
         vaultScore = new VaultScore(txHandler);
 
-        ownerWallet = Utils.getGovernor();
+        governorWallet = Utils.getGovernor();
     }
 
     void _checkAndClaim(KeyWallet wallet) throws IOException, ResultTimeoutException {
@@ -78,7 +76,9 @@ public class VaultTest extends TestBase {
                 new VaultScore.VestingAccount(wallets[0].getAddress(), allocations[0]),
                 new VaultScore.VestingAccount(wallets[1].getAddress(), allocations[1])
         };
-        vaultScore.addAllocation(ownerWallet, accounts);
+        assertFailure(vaultScore.addAllocation(wallets[0], accounts));
+        assertFailure(vaultScore.addAllocation(governorWallet, new VaultScore.VestingAccount[] {}));
+        assertSuccess(vaultScore.addAllocation(governorWallet, accounts));
         LOG.infoExiting();
 
         LOG.infoEntering("get", "getAllocation()");
@@ -97,8 +97,10 @@ public class VaultTest extends TestBase {
                 new VaultScore.VestingSchedule(timeStamps[1], BigInteger.valueOf(100), BigInteger.valueOf(50)),
                 new VaultScore.VestingSchedule(timeStamps[2], BigInteger.valueOf(100), BigInteger.valueOf(100))
         };
-        vaultScore.setVestingSchedules(ownerWallet, wallets[0].getAddress(), schedules);
-        vaultScore.setVestingSchedules(ownerWallet, wallets[1].getAddress(), schedules);
+        assertFailure(vaultScore.setVestingSchedules(wallets[0], wallets[0].getAddress(), schedules));
+        assertFailure(vaultScore.setVestingSchedules(governorWallet, wallets[2].getAddress(), schedules));
+        assertSuccess(vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), schedules));
+        assertSuccess(vaultScore.setVestingSchedules(governorWallet, wallets[1].getAddress(), schedules));
         LOG.infoExiting();
 
         LOG.infoEntering("claim", "claim vault");
@@ -123,15 +125,15 @@ public class VaultTest extends TestBase {
         }
 
         LOG.infoEntering("call", "setAdmin()");
-        var txHash = vaultScore.setAdmin(wallets[1], ownerWallet.getAddress());
+        var txHash = vaultScore.setAdmin(wallets[1], governorWallet.getAddress());
         assertFailure(txHash);
 
-        txHash = vaultScore.setAdmin(ownerWallet, wallets[1].getAddress());
+        txHash = vaultScore.setAdmin(governorWallet, wallets[1].getAddress());
         assertSuccess(txHash);
         LOG.infoExiting();
 
         LOG.infoEntering("call", "admin()");
-        assertEquals(false, vaultScore.admin().equals(ownerWallet.getAddress()));
+        assertEquals(false, vaultScore.admin().equals(governorWallet.getAddress()));
         assertEquals(true, vaultScore.admin().equals(wallets[1].getAddress()));
         LOG.infoExiting();
 
@@ -141,12 +143,12 @@ public class VaultTest extends TestBase {
                 new VaultScore.VestingAccount(tmpWallets[1].getAddress(), BigInteger.ZERO),
                 new VaultScore.VestingAccount(tmpWallets[2].getAddress(), BigInteger.ZERO)
         };
-        assertFailure(vaultScore.addAllocation(ownerWallet, accounts));
+        assertFailure(vaultScore.addAllocation(governorWallet, accounts));
         assertSuccess(vaultScore.addAllocation(wallets[1], accounts));
         LOG.infoExiting();
 
         LOG.infoEntering("call", "setAllocation()");
-        assertFailure(vaultScore.setAllocation(ownerWallet, new VaultScore.VestingAccount(wallets[0].getAddress(), BigInteger.ZERO)));
+        assertFailure(vaultScore.setAllocation(governorWallet, new VaultScore.VestingAccount(wallets[0].getAddress(), BigInteger.ZERO)));
         assertSuccess(vaultScore.setAllocation(wallets[1], new VaultScore.VestingAccount(wallets[0].getAddress(), BigInteger.ZERO)));
         LOG.infoExiting();
 
@@ -158,11 +160,11 @@ public class VaultTest extends TestBase {
                 new VaultScore.VestingSchedule(timeStamps[1], BigInteger.valueOf(100), BigInteger.valueOf(50)),
                 new VaultScore.VestingSchedule(timeStamps[2], BigInteger.valueOf(100), BigInteger.valueOf(100))
         };
-        assertFailure(vaultScore.setVestingSchedules(ownerWallet, wallets[0].getAddress(), schedules));
+        assertFailure(vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), schedules));
         assertSuccess(vaultScore.setVestingSchedules(wallets[1], wallets[1].getAddress(), schedules));
         LOG.infoExiting();
 
-        txHash = vaultScore.setAdmin(wallets[1], ownerWallet.getAddress());
+        txHash = vaultScore.setAdmin(wallets[1], governorWallet.getAddress());
         assertSuccess(txHash);
     }
 }
