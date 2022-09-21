@@ -236,3 +236,26 @@ func (s *chainScore) Ex_fallback() error {
 	}
 	return es.BurnCoin(s.newCallContext(), s.value)
 }
+
+func (s *chainScore) Ex_setPrivateClaimableRate(
+	numerator *common.HexInt, denominator *common.HexInt) error {
+	if err := s.checkGovernance(true); err != nil {
+		return err
+	}
+	es, err := s.getExtensionState()
+	if err != nil {
+		return err
+	}
+	return es.SetPrivateClaimableRate(numerator.Int64(), denominator.Int64())
+}
+
+func (s *chainScore) Ex_getPrivateClaimableRate() (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	es, err := s.getExtensionState()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetPrivateClaimableRate()
+}

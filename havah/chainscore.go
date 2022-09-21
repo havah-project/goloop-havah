@@ -307,6 +307,23 @@ var chainMethods = []*chainMethod{
 			scoreapi.Dict,
 		},
 	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "setPrivateClaimableRate",
+		scoreapi.FlagExternal, 2,
+		[]scoreapi.Parameter{
+			{"numerator", scoreapi.Integer, nil, nil},
+			{"denominator", scoreapi.Integer, nil, nil},
+		},
+		nil,
+	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "getPrivateClaimableRate",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 0,
+		nil,
+		[]scoreapi.DataType{
+			scoreapi.Dict,
+		},
+	}, 0, 0},
 	{scoreapi.Method{scoreapi.Function, "addDeployer",
 		scoreapi.FlagExternal, 1,
 		[]scoreapi.Parameter{

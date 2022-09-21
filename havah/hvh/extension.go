@@ -460,6 +460,22 @@ func (es *ExtensionStateImpl) BurnCoin(cc hvhmodule.CallContext, amount *big.Int
 	return nil
 }
 
+func (es *ExtensionStateImpl) SetPrivateClaimableRate(numerator, denominator int64) error {
+	es.Logger().Debugf(
+		"SetPrivateClaimableRate() start: numerator=%d denominator=%d",
+		numerator, denominator)
+	defer es.Logger().Debugf("SetPrivateClaimableRate() end")
+	return es.state.SetPrivateClaimableRate(numerator, denominator)
+}
+
+func (es *ExtensionStateImpl) GetPrivateClaimableRate() (map[string]interface{}, error) {
+	num, denom := es.state.GetPrivateClaimableRate()
+	return map[string]interface{}{
+		"numerator":   num,
+		"denominator": denom,
+	}, nil
+}
+
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {
 	es := wc.GetExtensionState()
 	if es == nil {
