@@ -47,17 +47,18 @@ public class VaultTest extends TestBase {
 
     void _checkAndClaim(KeyWallet wallet) throws IOException, ResultTimeoutException {
         LOG.infoEntering("_checkAndClaim", "claim : " + wallet.getAddress());
+        BigInteger before = txHandler.getBalance(wallet.getAddress());
+        LOG.info("balance before : " + before);
         BigInteger claimable = vaultScore.getClaimable(wallet.getAddress());
-        BigInteger balance = txHandler.getBalance(wallet.getAddress());
         TransactionResult result = vaultScore.claim(wallet);
         assertSuccess(result);
         BigInteger fee = Utils.getTxFee(result);
-        balance = txHandler.getBalance(wallet.getAddress()).subtract(balance);
+        BigInteger after = txHandler.getBalance(wallet.getAddress());
         LOG.info("claimable : " + claimable);
         claimable = claimable.subtract(fee);
         LOG.info("real claim amount (exclude txFee) : " + claimable);
-        LOG.info("balance : " + balance);
-        assertEquals(0, balance.compareTo(claimable), "claimable is not expected");
+        LOG.info("balance after : " + after);
+        assertEquals(0, after.subtract(before).compareTo(claimable), "claimable is not expected");
         LOG.infoExiting();
     }
     @Test
@@ -91,7 +92,11 @@ public class VaultTest extends TestBase {
 
         LOG.infoEntering("call", "setVestingSchedules()");
         BigInteger curTimestamp = Utils.getTimestamp();
-        BigInteger[] timeStamps = { curTimestamp.add(BigInteger.valueOf(1500)), curTimestamp.add(BigInteger.valueOf(3000)), curTimestamp.add(BigInteger.valueOf(4500)) };
+        BigInteger[] timeStamps = {
+                curTimestamp.add(BigInteger.valueOf(20000000)),
+                curTimestamp.add(BigInteger.valueOf(40000000)),
+                curTimestamp.add(BigInteger.valueOf(60000000))
+        };
         VaultScore.VestingSchedule[] schedules = {
                 new VaultScore.VestingSchedule(timeStamps[0], BigInteger.valueOf(100), BigInteger.valueOf(25)),
                 new VaultScore.VestingSchedule(timeStamps[1], BigInteger.valueOf(100), BigInteger.valueOf(50)),
@@ -105,7 +110,7 @@ public class VaultTest extends TestBase {
 
         LOG.infoEntering("claim", "claim vault");
         for(int i=0; i<schedules.length; i++) {
-            Utils.waitUtilTime(timeStamps[i]);
+            Utils.waitUtilTime(schedules[i].timestamp);
             _checkAndClaim(wallets[0]);
         }
         _checkAndClaim(wallets[1]);

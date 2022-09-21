@@ -3,7 +3,6 @@ package io.havah.test.score;
 import foundation.icon.icx.Wallet;
 import foundation.icon.icx.data.Address;
 import foundation.icon.icx.data.Bytes;
-import foundation.icon.icx.transport.jsonrpc.RpcArray;
 import foundation.icon.icx.transport.jsonrpc.RpcObject;
 import foundation.icon.icx.transport.jsonrpc.RpcValue;
 import foundation.icon.test.common.TransactionHandler;
@@ -14,12 +13,14 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
-import static foundation.icon.test.common.Env.LOG;
-
 public class EcosystemScore extends Score {
 
     public EcosystemScore(TransactionHandler txHandler) {
         super(txHandler, Constants.ECOSYSTEM_ADDRESS);
+    }
+
+    public EcosystemScore(Score score) {
+        super(score);
     }
 
     public Bytes transfer(Wallet wallet, Address to, BigInteger amount) throws Exception {
@@ -34,7 +35,7 @@ public class EcosystemScore extends Score {
         var schedules =  call("getLockupSchedule", null).asArray();
         List<LockupSchedule> list = new ArrayList<>();
         for (var s : schedules) {
-            var height = s.asObject().getItem("BLOCK_HEIGHT").asInteger();
+            var height = s.asObject().getItem("BLOCK_TIMESTAMP").asInteger();
             var amount = s.asObject().getItem("LOCKUP_AMOUNT").asInteger();
             list.add(new LockupSchedule(height, amount));
         }
@@ -49,15 +50,15 @@ public class EcosystemScore extends Score {
     }
 
     public static class LockupSchedule {
-        private final BigInteger blockHeight;
+        private final BigInteger blockTimestamp;
         private final BigInteger amount;
-        public LockupSchedule(BigInteger blockHeight, BigInteger amount) {
-            this.blockHeight = blockHeight;
+        public LockupSchedule(BigInteger blockTimestamp, BigInteger amount) {
+            this.blockTimestamp = blockTimestamp;
             this.amount = amount;
         }
 
-        public BigInteger getBlockHeight() {
-            return blockHeight;
+        public BigInteger getBlockTimestamp() {
+            return blockTimestamp;
         }
 
         public BigInteger getAmount() {
@@ -67,7 +68,7 @@ public class EcosystemScore extends Score {
         @Override
         public String toString() {
             return "LockSchedule{" +
-                    "blockHeight=" + blockHeight +
+                    "blockTimestamp=" + blockTimestamp +
                     ", amount=" + amount +
                     '}';
         }

@@ -3,6 +3,9 @@ package io.havah.test.cases;
 import foundation.icon.icx.KeyWallet;
 import foundation.icon.icx.Wallet;
 import foundation.icon.icx.data.Address;
+import foundation.icon.icx.transport.jsonrpc.RpcArray;
+import foundation.icon.icx.transport.jsonrpc.RpcObject;
+import foundation.icon.icx.transport.jsonrpc.RpcValue;
 import foundation.icon.test.common.TestBase;
 import io.havah.test.common.Constants;
 import io.havah.test.common.Utils;
@@ -27,6 +30,7 @@ public class EcosystemTest extends TestBase {
     static void setup() throws Exception {
         ecoScore = new EcosystemScore(txHandler);
         ecoOwner = Utils.getGovernor();
+
         wallets = new Wallet[3];
         wallets[0] = ecoOwner;
         for (int i = 1; i < wallets.length; i++) {
@@ -60,20 +64,48 @@ public class EcosystemTest extends TestBase {
     @Test
     public void checkLockupSchedule() throws Exception {
         LOG.infoEntering("checkLockupSchedule");
+
+        BigInteger curTime = Utils.getTimestamp();
+        RpcArray.Builder array = new RpcArray.Builder()
+                .add(new RpcObject.Builder()
+                        .put("blockTimestamp", new RpcValue(curTime.add(BigInteger.valueOf(16000000))))
+                        .put("ratio", new RpcValue(BigInteger.valueOf(20)))
+                        .build()
+                ).add(new RpcObject.Builder()
+                        .put("blockTimestamp", new RpcValue(curTime.add(BigInteger.valueOf(40000000))))
+                        .put("ratio", new RpcValue(BigInteger.valueOf(50)))
+                        .build()
+                ).add(new RpcObject.Builder()
+                        .put("blockTimestamp", new RpcValue(curTime.add(BigInteger.valueOf(64000000))))
+                        .put("ratio", new RpcValue(BigInteger.valueOf(80)))
+                        .build()
+                ).add(new RpcObject.Builder()
+                        .put("blockTimestamp", new RpcValue(curTime.add(BigInteger.valueOf(88000000))))
+                        .put("ratio", new RpcValue(BigInteger.valueOf(100)))
+                        .build()
+                );
+
+        RpcObject params = new RpcObject.Builder()
+                .put("_name", new RpcValue("Eco-System"))
+                .put("_schedules", array.build())
+                .build();
+
+        txHandler.deploy(ecoOwner, "./data/genesisStorage/ecosystem-optimized.jar", Constants.ECOSYSTEM_ADDRESS, params, new BigInteger("9999999999"));
+        ecoScore = new EcosystemScore(txHandler);
+
         var schedules = ecoScore.getLockupSchedule();
         var lockedAmount = Constants.ECOSYSTEM_INITIAL_BALANCE;
         Address receiver = wallets[2].getAddress();
         Wallet noPermission = wallets[1];
         final BigInteger withdrawAmount = BigInteger.valueOf(1);
-        // check height and withdraw
+        // check timestamp and withdraw
         for (var schedule : schedules) {
-            var cur = Utils.getHeight();
-            // wait until schedule.blockHeight
+            var cur = Utils.getTimestamp();
+            // wait until schedule.blockTimestamp
             // cur <= schedule
-            var blockHeight = schedule.getBlockHeight();
+            var blockTimestamp = schedule.getBlockTimestamp();
             var amount = schedule.getAmount();
-            if (cur.compareTo(blockHeight) <= 0) {
-
+            if (cur.compareTo(blockTimestamp) <= 0) {
                 // failure case - not owner wallet
                 var txHash = ecoScore.transfer(noPermission, receiver, withdrawAmount);
                 assertFailure(txHandler.getResult(txHash));
@@ -90,9 +122,9 @@ public class EcosystemTest extends TestBase {
                 }
 
                 _transferExceedAndMax(receiver, lockedAmount);
-                Utils.waitUtil(blockHeight);
+                Utils.waitUtilTime(blockTimestamp);
                 lockedAmount = amount;
-                LOG.info("lock amount(" + amount + ") on (" + blockHeight + ") height");
+                LOG.info("lock amount(" + amount + ") on (" + blockTimestamp + ") timestamp");
             } else {
                 lockedAmount = BigInteger.ZERO;
             }
