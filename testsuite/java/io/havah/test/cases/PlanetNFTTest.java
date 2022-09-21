@@ -151,7 +151,7 @@ public class PlanetNFTTest extends TestBase {
 
     // mint & transfer
     void _mintAndTransfer(Wallet holder, Wallet from, Address to) throws Exception {
-        boolean success = holder.equals(from) && planetNFTScore.isTransferable();
+        boolean success = holder.equals(from) && planetNFTScore.isTransferable(PlanetNFTScore.PLANET_PUBLIC);
         LOG.infoEntering("Transfer", success ? "success" : "failure");
         _mintAndCheckBalance(planetScoreOwner, holder.getAddress(), PlanetNFTScore.PLANET_PUBLIC, BigInteger.ONE, BigInteger.ONE);
 
@@ -189,20 +189,20 @@ public class PlanetNFTTest extends TestBase {
         boolean isTransferable = false;
         for (int i = 0; i < 2; i++) {
             System.out.println("transfer : isTransferable(" + isTransferable + ")");
-            assertEquals(isTransferable, planetNFTScore.isTransferable());
+            assertEquals(isTransferable, planetNFTScore.isTransferable(PlanetNFTScore.PLANET_PUBLIC));
             _mintAndTransfer(wallets[0], wallets[1], wallets[2].getAddress()); // failure case
             _mintAndTransfer(wallets[0], wallets[2], wallets[0].getAddress()); // failure case
             _mintAndTransfer(wallets[0], wallets[0], wallets[1].getAddress()); // success case
             isTransferable = !isTransferable;
             System.out.println("transfer : setTransferable(" + isTransferable + ")");
-            var txHash = planetNFTScore.setTransferable(planetScoreOwner, isTransferable);
+            var txHash = planetNFTScore.setTransferable(planetScoreOwner, PlanetNFTScore.PLANET_PUBLIC, isTransferable);
             assertSuccess(txHash);
         }
         LOG.info("transfer totalSupply(" + planetNFTScore.totalSupply() + ")");
     }
 
     void _mintAndTransferFrom(Wallet holder, Wallet approveInvoker, Wallet approver, Wallet transferInvoker, Address to) throws Exception {
-        boolean success = approver.equals(transferInvoker) && planetNFTScore.isTransferable();
+        boolean success = approver.equals(transferInvoker) && planetNFTScore.isTransferable(PlanetNFTScore.PLANET_PUBLIC);
         var tokenIds = planetNFTScore.tokenIdsOf(holder.getAddress(), 0, 10);
         var approved = tokenIds.tokenIds.get(0);
         boolean approveSuccess = holder.equals(approveInvoker);
@@ -230,14 +230,14 @@ public class PlanetNFTTest extends TestBase {
         boolean isTransferable = false;
         for (int i = 0; i < 2; i++) {
             System.out.println("transferFrom : isTransferable(" + isTransferable + ")");
-            assertEquals(isTransferable, planetNFTScore.isTransferable());
+            assertEquals(isTransferable, planetNFTScore.isTransferable(PlanetNFTScore.PLANET_PUBLIC));
             _mintAndCheckBalance(planetScoreOwner, wallet[0].getAddress()); // mint with cnt
             _mintAndTransferFrom(wallet[0], wallet[1], wallet[2], wallet[3], wallet[4].getAddress()); // failure
             _mintAndTransferFrom(wallet[0], wallet[0], wallet[1], wallet[2], wallet[4].getAddress()); // failure
             _mintAndTransferFrom(wallet[0], wallet[0], wallet[1], wallet[1], wallet[4].getAddress()); // success
             isTransferable = !isTransferable;
             System.out.println("transferFrom : setTransferable(" + isTransferable + ")");
-            var txHash = planetNFTScore.setTransferable(planetScoreOwner, isTransferable);
+            var txHash = planetNFTScore.setTransferable(planetScoreOwner, PlanetNFTScore.PLANET_PUBLIC, isTransferable);
             assertSuccess(txHash);
         }
 

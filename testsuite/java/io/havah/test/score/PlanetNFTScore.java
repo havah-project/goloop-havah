@@ -178,15 +178,19 @@ public class PlanetNFTScore extends Score {
         return call("infoOf", params).asObject();
     }
 
-    public Bytes setTransferable(Wallet wallet, boolean transferable) throws Exception {
+    public Bytes setTransferable(Wallet wallet, int type, boolean transferable) throws Exception {
         RpcObject params = new RpcObject.Builder()
+                .put("_type", new RpcValue(BigInteger.valueOf(type)))
                 .put("_transferable", new RpcValue(transferable))
                 .build();
         return invoke(wallet, "setTransferable", params);
     }
 
-    public boolean isTransferable() throws Exception {
-        var result = call("isTransferable", null).asBoolean();
+    public boolean isTransferable(int type) throws Exception {
+        RpcObject params = new RpcObject.Builder()
+                .put("_type", new RpcValue(BigInteger.valueOf(type)))
+                .build();
+        var result = call("isTransferable", params).asBoolean();
         return result;
     }
 
