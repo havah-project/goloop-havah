@@ -188,7 +188,7 @@ public class MultiSigWalletScore extends Score {
     }
 
     public void ensureIcxTransfer(TransactionResult result, Address from, Address to, long value) throws IOException {
-        TransactionResult.EventLog event = findEventLog(result, "ICXTransfer(Address,Address,int)");
+        TransactionResult.EventLog event = findEventLog(result, "Transfer(Address,Address,int)");
         if (event != null) {
             BigInteger icxValue = IconAmount.of(BigInteger.valueOf(value), IconAmount.Unit.ICX).toLoop();
             Address _from = event.getIndexed().get(1).asAddress();
@@ -198,7 +198,7 @@ public class MultiSigWalletScore extends Score {
                 return; // ensured
             }
         }
-        throw new IOException("Failed to get ICXTransfer.");
+        throw new IOException("Failed to get Transfer.");
     }
 
     public void ensureExecution(TransactionResult result, BigInteger txId) throws IOException {

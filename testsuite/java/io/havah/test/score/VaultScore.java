@@ -5,6 +5,7 @@ import foundation.icon.icx.data.Address;
 import foundation.icon.icx.data.Bytes;
 import foundation.icon.icx.data.TransactionResult;
 import foundation.icon.icx.transport.jsonrpc.RpcArray;
+import foundation.icon.icx.transport.jsonrpc.RpcItem;
 import foundation.icon.icx.transport.jsonrpc.RpcObject;
 import foundation.icon.icx.transport.jsonrpc.RpcValue;
 import foundation.icon.test.common.ResultTimeoutException;
@@ -14,17 +15,25 @@ import io.havah.test.common.Constants;
 
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.Arrays;
-import java.util.Map;
 
 public class VaultScore extends Score {
     public static class VestingAccount {
-        public Address account;
+        public Address address;
         public BigInteger amount; // 전체 분배 비율
 
-        public VestingAccount(Address account, BigInteger amount) {
-            this.account = account;
+        public VestingAccount(Address address, BigInteger amount) {
+            this.address = address;
             this.amount = amount;
+        }
+
+        public String toString() {
+            StringBuilder builder = new StringBuilder();
+            builder.append("{\"");
+            builder.append(address.toString());
+            builder.append("\",\"");
+            builder.append(amount.toString());
+            builder.append("\"}");
+            return builder.toString();
         }
     }
 
@@ -37,6 +46,18 @@ public class VaultScore extends Score {
             this.timestamp = _timestamp;
             this.denominator = _denominator;
             this.numerator = _numerator;
+        }
+
+        public String toString() {
+            StringBuilder builder = new StringBuilder();
+            builder.append("{\"");
+            builder.append(timestamp.toString());
+            builder.append("\",\"");
+            builder.append(numerator.toString());
+            builder.append("\",\"");
+            builder.append(denominator.toString());
+            builder.append("\"}");
+            return builder.toString();
         }
     }
     public VaultScore(TransactionHandler txHandler) {
@@ -62,29 +83,33 @@ public class VaultScore extends Score {
         return call("admin", params).asAddress();
     }
 
-    public TransactionResult addAllocation(Wallet wallet, VestingAccount[] vestingAccounts)
+    public TransactionResult addAllocation(Wallet wallet, VestingAccount[] vestingAccounts) throws ResultTimeoutException, IOException {
+        return addAllocation(wallet, vestingAccounts, Constants.DEFAULT_STEPS);
+    }
+
+    public TransactionResult addAllocation(Wallet wallet, VestingAccount[] vestingAccounts, BigInteger steps)
             throws ResultTimeoutException, IOException {
         var accounts = new RpcArray.Builder();
         for (var a : vestingAccounts) {
             accounts.add(new RpcObject.Builder()
-                    .put("account", new RpcValue(a.account))
+                    .put("address", new RpcValue(a.address))
                     .put("amount", new RpcValue(a.amount))
                     .build());
         }
 
         RpcObject params = new RpcObject.Builder()
-                .put("vestingAccounts", accounts.build())
+                .put("_vestingAccounts", accounts.build())
                 .build();
 
-        return invokeAndWaitResult(wallet, "addAllocation", params);
+        return invokeAndWaitResult(wallet, "addAllocation", params, BigInteger.ZERO, steps);
     }
 
     public TransactionResult setAllocation(Wallet wallet, VestingAccount vestingAccount)
             throws ResultTimeoutException, IOException {
 
         RpcObject params = new RpcObject.Builder()
-                .put("account", new RpcObject.Builder()
-                        .put("account", new RpcValue(vestingAccount.account))
+                .put("_account", new RpcObject.Builder()
+                        .put("address", new RpcValue(vestingAccount.address))
                         .put("amount", new RpcValue(vestingAccount.amount))
                         .build())
                 .build();
@@ -104,8 +129,8 @@ public class VaultScore extends Score {
         }
 
         RpcObject params = new RpcObject.Builder()
-                .put("account", new RpcValue(account))
-                .put("vestingSchedules", heights.build())
+                .put("_account", new RpcValue(account))
+                .put("_vestingSchedules", heights.build())
                 .build();
 
         return invokeAndWaitResult(wallet, "setVestingSchedules", params);
@@ -118,7 +143,7 @@ public class VaultScore extends Score {
 
     public BigInteger getClaimable(Address address) throws IOException {
         RpcObject params = new RpcObject.Builder()
-                .put("address", new RpcValue(address))
+                .put("_address", new RpcValue(address))
                 .build();
 
         return call("getClaimable", params).asInteger();
@@ -126,9 +151,60 @@ public class VaultScore extends Score {
 
     public BigInteger getAllocation(Address address) throws IOException {
         RpcObject params = new RpcObject.Builder()
-                .put("address", new RpcValue(address))
+                .put("_address", new RpcValue(address))
                 .build();
 
-        return call("getAllocation", params).asInteger();
+        RpcItem val = call("getAllocation", params);
+        return val == null ? null : val.asInteger();
+    }
+
+    public void ensureAddAllocation(TransactionResult result, String vestingAccounts)
+            throws IOException {
+        TransactionResult.EventLog event = findEventLog(result, "AddAllocation(str)");
+        if (event != null) {
+            String _vestingAccounts = event.getIndexed().get(1).asString();
+            if (_vestingAccounts.equals(vestingAccounts)) {
+                return; // ensured
+            }
+        }
+        throw new IOException("ensureAddAllocation failed.");
+    }
+
+    public void ensureSetAllocation(TransactionResult result, String account)
+            throws IOException {
+        TransactionResult.EventLog event = findEventLog(result, "SetAllocation(str)");
+        if (event != null) {
+            String _accounts = event.getIndexed().get(1).asString();
+            if (_accounts.equals(account)) {
+                return; // ensured
+            }
+        }
+        throw new IOException("ensureSetAllocation failed.");
+    }
+
+    public void ensureSetVestingSchedules(TransactionResult result, Address account, String vestingSchedules)
+            throws IOException {
+        TransactionResult.EventLog event = findEventLog(result, "SetVestingSchedules(Address,str)");
+        if (event != null) {
+            Address _accounts = event.getIndexed().get(1).asAddress();
+            String _vestingSchedules = event.getIndexed().get(2).asString();
+            if (_accounts.equals(account) && _vestingSchedules.equals(vestingSchedules)) {
+                return; // ensured
+            }
+        }
+        throw new IOException("ensureSetVestingSchedules failed.");
+    }
+
+    public void ensureClaim(TransactionResult result, Address account, BigInteger amount)
+            throws IOException {
+        TransactionResult.EventLog event = findEventLog(result, "Claim(Address,int)");
+        if (event != null) {
+            Address _accounts = event.getIndexed().get(1).asAddress();
+            BigInteger _amount = event.getIndexed().get(2).asInteger();
+            if (_accounts.equals(account) && _amount.equals(amount)) {
+                return; // ensured
+            }
+        }
+        throw new IOException("ensureClaim failed.");
     }
 }

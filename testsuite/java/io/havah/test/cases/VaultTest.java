@@ -52,11 +52,12 @@ public class VaultTest extends TestBase {
         BigInteger claimable = vaultScore.getClaimable(wallet.getAddress());
         TransactionResult result = vaultScore.claim(wallet);
         assertSuccess(result);
+        vaultScore.ensureClaim(result, wallet.getAddress(), claimable);
         BigInteger fee = Utils.getTxFee(result);
         BigInteger after = txHandler.getBalance(wallet.getAddress());
         LOG.info("claimable : " + claimable);
         claimable = claimable.subtract(fee);
-        LOG.info("real claim amount (exclude txFee) : " + claimable);
+        LOG.info("claimed amount (exclude txFee) : " + claimable);
         LOG.info("balance after : " + after);
         assertEquals(0, after.subtract(before).compareTo(claimable), "claimable is not expected");
         LOG.infoExiting();
@@ -79,16 +80,33 @@ public class VaultTest extends TestBase {
         };
         assertFailure(vaultScore.addAllocation(wallets[0], accounts));
         assertFailure(vaultScore.addAllocation(governorWallet, new VaultScore.VestingAccount[] {}));
-        assertSuccess(vaultScore.addAllocation(governorWallet, accounts));
+        TransactionResult result = vaultScore.addAllocation(governorWallet, accounts);
+        assertSuccess(result);
+        StringBuilder builder = new StringBuilder();
+        builder.append("[");
+        for (int i=0; i<accounts.length; i++) {
+            if(i > 0)
+                builder.append(',');
+            builder.append(accounts[i].toString());
+        }
+        builder.append("]");
+        vaultScore.ensureAddAllocation(result, builder.toString());
         LOG.infoExiting();
 
         LOG.infoEntering("get", "getAllocation()");
         assertEquals(allocations[0], vaultScore.getAllocation(wallets[0].getAddress()));
         assertEquals(allocations[1], vaultScore.getAllocation(wallets[1].getAddress()));
-        assertEquals(BigInteger.ZERO, vaultScore.getAllocation(wallets[2].getAddress()));
+        assertEquals(null, vaultScore.getAllocation(wallets[2].getAddress()));
         LOG.infoExiting();
 
         assertEquals(BigInteger.ZERO, vaultScore.getClaimable(wallets[0].getAddress()));
+
+        LOG.infoEntering("call", "setAllocation()");
+        VaultScore.VestingAccount vestingAccount = new VaultScore.VestingAccount(wallets[0].getAddress(), allocations[0]);
+        assertFailure(vaultScore.setAllocation(wallets[0], vestingAccount));
+        result = vaultScore.setAllocation(governorWallet, vestingAccount);
+        vaultScore.ensureSetAllocation(result, vestingAccount.toString());
+        LOG.infoExiting();
 
         LOG.infoEntering("call", "setVestingSchedules()");
         BigInteger curTimestamp = Utils.getTimestamp();
@@ -102,10 +120,33 @@ public class VaultTest extends TestBase {
                 new VaultScore.VestingSchedule(timeStamps[1], BigInteger.valueOf(100), BigInteger.valueOf(50)),
                 new VaultScore.VestingSchedule(timeStamps[2], BigInteger.valueOf(100), BigInteger.valueOf(100))
         };
+        VaultScore.VestingSchedule[] falseSchedules = {
+                new VaultScore.VestingSchedule(timeStamps[0], BigInteger.valueOf(25), BigInteger.valueOf(15)),
+                new VaultScore.VestingSchedule(timeStamps[1], BigInteger.valueOf(100), BigInteger.valueOf(15)),
+                new VaultScore.VestingSchedule(timeStamps[2], BigInteger.valueOf(100), BigInteger.valueOf(100))
+        };
+        VaultScore.VestingSchedule[] falseSchedules2 = {
+                new VaultScore.VestingSchedule(timeStamps[1], BigInteger.valueOf(100), BigInteger.valueOf(150))
+        };
+
         assertFailure(vaultScore.setVestingSchedules(wallets[0], wallets[0].getAddress(), schedules));
         assertFailure(vaultScore.setVestingSchedules(governorWallet, wallets[2].getAddress(), schedules));
-        assertSuccess(vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), schedules));
-        assertSuccess(vaultScore.setVestingSchedules(governorWallet, wallets[1].getAddress(), schedules));
+        assertFailure(vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), falseSchedules));
+        assertFailure(vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), falseSchedules2));
+        result = vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), schedules);
+        assertSuccess(result);
+        builder = new StringBuilder();
+        builder.append("[");
+        for (int i=0; i<schedules.length; i++) {
+            if(i > 0)
+                builder.append(',');
+            builder.append(schedules[i].toString());
+        }
+        builder.append("]");
+        vaultScore.ensureSetVestingSchedules(result, wallets[0].getAddress(), builder.toString());
+        result = vaultScore.setVestingSchedules(governorWallet, wallets[1].getAddress(), schedules);
+        assertSuccess(result);
+        vaultScore.ensureSetVestingSchedules(result, wallets[1].getAddress(), builder.toString());
         LOG.infoExiting();
 
         LOG.infoEntering("claim", "claim vault");
@@ -115,7 +156,7 @@ public class VaultTest extends TestBase {
         }
         _checkAndClaim(wallets[1]);
 
-        TransactionResult result = vaultScore.claim(wallets[2]);
+        result = vaultScore.claim(wallets[2]);
         assertFailure(result);
 
         LOG.infoExiting();

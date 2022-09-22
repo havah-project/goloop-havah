@@ -35,10 +35,7 @@ import foundation.icon.test.common.ZipFile;
 import foundation.icon.test.score.ChainScore;
 import foundation.icon.test.score.GovScore;
 import foundation.icon.test.score.Score;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import testcases.APITest;
 
 import java.math.BigInteger;
@@ -229,6 +226,7 @@ public class GetStatusTest extends TestBase {
 
     @Test
     @Tag(Constants.TAG_JAVA_GOV)
+    @Disabled("not for Havah")
     public void testScoreStatusOnGovernanceWithJava() throws Exception {
         LOG.infoEntering("testScoreStatusOnGovernanceWithJava");
         var deployInfo = deployJavaScore();

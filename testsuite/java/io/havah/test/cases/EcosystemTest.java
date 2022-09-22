@@ -94,7 +94,8 @@ public class EcosystemTest extends TestBase {
         ecoScore = new EcosystemScore(txHandler);
 
         var schedules = ecoScore.getLockupSchedule();
-        var lockedAmount = Constants.ECOSYSTEM_INITIAL_BALANCE;
+//        var lockedAmount = Constants.ECOSYSTEM_INITIAL_BALANCE;
+        var lockedAmount = txHandler.getBalance(Constants.ECOSYSTEM_ADDRESS);
         Address receiver = wallets[2].getAddress();
         Wallet noPermission = wallets[1];
         final BigInteger withdrawAmount = BigInteger.valueOf(1);
@@ -132,7 +133,8 @@ public class EcosystemTest extends TestBase {
         _transferExceedAndMax(receiver, lockedAmount);
         // transfer from receiver to ecosystem
         var receiverWallet = wallets[2];
-        txHandler.transfer(receiverWallet, Constants.ECOSYSTEM_ADDRESS, txHandler.getBalance(receiver).subtract(BigInteger.TEN.pow(20)));
+        var txHash = txHandler.transfer(receiverWallet, Constants.ECOSYSTEM_ADDRESS, txHandler.getBalance(receiver).subtract(BigInteger.TEN.pow(20)));
+        assertSuccess(txHandler.getResult(txHash));
         LOG.infoExiting();
     }
 

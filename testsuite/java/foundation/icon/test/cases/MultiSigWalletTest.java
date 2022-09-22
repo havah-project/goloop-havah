@@ -120,7 +120,7 @@ public class MultiSigWalletTest extends TestBase {
         // Alice confirms the tx to make it executed
         LOG.info("confirmTransaction() by Alice");
         result = multiSigWalletScore.confirmTransaction(aliceWallet, txId);
-        multiSigWalletScore.ensureIcxTransfer(result, multiSigWalletAddress, bobWallet.getAddress(), 2);
+        multiSigWalletScore.ensureConfirmation(result, aliceWallet.getAddress(), txId);
         multiSigWalletScore.ensureExecution(result, txId);
 
         // check icx balances
@@ -141,7 +141,7 @@ public class MultiSigWalletTest extends TestBase {
         // Bob confirms the tx to make it executed
         LOG.info("confirmTransaction() by Bob");
         result = multiSigWalletScore.confirmTransaction(bobWallet, txId);
-        multiSigWalletScore.ensureIcxTransfer(result, multiSigWalletAddress, helloScore.getAddress(), 1);
+        multiSigWalletScore.ensureConfirmation(result, bobWallet.getAddress(), txId);
         multiSigWalletScore.ensureExecution(result, txId);
 
         // check icx balances
