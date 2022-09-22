@@ -158,42 +158,42 @@ public class VaultScore extends Score {
         return val == null ? null : val.asInteger();
     }
 
-    public void ensureAddAllocation(TransactionResult result, String vestingAccounts)
-            throws IOException {
-        TransactionResult.EventLog event = findEventLog(result, "AddAllocation(str)");
-        if (event != null) {
-            String _vestingAccounts = event.getIndexed().get(1).asString();
-            if (_vestingAccounts.equals(vestingAccounts)) {
-                return; // ensured
-            }
-        }
-        throw new IOException("ensureAddAllocation failed.");
-    }
-
-    public void ensureSetAllocation(TransactionResult result, String account)
-            throws IOException {
-        TransactionResult.EventLog event = findEventLog(result, "SetAllocation(str)");
-        if (event != null) {
-            String _accounts = event.getIndexed().get(1).asString();
-            if (_accounts.equals(account)) {
-                return; // ensured
-            }
-        }
-        throw new IOException("ensureSetAllocation failed.");
-    }
-
-    public void ensureSetVestingSchedules(TransactionResult result, Address account, String vestingSchedules)
-            throws IOException {
-        TransactionResult.EventLog event = findEventLog(result, "SetVestingSchedules(Address,str)");
-        if (event != null) {
-            Address _accounts = event.getIndexed().get(1).asAddress();
-            String _vestingSchedules = event.getIndexed().get(2).asString();
-            if (_accounts.equals(account) && _vestingSchedules.equals(vestingSchedules)) {
-                return; // ensured
-            }
-        }
-        throw new IOException("ensureSetVestingSchedules failed.");
-    }
+//    public void ensureAddAllocation(TransactionResult result, String vestingAccounts)
+//            throws IOException {
+//        TransactionResult.EventLog event = findEventLog(result, "AddAllocation(str)");
+//        if (event != null) {
+//            String _vestingAccounts = event.getIndexed().get(1).asString();
+//            if (_vestingAccounts.equals(vestingAccounts)) {
+//                return; // ensured
+//            }
+//        }
+//        throw new IOException("ensureAddAllocation failed.");
+//    }
+//
+//    public void ensureSetAllocation(TransactionResult result, String account)
+//            throws IOException {
+//        TransactionResult.EventLog event = findEventLog(result, "SetAllocation(str)");
+//        if (event != null) {
+//            String _accounts = event.getIndexed().get(1).asString();
+//            if (_accounts.equals(account)) {
+//                return; // ensured
+//            }
+//        }
+//        throw new IOException("ensureSetAllocation failed.");
+//    }
+//
+//    public void ensureSetVestingSchedules(TransactionResult result, Address account, String vestingSchedules)
+//            throws IOException {
+//        TransactionResult.EventLog event = findEventLog(result, "SetVestingSchedules(Address,str)");
+//        if (event != null) {
+//            Address _accounts = event.getIndexed().get(1).asAddress();
+//            String _vestingSchedules = event.getIndexed().get(2).asString();
+//            if (_accounts.equals(account) && _vestingSchedules.equals(vestingSchedules)) {
+//                return; // ensured
+//            }
+//        }
+//        throw new IOException("ensureSetVestingSchedules failed.");
+//    }
 
     public void ensureClaim(TransactionResult result, Address account, BigInteger amount)
             throws IOException {

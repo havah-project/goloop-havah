@@ -82,15 +82,6 @@ public class VaultTest extends TestBase {
         assertFailure(vaultScore.addAllocation(governorWallet, new VaultScore.VestingAccount[] {}));
         TransactionResult result = vaultScore.addAllocation(governorWallet, accounts);
         assertSuccess(result);
-        StringBuilder builder = new StringBuilder();
-        builder.append("[");
-        for (int i=0; i<accounts.length; i++) {
-            if(i > 0)
-                builder.append(',');
-            builder.append(accounts[i].toString());
-        }
-        builder.append("]");
-        vaultScore.ensureAddAllocation(result, builder.toString());
         LOG.infoExiting();
 
         LOG.infoEntering("get", "getAllocation()");
@@ -105,53 +96,54 @@ public class VaultTest extends TestBase {
         VaultScore.VestingAccount vestingAccount = new VaultScore.VestingAccount(wallets[0].getAddress(), allocations[0]);
         assertFailure(vaultScore.setAllocation(wallets[0], vestingAccount));
         result = vaultScore.setAllocation(governorWallet, vestingAccount);
-        vaultScore.ensureSetAllocation(result, vestingAccount.toString());
+        assertSuccess(result);
         LOG.infoExiting();
 
         LOG.infoEntering("call", "setVestingSchedules()");
         BigInteger curTimestamp = Utils.getTimestamp();
         BigInteger[] timeStamps = {
-                curTimestamp.add(BigInteger.valueOf(20000000)),
                 curTimestamp.add(BigInteger.valueOf(40000000)),
-                curTimestamp.add(BigInteger.valueOf(60000000))
+                curTimestamp.add(BigInteger.valueOf(60000000)),
+                curTimestamp.add(BigInteger.valueOf(80000000))
         };
-        VaultScore.VestingSchedule[] schedules = {
+        VaultScore.VestingSchedule[] successSchedules1 = {
                 new VaultScore.VestingSchedule(timeStamps[0], BigInteger.valueOf(100), BigInteger.valueOf(25)),
                 new VaultScore.VestingSchedule(timeStamps[1], BigInteger.valueOf(100), BigInteger.valueOf(50)),
                 new VaultScore.VestingSchedule(timeStamps[2], BigInteger.valueOf(100), BigInteger.valueOf(100))
         };
-        VaultScore.VestingSchedule[] falseSchedules = {
-                new VaultScore.VestingSchedule(timeStamps[0], BigInteger.valueOf(25), BigInteger.valueOf(15)),
-                new VaultScore.VestingSchedule(timeStamps[1], BigInteger.valueOf(100), BigInteger.valueOf(15)),
-                new VaultScore.VestingSchedule(timeStamps[2], BigInteger.valueOf(100), BigInteger.valueOf(100))
+        VaultScore.VestingSchedule[] successSchedules2 = {
+                new VaultScore.VestingSchedule(timeStamps[0], BigInteger.valueOf(100), BigInteger.valueOf(0)),
+                new VaultScore.VestingSchedule(timeStamps[1], BigInteger.valueOf(100), BigInteger.valueOf(50))
         };
-        VaultScore.VestingSchedule[] falseSchedules2 = {
+        VaultScore.VestingSchedule[] failureSchedules1 = {
+                new VaultScore.VestingSchedule(timeStamps[0], BigInteger.valueOf(25), BigInteger.valueOf(15)),
+                new VaultScore.VestingSchedule(timeStamps[1], BigInteger.valueOf(100), BigInteger.valueOf(15))
+        };
+        VaultScore.VestingSchedule[] failureSchedules2 = {
                 new VaultScore.VestingSchedule(timeStamps[1], BigInteger.valueOf(100), BigInteger.valueOf(150))
         };
+        VaultScore.VestingSchedule[] failureSchedules3 = {
+                new VaultScore.VestingSchedule(timeStamps[1], BigInteger.valueOf(0), BigInteger.valueOf(150))
+        };
+        VaultScore.VestingSchedule[] failureSchedules4 = {
+                new VaultScore.VestingSchedule(timeStamps[1], BigInteger.valueOf(100), BigInteger.valueOf(-1))
+        };
 
-        assertFailure(vaultScore.setVestingSchedules(wallets[0], wallets[0].getAddress(), schedules));
-        assertFailure(vaultScore.setVestingSchedules(governorWallet, wallets[2].getAddress(), schedules));
-        assertFailure(vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), falseSchedules));
-        assertFailure(vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), falseSchedules2));
-        result = vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), schedules);
+        assertFailure(vaultScore.setVestingSchedules(wallets[0], wallets[0].getAddress(), successSchedules1));
+        assertFailure(vaultScore.setVestingSchedules(governorWallet, wallets[2].getAddress(), successSchedules1));
+        assertFailure(vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), failureSchedules1));
+        assertFailure(vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), failureSchedules2));
+        assertFailure(vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), failureSchedules3));
+        assertFailure(vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), failureSchedules4));
+        result = vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), successSchedules1);
         assertSuccess(result);
-        builder = new StringBuilder();
-        builder.append("[");
-        for (int i=0; i<schedules.length; i++) {
-            if(i > 0)
-                builder.append(',');
-            builder.append(schedules[i].toString());
-        }
-        builder.append("]");
-        vaultScore.ensureSetVestingSchedules(result, wallets[0].getAddress(), builder.toString());
-        result = vaultScore.setVestingSchedules(governorWallet, wallets[1].getAddress(), schedules);
+        result = vaultScore.setVestingSchedules(governorWallet, wallets[1].getAddress(), successSchedules2);
         assertSuccess(result);
-        vaultScore.ensureSetVestingSchedules(result, wallets[1].getAddress(), builder.toString());
         LOG.infoExiting();
 
         LOG.infoEntering("claim", "claim vault");
-        for(int i=0; i<schedules.length; i++) {
-            Utils.waitUtilTime(schedules[i].timestamp);
+        for(int i=0; i<successSchedules1.length; i++) {
+            Utils.waitUtilTime(successSchedules1[i].timestamp);
             _checkAndClaim(wallets[0]);
         }
         _checkAndClaim(wallets[1]);
