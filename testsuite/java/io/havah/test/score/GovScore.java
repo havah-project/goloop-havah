@@ -240,10 +240,10 @@ public class GovScore extends Score {
         return invokeAndWaitResult(wallet, "startRewardIssue", params);
     }
 
-    public TransactionResult setPrivateClaimableRate(Wallet wallet, BigInteger denominator, BigInteger numerator) throws IOException, ResultTimeoutException {
+    public TransactionResult setPrivateClaimableRate(Wallet wallet, BigInteger numerator, BigInteger denominator) throws IOException, ResultTimeoutException {
         RpcObject params = new RpcObject.Builder()
-                .put("denominator", new RpcValue(denominator))
                 .put("numerator", new RpcValue(numerator))
+                .put("denominator", new RpcValue(denominator))
                 .build();
         return invokeAndWaitResult(wallet, "setPrivateClaimableRate", params);
     }

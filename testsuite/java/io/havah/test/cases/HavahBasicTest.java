@@ -238,7 +238,7 @@ public class HavahBasicTest extends TestBase {
         return Map.of();
     }
 
-    public static boolean checkPrivateClaimableRate(BigInteger denominator, BigInteger numerator) throws IOException {
+    public static boolean checkPrivateClaimableRate(BigInteger numerator, BigInteger denominator) throws IOException {
         Map<String, Object> claimableRate = _getPrivateClaimableRate();
         if(denominator.equals(claimableRate.get("denominator")) &&
                 numerator.equals(claimableRate.get("numerator"))) return true;
@@ -479,19 +479,19 @@ public class HavahBasicTest extends TestBase {
         }
 
         // check getPrivateClaimableRate default value
-        assertTrue(checkPrivateClaimableRate(BigInteger.valueOf(24), BigInteger.ZERO));
+        assertTrue(checkPrivateClaimableRate(BigInteger.ZERO, BigInteger.valueOf(24)));
 
         // check setPrivateClaimableRate param
-        _setPrivateClaimableRate(planetWallet, BigInteger.valueOf(1000), BigInteger.ONE, false);
-        _setPrivateClaimableRate(governorWallet, BigInteger.ZERO, BigInteger.ONE, false);
-        _setPrivateClaimableRate(governorWallet, BigInteger.valueOf(-1), BigInteger.ONE, false);
+        _setPrivateClaimableRate(planetWallet, BigInteger.ONE, BigInteger.valueOf(1000), false);
+        _setPrivateClaimableRate(governorWallet, BigInteger.ONE, BigInteger.ZERO, false);
         _setPrivateClaimableRate(governorWallet, BigInteger.ONE, BigInteger.valueOf(-1), false);
-        _setPrivateClaimableRate(governorWallet, BigInteger.valueOf(1000), BigInteger.valueOf(11115), false);
+        _setPrivateClaimableRate(governorWallet, BigInteger.valueOf(-1), BigInteger.ONE, false);
+        _setPrivateClaimableRate(governorWallet, BigInteger.valueOf(11115), BigInteger.valueOf(1000), false);
 
         BigInteger denominator = BigInteger.valueOf(100);
         BigInteger numerator = BigInteger.ONE;
-        _setPrivateClaimableRate(governorWallet, denominator, numerator, true);
-        assertTrue(checkPrivateClaimableRate(denominator, numerator));
+        _setPrivateClaimableRate(governorWallet, numerator, denominator, true);
+        assertTrue(checkPrivateClaimableRate(numerator, denominator));
 
         Utils.waitUntilNextTerm();
 
@@ -502,8 +502,8 @@ public class HavahBasicTest extends TestBase {
 
         // change private claimable rate
         numerator = BigInteger.TEN;
-        _setPrivateClaimableRate(governorWallet, denominator, numerator, true);
-        assertTrue(checkPrivateClaimableRate(denominator, numerator));
+        _setPrivateClaimableRate(governorWallet, numerator, denominator, true);
+        assertTrue(checkPrivateClaimableRate(numerator, denominator));
 
         Utils.waitUntilNextTerm();
 
@@ -525,8 +525,8 @@ public class HavahBasicTest extends TestBase {
 
         // change private claimable rate
         numerator = BigInteger.valueOf(15);
-        _setPrivateClaimableRate(governorWallet, denominator, numerator, true);
-        assertTrue(checkPrivateClaimableRate(denominator, numerator));
+        _setPrivateClaimableRate(governorWallet, numerator, denominator, true);
+        assertTrue(checkPrivateClaimableRate(numerator, denominator));
 
         // check claimable is expected
         expected = totalReward.multiply(numerator).divide(denominator).subtract(claimedReward);
