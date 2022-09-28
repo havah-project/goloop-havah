@@ -68,19 +68,19 @@ public class EcosystemTest extends TestBase {
         BigInteger curTime = Utils.getTimestamp();
         RpcArray.Builder array = new RpcArray.Builder()
                 .add(new RpcObject.Builder()
-                        .put("blockTimestamp", new RpcValue(curTime.add(BigInteger.valueOf(16000000))))
+                        .put("timestamp", new RpcValue(curTime.add(BigInteger.valueOf(16000000))))
                         .put("ratio", new RpcValue(BigInteger.valueOf(20)))
                         .build()
                 ).add(new RpcObject.Builder()
-                        .put("blockTimestamp", new RpcValue(curTime.add(BigInteger.valueOf(40000000))))
+                        .put("timestamp", new RpcValue(curTime.add(BigInteger.valueOf(40000000))))
                         .put("ratio", new RpcValue(BigInteger.valueOf(50)))
                         .build()
                 ).add(new RpcObject.Builder()
-                        .put("blockTimestamp", new RpcValue(curTime.add(BigInteger.valueOf(64000000))))
+                        .put("timestamp", new RpcValue(curTime.add(BigInteger.valueOf(64000000))))
                         .put("ratio", new RpcValue(BigInteger.valueOf(80)))
                         .build()
                 ).add(new RpcObject.Builder()
-                        .put("blockTimestamp", new RpcValue(curTime.add(BigInteger.valueOf(88000000))))
+                        .put("timestamp", new RpcValue(curTime.add(BigInteger.valueOf(88000000))))
                         .put("ratio", new RpcValue(BigInteger.valueOf(100)))
                         .build()
                 );
@@ -102,11 +102,11 @@ public class EcosystemTest extends TestBase {
         // check timestamp and withdraw
         for (var schedule : schedules) {
             var cur = Utils.getTimestamp();
-            // wait until schedule.blockTimestamp
+            // wait until schedule.timestamp
             // cur <= schedule
-            var blockTimestamp = schedule.getBlockTimestamp();
+            var timestamp = schedule.getTimestamp();
             var amount = schedule.getAmount();
-            if (cur.compareTo(blockTimestamp) <= 0) {
+            if (cur.compareTo(timestamp) <= 0) {
                 // failure case - not owner wallet
                 var txHash = ecoScore.transfer(noPermission, receiver, withdrawAmount);
                 assertFailure(txHandler.getResult(txHash));
@@ -123,9 +123,9 @@ public class EcosystemTest extends TestBase {
                 }
 
                 _transferExceedAndMax(receiver, lockedAmount);
-                Utils.waitUtilTime(blockTimestamp);
+                Utils.waitUtilTime(timestamp);
                 lockedAmount = amount;
-                LOG.info("lock amount(" + amount + ") on (" + blockTimestamp + ") timestamp");
+                LOG.info("lock amount(" + amount + ") on (" + timestamp + ") timestamp");
             } else {
                 lockedAmount = BigInteger.ZERO;
             }

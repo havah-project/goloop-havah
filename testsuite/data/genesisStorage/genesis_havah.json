@@ -56,19 +56,19 @@
           "_name": "Eco-System",
           "_schedules": [
             {
-              "blockTimestamp": "0x1",
+              "timestamp": "0x1",
               "ratio": "20"
             },
             {
-              "blockTimestamp": "0x14",
+              "timestamp": "0x14",
               "ratio": "50"
             },
             {
-              "blockTimestamp": "0x1E",
+              "timestamp": "0x1E",
               "ratio": "80"
             },
             {
-              "blockTimestamp": "0x28",
+              "timestamp": "0x28",
               "ratio": "100"
             }
           ]

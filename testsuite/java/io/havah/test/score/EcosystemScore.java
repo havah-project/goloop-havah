@@ -35,8 +35,8 @@ public class EcosystemScore extends Score {
         var schedules =  call("getLockupSchedule", null).asArray();
         List<LockupSchedule> list = new ArrayList<>();
         for (var s : schedules) {
-            var height = s.asObject().getItem("BLOCK_TIMESTAMP").asInteger();
-            var amount = s.asObject().getItem("LOCKUP_AMOUNT").asInteger();
+            var height = s.asObject().getItem("timestamp").asInteger();
+            var amount = s.asObject().getItem("lockup_amount").asInteger();
             list.add(new LockupSchedule(height, amount));
         }
         return list;
@@ -50,15 +50,15 @@ public class EcosystemScore extends Score {
     }
 
     public static class LockupSchedule {
-        private final BigInteger blockTimestamp;
+        private final BigInteger timestamp;
         private final BigInteger amount;
         public LockupSchedule(BigInteger blockTimestamp, BigInteger amount) {
-            this.blockTimestamp = blockTimestamp;
+            this.timestamp = blockTimestamp;
             this.amount = amount;
         }
 
-        public BigInteger getBlockTimestamp() {
-            return blockTimestamp;
+        public BigInteger getTimestamp() {
+            return timestamp;
         }
 
         public BigInteger getAmount() {
@@ -68,7 +68,7 @@ public class EcosystemScore extends Score {
         @Override
         public String toString() {
             return "LockSchedule{" +
-                    "blockTimestamp=" + blockTimestamp +
+                    "blockTimestamp=" + timestamp +
                     ", amount=" + amount +
                     '}';
         }
