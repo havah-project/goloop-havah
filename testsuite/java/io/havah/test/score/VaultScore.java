@@ -141,6 +141,14 @@ public class VaultScore extends Score {
         return invokeAndWaitResult(wallet, "claim", null);
     }
 
+    public RpcArray getSchedule(Address address) throws IOException {
+        RpcObject params = new RpcObject.Builder()
+                .put("_address", new RpcValue(address))
+                .build();
+
+        return call("getSchedule", params).asArray();
+    }
+
     public BigInteger getClaimable(Address address) throws IOException {
         RpcObject params = new RpcObject.Builder()
                 .put("_address", new RpcValue(address))

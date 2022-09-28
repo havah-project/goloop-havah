@@ -16,7 +16,7 @@ import java.io.IOException;
 import java.math.BigInteger;
 
 import static foundation.icon.test.common.Env.LOG;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Tag(Constants.TAG_HAVAH)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -30,7 +30,7 @@ public class VaultTest extends TestBase {
     @BeforeAll
     static void setup() throws Exception {
         txHandler = Utils.getTxHandler();
-        wallets = new KeyWallet[3];
+        wallets = new KeyWallet[4];
         BigInteger amount = ICX.multiply(BigInteger.valueOf(300));
         for (int i = 0; i < wallets.length; i++) {
             wallets[i] = KeyWallet.create();
@@ -62,14 +62,15 @@ public class VaultTest extends TestBase {
         assertEquals(0, after.subtract(before).compareTo(claimable), "claimable is not expected");
         LOG.infoExiting();
     }
+
     @Test
     @Order(1)
     void startVault() throws Exception {
         LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
 
         LOG.infoEntering("transfer icx", "transfer 100 ICX to vault score from account");
-        Bytes txHash = txHandler.transfer(wallets[0], vaultScore.getAddress(), ICX.multiply(BigInteger.valueOf(100)));
-        assertFailure(txHandler.getResult(txHash));
+        Bytes txHash = txHandler.transfer(wallets[0], vaultScore.getAddress(), ICX.multiply(BigInteger.valueOf(250)));
+        assertSuccess(txHandler.getResult(txHash));
         LOG.infoExiting();
 
         LOG.infoEntering("call", "addAllocation()");
@@ -87,7 +88,15 @@ public class VaultTest extends TestBase {
         LOG.infoEntering("get", "getAllocation()");
         assertEquals(allocations[0], vaultScore.getAllocation(wallets[0].getAddress()));
         assertEquals(allocations[1], vaultScore.getAllocation(wallets[1].getAddress()));
-        assertEquals(null, vaultScore.getAllocation(wallets[2].getAddress()));
+        boolean exception = false;
+        try {
+            var val = vaultScore.getAllocation(wallets[2].getAddress());
+        } catch (Exception ex){
+            LOG.info("val(" + ex + ")");
+            exception = true;
+        }
+        assertTrue(exception);
+//        assertEquals(null, vaultScore.getAllocation(wallets[2].getAddress()));
         LOG.infoExiting();
 
         assertEquals(BigInteger.ZERO, vaultScore.getClaimable(wallets[0].getAddress()));
@@ -137,6 +146,8 @@ public class VaultTest extends TestBase {
         assertFailure(vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), failureSchedules4));
         result = vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), successSchedules1);
         assertSuccess(result);
+        var s =  vaultScore.getSchedule(wallets[0].getAddress());
+        System.out.println("schedule(" + s + ")");
         result = vaultScore.setVestingSchedules(governorWallet, wallets[1].getAddress(), successSchedules2);
         assertSuccess(result);
         LOG.infoExiting();
@@ -157,13 +168,9 @@ public class VaultTest extends TestBase {
     @Test
     @Order(2)
     void setAdmin() throws Exception {
-        KeyWallet[] tmpWallets = new KeyWallet[3];
-        for (int i = 0; i < tmpWallets.length; i++) {
-            tmpWallets[i] = KeyWallet.create();
-        }
-
         LOG.infoEntering("call", "setAdmin()");
-        var txHash = vaultScore.setAdmin(wallets[1], governorWallet.getAddress());
+        var newAdmin =  wallets[1];
+        var txHash = vaultScore.setAdmin(newAdmin, governorWallet.getAddress());
         assertFailure(txHash);
 
         txHash = vaultScore.setAdmin(governorWallet, wallets[1].getAddress());
@@ -171,23 +178,22 @@ public class VaultTest extends TestBase {
         LOG.infoExiting();
 
         LOG.infoEntering("call", "admin()");
-        assertEquals(false, vaultScore.admin().equals(governorWallet.getAddress()));
-        assertEquals(true, vaultScore.admin().equals(wallets[1].getAddress()));
+        assertNotEquals(vaultScore.admin(), governorWallet.getAddress());
+        assertEquals(vaultScore.admin(), newAdmin.getAddress());
         LOG.infoExiting();
 
         LOG.infoEntering("call", "addAllocation()");
         VaultScore.VestingAccount[] accounts = {
-                new VaultScore.VestingAccount(tmpWallets[0].getAddress(), BigInteger.ZERO),
-                new VaultScore.VestingAccount(tmpWallets[1].getAddress(), BigInteger.ZERO),
-                new VaultScore.VestingAccount(tmpWallets[2].getAddress(), BigInteger.ZERO)
+                new VaultScore.VestingAccount(wallets[2].getAddress(), BigInteger.ZERO),
+                new VaultScore.VestingAccount(wallets[3].getAddress(), BigInteger.ZERO)
         };
         assertFailure(vaultScore.addAllocation(governorWallet, accounts));
-        assertSuccess(vaultScore.addAllocation(wallets[1], accounts));
+        assertSuccess(vaultScore.addAllocation(newAdmin, accounts));
         LOG.infoExiting();
 
         LOG.infoEntering("call", "setAllocation()");
-        assertFailure(vaultScore.setAllocation(governorWallet, new VaultScore.VestingAccount(wallets[0].getAddress(), BigInteger.ZERO)));
-        assertSuccess(vaultScore.setAllocation(wallets[1], new VaultScore.VestingAccount(wallets[0].getAddress(), BigInteger.ZERO)));
+        assertFailure(vaultScore.setAllocation(governorWallet, new VaultScore.VestingAccount(wallets[2].getAddress(), BigInteger.ZERO)));
+        assertSuccess(vaultScore.setAllocation(newAdmin, new VaultScore.VestingAccount(wallets[2].getAddress(), BigInteger.ZERO)));
         LOG.infoExiting();
 
         LOG.infoEntering("call", "setVestingSchedules()");
@@ -198,11 +204,11 @@ public class VaultTest extends TestBase {
                 new VaultScore.VestingSchedule(timeStamps[1], BigInteger.valueOf(100), BigInteger.valueOf(50)),
                 new VaultScore.VestingSchedule(timeStamps[2], BigInteger.valueOf(100), BigInteger.valueOf(100))
         };
-        assertFailure(vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), schedules));
-        assertSuccess(vaultScore.setVestingSchedules(wallets[1], wallets[1].getAddress(), schedules));
+        assertFailure(vaultScore.setVestingSchedules(governorWallet, wallets[3].getAddress(), schedules));
+        assertSuccess(vaultScore.setVestingSchedules(newAdmin, wallets[3].getAddress(), schedules));
         LOG.infoExiting();
 
-        txHash = vaultScore.setAdmin(wallets[1], governorWallet.getAddress());
+        txHash = vaultScore.setAdmin(newAdmin, governorWallet.getAddress());
         assertSuccess(txHash);
     }
 }
