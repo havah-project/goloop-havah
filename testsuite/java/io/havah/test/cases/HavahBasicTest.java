@@ -85,6 +85,18 @@ public class HavahBasicTest extends TestBase {
         assertEquals(success ? Constants.STATUS_SUCCESS : Constants.STATUS_FAILURE, result.getStatus(), "failure result(" + result + ")");
     }
 
+    public static void _mintPlanetNFTWithId(Wallet wallet, Address to, int type, BigInteger planetId, boolean success) throws Exception {
+        Bytes txHash = planetNFTScore.mintPlanet(wallet, to, type, BigInteger.ONE, BigInteger.ONE, planetId);
+        TransactionResult result = planetNFTScore.getResult(txHash);
+        assertEquals(success ? Constants.STATUS_SUCCESS : Constants.STATUS_FAILURE, result.getStatus(), "failure result(" + result + ")");
+    }
+
+    public static void _burnPlanetNFTWithId(Wallet wallet, BigInteger planetId, boolean success) throws Exception {
+        Bytes txHash = planetNFTScore.burn(wallet, planetId);
+        TransactionResult result = planetNFTScore.getResult(txHash);
+        assertEquals(success ? Constants.STATUS_SUCCESS : Constants.STATUS_FAILURE, result.getStatus(), "failure result(" + result + ")");
+    }
+
     public static void _checkAndMintPlanetNFT(Address to, int type) throws Exception {
         LOG.infoEntering("_checkAndMintPlanetNFT", "mint PlanetNFT type : " + type);
         var oldBalance = planetNFTScore.balanceOf(to).intValue();
@@ -218,8 +230,8 @@ public class HavahBasicTest extends TestBase {
         return reward.divide(planetNFTScore.totalSupply());
     }
 
-    public static TransactionResult _setPrivateClaimableRate(Wallet wallet, BigInteger denominator, BigInteger numerator, boolean success) throws Exception {
-        TransactionResult result = govScore.setPrivateClaimableRate(wallet, denominator, numerator);
+    public static TransactionResult _setPrivateClaimableRate(Wallet wallet, BigInteger numerator, BigInteger denominator, boolean success) throws Exception {
+        TransactionResult result = govScore.setPrivateClaimableRate(wallet, numerator, denominator);
         assertEquals(success ? Constants.STATUS_SUCCESS : Constants.STATUS_FAILURE, result.getStatus(), "failure result(" + result + ")");
         return result;
     }
@@ -390,6 +402,7 @@ public class HavahBasicTest extends TestBase {
         BigInteger expected = _getCurrentPublicReward();
 
         assertTrue(compareWithBuffer(claimable, expected, BigInteger.TWO), "claimable is not expected");
+        _checkAndClaimPlanetReward(planetManagerWallet, new BigInteger[]{planetIds.get(0)}, true, BigInteger.ZERO, BigInteger.ZERO);
         _checkAndClaimPlanetReward(planetWallet, new BigInteger[]{planetIds.get(0)}, true, expected, BigInteger.TWO);
 
         // mint second planet nft
@@ -573,5 +586,92 @@ public class HavahBasicTest extends TestBase {
         obj = chainScore.getRewardInfo();
         reward = obj.getItem("rewardPerActivePlanet").asInteger();
         assertTrue(compareWithBuffer(reward, expected, BigInteger.TWO));
+    }
+
+    @Test
+    public void burnAndRewardPlanetTest() throws Exception {
+        LOG.infoEntering("claimPublicPlanetRewardTest");
+        KeyWallet planetManager = KeyWallet.create();
+        KeyWallet firstPlanet = KeyWallet.create();
+        KeyWallet secondPlanet = KeyWallet.create();
+
+        Utils.distributeCoin(new Wallet[] {planetManager, firstPlanet, secondPlanet});
+
+        _checkPlanetManager(governorWallet, planetManager.getAddress(), true);
+
+        Map<String, Object> claimableRate = _getPrivateClaimableRate();
+        BigInteger denominator = (BigInteger) claimableRate.get("denominator");
+        BigInteger numerator = (BigInteger) claimableRate.get("numerator");
+
+        _burnAndRewardPlanet(planetManager, firstPlanet, secondPlanet, PLANET_PUBLIC);
+        _burnAndRewardPlanet(planetManager, firstPlanet, secondPlanet, PLANET_COMPANY);
+        _burnAndRewardPlanet(planetManager, firstPlanet, secondPlanet, PLANET_PRIVATE);
+
+        _setPrivateClaimableRate(governorWallet, numerator, denominator, true);
+
+        LOG.infoExiting();
+    }
+
+    public void _burnAndRewardPlanet(KeyWallet planetManager, KeyWallet firstPlanet, KeyWallet secondPlanet, int type) throws Exception {
+        _mintPlanetNFT(governorWallet, firstPlanet.getAddress(), type, true);
+        BigInteger planetId = planetNFTScore.getSerialTokenId();
+
+        Utils.waitUntilNextTerm();
+
+        _getPlanetInfo(planetId);
+        _reportPlanetWork(planetManager, planetId, true);
+
+        BigInteger claimable = (BigInteger) _getRewardInfoOf(planetId).get("claimable");
+        BigInteger expected = _getCurrentPublicReward();
+        if(type == PLANET_COMPANY)
+            expected = expected.multiply(BigInteger.valueOf(4)).divide(BigInteger.TEN);
+        else if(type == PLANET_PRIVATE) {
+            _setPrivateClaimableRate(governorWallet, BigInteger.ONE, BigInteger.TEN, true);
+            Utils.waitUntilNextTerm();
+            claimable = (BigInteger) _getRewardInfoOf(planetId).get("claimable");
+            expected = expected.divide(BigInteger.TEN);
+        }
+
+        assertTrue(compareWithBuffer(claimable, expected, BigInteger.TWO), "claimable is not expected");
+        _checkAndClaimPlanetReward(firstPlanet, new BigInteger[]{planetId}, true, expected, BigInteger.TWO);
+
+        // burn planet
+        LOG.info("burn planet");
+        _burnPlanetNFTWithId(governorWallet, planetId, true);
+
+        Utils.waitUntilNextTerm();
+
+        // report planetwork
+        _getPlanetInfo(planetId);
+        _reportPlanetWork(planetManager, planetId, false);
+
+        Utils.waitUntilNextTerm();
+
+        // claim
+        assertEquals(null, _getRewardInfoOf(planetId).get("claimable"));
+        _checkAndClaimPlanetReward(secondPlanet, new BigInteger[]{planetId}, true, BigInteger.ZERO, BigInteger.ZERO);
+
+        // mint planet again with same planetId and different wallet
+        _mintPlanetNFTWithId(governorWallet, secondPlanet.getAddress(), type, planetId, true);
+
+        Utils.waitUntilNextTerm();
+
+        _getPlanetInfo(planetId);
+        _reportPlanetWork(planetManager, planetId, true);
+
+        claimable = (BigInteger) _getRewardInfoOf(planetId).get("claimable");
+        expected = _getCurrentPublicReward();
+        if(type == PLANET_COMPANY)
+            expected = expected.multiply(BigInteger.valueOf(4)).divide(BigInteger.TEN);
+        else if(type == PLANET_PRIVATE) {
+            _setPrivateClaimableRate(governorWallet, BigInteger.ONE, BigInteger.TEN, true);
+            Utils.waitUntilNextTerm();
+            claimable = (BigInteger) _getRewardInfoOf(planetId).get("claimable");
+            expected = expected.divide(BigInteger.TEN);
+        }
+
+        assertTrue(compareWithBuffer(claimable, expected, BigInteger.TWO), "claimable is not expected");
+        _checkAndClaimPlanetReward(firstPlanet, new BigInteger[]{planetId}, true, BigInteger.ZERO, BigInteger.ZERO);
+        _checkAndClaimPlanetReward(secondPlanet, new BigInteger[]{planetId}, true, expected, BigInteger.TWO);
     }
 }

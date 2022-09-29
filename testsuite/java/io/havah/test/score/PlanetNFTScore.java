@@ -72,6 +72,7 @@ public class PlanetNFTScore extends Score {
     }
 
     public static BigInteger serialTokenId = BigInteger.ZERO;
+    public BigInteger getSerialTokenId() { return serialTokenId; }
 
     public Bytes mintPlanet(Address _to, int _type, BigInteger _priceInUSDT, BigInteger _priceInHVH, BigInteger _tokenId) throws IOException {
         return mintPlanet(deployer, _to, _type, _priceInUSDT, _priceInHVH, _tokenId);
