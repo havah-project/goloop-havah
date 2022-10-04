@@ -73,6 +73,7 @@ func (h *TransferHandler) DoExecuteSync(cc CallContext) (err error, ro *codec.Ty
 		)
 	}
 
+	h.Log.OnBalanceChange(module.Transfer, h.From, h.To, h.Value)
 	return nil, nil, nil
 }
 
