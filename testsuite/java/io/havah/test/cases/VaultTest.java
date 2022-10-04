@@ -152,7 +152,6 @@ public class VaultTest extends TestBase {
         result = vaultScore.setVestingSchedules(governorWallet, wallets[0].getAddress(), successSchedules1);
         assertSuccess(result);
         s =  vaultScore.getSchedule(wallets[0].getAddress());
-        int size = s.size();
         LOG.info("schedule(" + s + ")");
         assertEquals(successSchedules1.length, s.size());
         result = vaultScore.setVestingSchedules(governorWallet, wallets[1].getAddress(), successSchedules2);
