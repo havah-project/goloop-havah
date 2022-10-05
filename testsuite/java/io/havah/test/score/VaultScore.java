@@ -176,12 +176,13 @@ public class VaultScore extends Score {
         return map;
     }
 
-    public List<Map<String, BigInteger>> getAllAccountStates() throws IOException {
-        List<Map<String, BigInteger>> list = new ArrayList<>();
+    public List<Map<String, Object>> getAllAccountStates() throws IOException {
+        List<Map<String, Object>> list = new ArrayList<>();
         RpcArray items = call("getAllAccountStates", null).asArray();
         for (RpcItem item : items) {
-            Map<String, BigInteger> map = new HashMap<>();
+            Map<String, Object> map = new HashMap<>();
             if (!item.isEmpty()) {
+                map.put("address", item.asObject().getItem("address").asAddress());
                 map.put("total", item.asObject().getItem("total").asInteger());
                 map.put("claimed", item.asObject().getItem("claimed").asInteger());
                 map.put("available", item.asObject().getItem("available").asInteger());

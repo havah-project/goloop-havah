@@ -100,7 +100,9 @@ public class VaultTest extends TestBase {
         var list = vaultScore.getAllAccountStates();
         assertEquals(2, list.size());
         assertEquals(allocations[0], list.get(0).get("total"));
+        assertEquals(wallets[0].getAddress(), list.get(0).get("address"));
         assertEquals(allocations[1], list.get(1).get("total"));
+        assertEquals(wallets[1].getAddress(), list.get(1).get("address"));
         LOG.infoExiting();
 
         assertEquals(BigInteger.ZERO, vaultScore.getClaimable(wallets[0].getAddress()));
