@@ -161,13 +161,13 @@ public class VaultScore extends Score {
         return call("getClaimable", params).asInteger();
     }
 
-    public Map<String, BigInteger> getAccountState(Address address) throws IOException {
+    public Map<String, Object> getAccountState(Address address) throws IOException {
         RpcObject params = new RpcObject.Builder()
                 .put("_address", new RpcValue(address))
                 .build();
 
         RpcObject item = (RpcObject) call("getAccountState", params);
-        Map<String, BigInteger> map = new HashMap<>();
+        Map<String, Object> map = new HashMap<>();
         if (!item.isEmpty()) {
             map.put("total", item.getItem("total").asInteger());
             map.put("claimed", item.getItem("claimed").asInteger());

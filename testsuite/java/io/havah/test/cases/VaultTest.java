@@ -166,7 +166,7 @@ public class VaultTest extends TestBase {
 
         LOG.infoEntering("claim", "claim vault");
         BigInteger totalClaimed = BigInteger.ZERO;
-        BigInteger totalAmount = vaultScore.getAccountState(wallets[0].getAddress()).get("total");
+        BigInteger totalAmount = (BigInteger) vaultScore.getAccountState(wallets[0].getAddress()).get("total");
         for(int i=0; i<successSchedules1.length; i++) {
             Utils.waitUtilTime(successSchedules1[i].timestamp);
             totalClaimed = totalClaimed.add(vaultScore.getClaimable(wallets[0].getAddress()));
