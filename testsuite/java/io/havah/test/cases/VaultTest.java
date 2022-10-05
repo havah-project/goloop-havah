@@ -78,13 +78,23 @@ public class VaultTest extends TestBase {
         LOG.infoEntering("call", "addAllocation()");
         BigInteger[] allocations = { ICX.multiply(BigInteger.valueOf(150)), ICX.multiply(BigInteger.valueOf(100))};
         VaultScore.VestingAccount[] accounts = {
-                new VaultScore.VestingAccount(wallets[0].getAddress(), allocations[0]),
-                new VaultScore.VestingAccount(wallets[1].getAddress(), allocations[1])
+                new VaultScore.VestingAccount(wallets[0].getAddress(), allocations[1]),
+                new VaultScore.VestingAccount(wallets[1].getAddress(), allocations[0])
         };
         assertFailure(vaultScore.addAllocation(wallets[0], accounts));
         assertFailure(vaultScore.addAllocation(governorWallet, new VaultScore.VestingAccount[] {}));
         TransactionResult result = vaultScore.addAllocation(governorWallet, accounts);
         assertSuccess(result);
+        LOG.infoExiting();
+
+        LOG.infoEntering("call", "setAllocation()");
+        VaultScore.VestingAccount[] accounts2 = {
+                new VaultScore.VestingAccount(wallets[0].getAddress(), allocations[0]),
+                new VaultScore.VestingAccount(wallets[1].getAddress(), allocations[1])
+        };
+        assertFailure(vaultScore.setAllocation(wallets[0], accounts2[0]));
+        assertSuccess(vaultScore.setAllocation(governorWallet, accounts2[0]));
+        assertSuccess(vaultScore.setAllocation(governorWallet, accounts2[1]));
         LOG.infoExiting();
 
         LOG.infoEntering("get", "getAccountState()");
@@ -103,15 +113,6 @@ public class VaultTest extends TestBase {
         assertEquals(wallets[0].getAddress(), list.get(0).get("address"));
         assertEquals(allocations[1], list.get(1).get("total"));
         assertEquals(wallets[1].getAddress(), list.get(1).get("address"));
-        LOG.infoExiting();
-
-        assertEquals(BigInteger.ZERO, vaultScore.getClaimable(wallets[0].getAddress()));
-
-        LOG.infoEntering("call", "setAllocation()");
-        VaultScore.VestingAccount vestingAccount = new VaultScore.VestingAccount(wallets[0].getAddress(), allocations[0]);
-        assertFailure(vaultScore.setAllocation(wallets[0], vestingAccount));
-        result = vaultScore.setAllocation(governorWallet, vestingAccount);
-        assertSuccess(result);
         LOG.infoExiting();
 
         LOG.infoEntering("call", "setVestingSchedules()");
@@ -163,6 +164,8 @@ public class VaultTest extends TestBase {
         result = vaultScore.setVestingSchedules(governorWallet, wallets[1].getAddress(), successSchedules2);
         assertSuccess(result);
         LOG.infoExiting();
+
+        assertEquals(BigInteger.ZERO, vaultScore.getClaimable(wallets[0].getAddress()));
 
         LOG.infoEntering("claim", "claim vault");
         BigInteger totalClaimed = BigInteger.ZERO;
