@@ -555,6 +555,7 @@ public class ChainScoreTest extends TestBase {
 
     @ParameterizedTest(name = "addRemoveDeployer {0}")
     @EnumSource(TargetScore.class)
+    @Disabled
     public void addRemoveDeployer(TargetScore score) throws Exception {
         LOG.infoEntering("addRemoveDeployer");
         KeyWallet wallet = testWallets[0];

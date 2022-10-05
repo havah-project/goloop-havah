@@ -15,6 +15,10 @@ import io.havah.test.common.Constants;
 
 import java.io.IOException;
 import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class VaultScore extends Score {
     public static class VestingAccount {
@@ -117,7 +121,7 @@ public class VaultScore extends Score {
         return invokeAndWaitResult(wallet, "setAllocation", params);
     }
 
-    public TransactionResult setVestingSchedules(Wallet wallet, Address account, VestingSchedule[] vestingSchedules)
+    public TransactionResult setVestingSchedules(Wallet wallet, Address address, VestingSchedule[] vestingSchedules)
             throws ResultTimeoutException, IOException {
         var heights = new RpcArray.Builder();
         for (var v : vestingSchedules) {
@@ -129,7 +133,7 @@ public class VaultScore extends Score {
         }
 
         RpcObject params = new RpcObject.Builder()
-                .put("_account", new RpcValue(account))
+                .put("_address", new RpcValue(address))
                 .put("_vestingSchedules", heights.build())
                 .build();
 
@@ -157,13 +161,38 @@ public class VaultScore extends Score {
         return call("getClaimable", params).asInteger();
     }
 
-    public BigInteger getAllocation(Address address) throws IOException {
+    public Map<String, BigInteger> getAccountState(Address address) throws IOException {
         RpcObject params = new RpcObject.Builder()
                 .put("_address", new RpcValue(address))
                 .build();
 
-        RpcItem val = call("getAllocation", params);
-        return val == null ? null : val.asInteger();
+        RpcObject item = (RpcObject) call("getAccountState", params);
+        Map<String, BigInteger> map = new HashMap<>();
+        if (!item.isEmpty()) {
+            map.put("total", item.getItem("total").asInteger());
+            map.put("claimed", item.getItem("claimed").asInteger());
+            map.put("available", item.getItem("available").asInteger());
+        }
+        return map;
+    }
+
+    public List<Map<String, BigInteger>> getAllAccountStates() throws IOException {
+        List<Map<String, BigInteger>> list = new ArrayList<>();
+        RpcArray items = call("getAllAccountStates", null).asArray();
+        for (RpcItem item : items) {
+            Map<String, BigInteger> map = new HashMap<>();
+            if (!item.isEmpty()) {
+                map.put("total", item.asObject().getItem("total").asInteger());
+                map.put("claimed", item.asObject().getItem("claimed").asInteger());
+                map.put("available", item.asObject().getItem("available").asInteger());
+            }
+            list.add(map);
+        }
+        return list;
+    }
+
+    public BigInteger getUnallocated() throws IOException {
+        return call("getUnallocated", null).asInteger();
     }
 
 //    public void ensureAddAllocation(TransactionResult result, String vestingAccounts)

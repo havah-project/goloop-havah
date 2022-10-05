@@ -4,6 +4,7 @@ import foundation.icon.icx.KeyWallet;
 import foundation.icon.icx.Wallet;
 import foundation.icon.icx.data.Bytes;
 import foundation.icon.icx.data.TransactionResult;
+import foundation.icon.icx.transport.jsonrpc.RpcError;
 import foundation.icon.test.common.ResultTimeoutException;
 import foundation.icon.test.common.TestBase;
 import foundation.icon.test.common.TransactionHandler;
@@ -83,20 +84,23 @@ public class VaultTest extends TestBase {
         assertFailure(vaultScore.addAllocation(governorWallet, new VaultScore.VestingAccount[] {}));
         TransactionResult result = vaultScore.addAllocation(governorWallet, accounts);
         assertSuccess(result);
+        assertEquals(allocations[0].add(allocations[1]), vaultScore.getUnallocated());
         LOG.infoExiting();
 
-        LOG.infoEntering("get", "getAllocation()");
-        assertEquals(allocations[0], vaultScore.getAllocation(wallets[0].getAddress()));
-        assertEquals(allocations[1], vaultScore.getAllocation(wallets[1].getAddress()));
-        boolean exception = false;
+        LOG.infoEntering("get", "getAccountState()");
+        assertEquals(allocations[0], vaultScore.getAccountState(wallets[0].getAddress()).get("total"));
+        assertEquals(allocations[1], vaultScore.getAccountState(wallets[1].getAddress()).get("total"));
         try {
-            var val = vaultScore.getAllocation(wallets[2].getAddress());
-        } catch (Exception ex){
-            LOG.info("val(" + ex + ")");
-            exception = true;
-        }
-        assertTrue(exception);
-//        assertEquals(null, vaultScore.getAllocation(wallets[2].getAddress()));
+            vaultScore.getAccountState(wallets[2].getAddress());
+            fail();
+        } catch (RpcError e) {}
+        LOG.infoExiting();
+
+        LOG.infoEntering("get", "getAllAccountStates()");
+        var list = vaultScore.getAllAccountStates();
+        assertEquals(2, list.size());
+        assertEquals(allocations[0], list.get(0).get("total"));
+        assertEquals(allocations[1], list.get(1).get("total"));
         LOG.infoExiting();
 
         assertEquals(BigInteger.ZERO, vaultScore.getClaimable(wallets[0].getAddress()));
@@ -159,11 +163,19 @@ public class VaultTest extends TestBase {
         LOG.infoExiting();
 
         LOG.infoEntering("claim", "claim vault");
+        BigInteger totalClaimed = BigInteger.ZERO;
+        BigInteger totalAmount = vaultScore.getAccountState(wallets[0].getAddress()).get("total");
         for(int i=0; i<successSchedules1.length; i++) {
             Utils.waitUtilTime(successSchedules1[i].timestamp);
+            totalClaimed = totalClaimed.add(vaultScore.getClaimable(wallets[0].getAddress()));
             _checkAndClaim(wallets[0]);
+            assertEquals(totalClaimed, vaultScore.getAccountState(wallets[0].getAddress()).get("claimed"));
+            assertEquals(totalAmount.subtract(totalClaimed), vaultScore.getAccountState(wallets[0].getAddress()).get("available"));
         }
+
         _checkAndClaim(wallets[1]);
+        assertFailure(vaultScore.setAllocation(governorWallet, new VaultScore.VestingAccount(wallets[1].getAddress(), BigInteger.ZERO)));
+        assertSuccess(vaultScore.setAllocation(governorWallet, new VaultScore.VestingAccount(wallets[1].getAddress(), allocations[1].add(BigInteger.TEN))));
 
         result = vaultScore.claim(wallets[2]);
         assertFailure(result);
