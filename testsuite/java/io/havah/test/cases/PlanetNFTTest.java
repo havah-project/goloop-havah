@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 import static foundation.icon.test.common.Env.LOG;
 import static org.junit.jupiter.api.Assertions.*;
@@ -472,22 +471,22 @@ public class PlanetNFTTest extends TestBase {
 
         // mint and burn with owner - success
         _mintAndCheckBalance(caller, holder, false);
-        var txHash = planetNFTScore.addMintingApprover(planetScoreOwner, caller.getAddress());
+        var txHash = planetNFTScore.addMinter(planetScoreOwner, caller.getAddress());
         assertSuccess(txHandler.getResult(txHash));
         _mintAndCheckBalance(caller, holder, true);
         _mintAndCheckBalance(planetScoreOwner, holder, true);
-        var approvers = planetNFTScore.getMintingApprover();
+        var approvers = planetNFTScore.minter();
         assertEquals(approvers.size(), 1);
         assertEquals(approvers.get(0), caller.getAddress());
 
         Wallet caller2 = wallets[2];
         _mintAndCheckBalance(caller2, holder, false);
-        txHash = planetNFTScore.addMintingApprover(planetScoreOwner, caller2.getAddress());
+        txHash = planetNFTScore.addMinter(planetScoreOwner, caller2.getAddress());
         assertSuccess(txHandler.getResult(txHash));
         _mintAndCheckBalance(caller2, holder, true);
         _mintAndCheckBalance(caller, holder, true);
         _mintAndCheckBalance(planetScoreOwner, holder, true);
-        approvers = planetNFTScore.getMintingApprover();
+        approvers = planetNFTScore.minter();
         assertEquals(approvers.size(), 2);
         for (int i = 0; i < approvers.size(); i++) {
             if (i == 0) {
@@ -497,9 +496,9 @@ public class PlanetNFTTest extends TestBase {
             }
         }
 
-        txHash = planetNFTScore.removeMintingApprover(planetScoreOwner, caller.getAddress());
+        txHash = planetNFTScore.removeMinter(planetScoreOwner, caller.getAddress());
         assertSuccess(txHandler.getResult(txHash));
-        approvers = planetNFTScore.getMintingApprover();
+        approvers = planetNFTScore.minter();
         assertEquals(1, approvers.size());
         assertEquals(approvers.get(0), caller2.getAddress());
 
@@ -508,12 +507,12 @@ public class PlanetNFTTest extends TestBase {
         _mintAndCheckBalance(planetScoreOwner, holder, true);
 
 
-        txHash = planetNFTScore.removeMintingApprover(planetScoreOwner, caller2.getAddress());
+        txHash = planetNFTScore.removeMinter(planetScoreOwner, caller2.getAddress());
         assertSuccess(txHandler.getResult(txHash));
         _mintAndCheckBalance(caller, holder, false);
         _mintAndCheckBalance(caller2, holder, false);
         _mintAndCheckBalance(planetScoreOwner, holder, true);
-        approvers = planetNFTScore.getMintingApprover();
+        approvers = planetNFTScore.minter();
         assertEquals(approvers.size(), 0);
     }
 

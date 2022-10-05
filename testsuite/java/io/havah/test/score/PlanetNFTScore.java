@@ -202,22 +202,22 @@ public class PlanetNFTScore extends Score {
         return invoke(wallet, "setAdmin", params);
     }
 
-    public Bytes addMintingApprover(Wallet wallet, Address approver) throws IOException {
+    public Bytes addMinter(Wallet wallet, Address approver) throws IOException {
         RpcObject params = new RpcObject.Builder()
                 .put("_address", new RpcValue(approver))
                 .build();
-        return invoke(wallet, "addMintingApprover", params);
+        return invoke(wallet, "addMinter", params);
     }
 
-    public Bytes removeMintingApprover(Wallet wallet, Address approver) throws Exception {
+    public Bytes removeMinter(Wallet wallet, Address approver) throws Exception {
         RpcObject params = new RpcObject.Builder()
                 .put("_address", new RpcValue(approver))
                 .build();
-        return invoke(wallet, "removeMintingApprover", params);
+        return invoke(wallet, "removeMinter", params);
     }
 
-    public List<Address> getMintingApprover() throws IOException {
-        var array = call("mintingApprover", null).asArray();
+    public List<Address> minter() throws IOException {
+        var array = call("minter", null).asArray();
         List<Address> approvers = new ArrayList<>();
         for (RpcItem rpcItem : array) {
             approvers.add(rpcItem.asAddress());
