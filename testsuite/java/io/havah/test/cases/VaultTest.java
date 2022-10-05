@@ -76,7 +76,7 @@ public class VaultTest extends TestBase {
         LOG.info("vault balance : " + scoreBalance);
 
         LOG.infoEntering("call", "addAllocation()");
-        BigInteger[] allocations = { ICX.multiply(BigInteger.valueOf(350)), ICX.multiply(BigInteger.valueOf(110))};
+        BigInteger[] allocations = { ICX.multiply(BigInteger.valueOf(350)), ICX.multiply(BigInteger.valueOf(10))};
         VaultScore.VestingAccount[] accounts = {
                 new VaultScore.VestingAccount(wallets[0].getAddress(), allocations[0]),
                 new VaultScore.VestingAccount(wallets[1].getAddress(), allocations[1])
@@ -182,8 +182,8 @@ public class VaultTest extends TestBase {
         _checkAndClaim(wallets[1]);
         assertEquals(scoreBalance.subtract(allocations2[0].add(allocations2[1])), vaultScore.getUnallocated());
 
-        assertFailure(vaultScore.setAllocation(governorWallet, new VaultScore.VestingAccount(wallets[1].getAddress(), BigInteger.ZERO)));
-        assertSuccess(vaultScore.setAllocation(governorWallet, new VaultScore.VestingAccount(wallets[1].getAddress(), allocations[1].add(BigInteger.TEN))));
+        assertFailure(vaultScore.setAllocation(governorWallet, new VaultScore.VestingAccount(wallets[1].getAddress(), BigInteger.ONE)));
+        assertSuccess(vaultScore.setAllocation(governorWallet, new VaultScore.VestingAccount(wallets[1].getAddress(), allocations2[1].add(BigInteger.TEN))));
 
         result = vaultScore.claim(wallets[2]);
         assertFailure(result);
