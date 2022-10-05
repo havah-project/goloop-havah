@@ -67,12 +67,13 @@ public class VaultTest extends TestBase {
     @Test
     @Order(1)
     void startVault() throws Exception {
-        LOG.info("vault balance : " + txHandler.getBalance(vaultScore.getAddress()));
-
         LOG.infoEntering("transfer icx", "transfer 100 ICX to vault score from account");
         Bytes txHash = txHandler.transfer(wallets[0], vaultScore.getAddress(), ICX.multiply(BigInteger.valueOf(250)));
         assertSuccess(txHandler.getResult(txHash));
         LOG.infoExiting();
+
+        BigInteger scoreBalance = txHandler.getBalance(vaultScore.getAddress());
+        LOG.info("vault balance : " + scoreBalance);
 
         LOG.infoEntering("call", "addAllocation()");
         BigInteger[] allocations = { ICX.multiply(BigInteger.valueOf(150)), ICX.multiply(BigInteger.valueOf(100))};
@@ -84,7 +85,6 @@ public class VaultTest extends TestBase {
         assertFailure(vaultScore.addAllocation(governorWallet, new VaultScore.VestingAccount[] {}));
         TransactionResult result = vaultScore.addAllocation(governorWallet, accounts);
         assertSuccess(result);
-        assertEquals(allocations[0].add(allocations[1]), vaultScore.getUnallocated());
         LOG.infoExiting();
 
         LOG.infoEntering("get", "getAccountState()");
@@ -174,6 +174,8 @@ public class VaultTest extends TestBase {
         }
 
         _checkAndClaim(wallets[1]);
+        assertEquals(scoreBalance.subtract(allocations[0].add(allocations[1])), vaultScore.getUnallocated());
+
         assertFailure(vaultScore.setAllocation(governorWallet, new VaultScore.VestingAccount(wallets[1].getAddress(), BigInteger.ZERO)));
         assertSuccess(vaultScore.setAllocation(governorWallet, new VaultScore.VestingAccount(wallets[1].getAddress(), allocations[1].add(BigInteger.TEN))));
 
