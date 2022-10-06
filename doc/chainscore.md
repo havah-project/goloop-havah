@@ -19,7 +19,7 @@ API path : `<scheme>://<host>/api/v3`
 
 Basic JSON-RPC APIs that ChainScore provides commonly, regardless of a specific platform
 
-### setRevision
+### setRevision(code int)
 
 * Sets a revision to activate new features
 * Called by Governance SCORE
@@ -54,7 +54,7 @@ Basic JSON-RPC APIs that ChainScore provides commonly, regardless of a specific 
 
 `T_HASH` - txHash
 
-### getRevision
+### getRevision() int
 
 * Returns revision
 
@@ -93,7 +93,7 @@ None
 
 `T_INT` - Revision code
 
-### setStepCost
+### setStepCost(type string, cost int)
 
 * Sets step cost of each action
 * Called by Governance SCORE
@@ -150,7 +150,7 @@ None
 
 `T_HASH` - txHash
 
-### getStepCost
+### getStepCost(type string) int
 
 * Returns the step cost of a specific action
 
@@ -194,7 +194,7 @@ None
 
 `T_INT` - step cost of a specific action type
 
-### getStepCosts
+### getStepCosts() dict
 
 * Returns a table of the step costs for each action
 
@@ -250,7 +250,7 @@ None
 
 `T_DICT` - a dict: key - camel-cased action strings, value - step costs in integer
 
-### setMaxStepLimit
+### setMaxStepLimit(contextType string, limit int)
 
 * Sets the maximum step limit that any SCORE execution should be bounded by
 * Called by Governance SCORE
@@ -287,7 +287,7 @@ None
 
 `T_HASH` - txHash
 
-### getMaxStepLimit
+### getMaxStepLimit(contextType string) int
 
 * Returns the maximum step limit value that any SCORE execution should be bounded by
 
@@ -331,7 +331,7 @@ None
 
 `T_INT` - integer of the maximum step limit for the given contextType
 
-### setStepPrice
+### setStepPrice(price int)
 
 * Sets the new step price
 * Called by Governance SCORE
@@ -366,7 +366,7 @@ None
 
 `T_HASH` - txHash
 
-### getStepPrice
+### getStepPrice() int
 
 * Returns the current step price
 
@@ -405,7 +405,7 @@ None
 
 `T_INT` - step price
 
-### getServiceConfig
+### getServiceConfig() int
 
 * Returns an integer value representing service configuration bitwise flags
 
@@ -455,7 +455,7 @@ None
 | Membership            | 0x10  |
 | FeeSharing            | 0x20  |
 
-### setScoreOwner
+### setScoreOwner(score Address, owner Address)
 
 * Changes the owner of the score indicated by a given address
 * Only the score owner can change its owner
@@ -496,7 +496,7 @@ None
 
 `T_HASH` - txHash
 
-### getScoreOwner
+### getScoreOwner(score Address) Address
 
 * Returns the owner of the score indicated by a given address
 
@@ -540,7 +540,7 @@ None
 
 `T_ADDRESS` - owner address of a given score
 
-### setTimestampThreshold
+### setTimestampThreshold(threshold int)
 
 * Sets transaction timestamp threshold in millisecond
 * Transactions whose timestamp is out of range of timestamp threshold is rejected
@@ -577,7 +577,7 @@ None
 
 `T_HASH` - txHash
 
-### getTimestampThreshold
+### getTimestampThreshold() int
 
 * Returns transaction threshold in millisecond
 
@@ -616,7 +616,7 @@ None
  
 `T_INT` - transaction threshold in millisecond
 
-### addDeployer
+### addDeployer(address Address)
 
 * Adds an address to deployer list
 * Only the addresses in deployer list can deploy a score
@@ -652,7 +652,7 @@ None
 
 `T_HASH` - txHash
 
-### removeDeployer
+### removeDeployer(address Address)
 
 * Remove an address from deployer list
 * Called by Governance SCORE
@@ -687,7 +687,7 @@ None
 
 `T_HASH` - txHash
 
-### isDeployer
+### isDeployer(address Address) bool
 
 * Returns true if a given address is contained in deployer list
 
@@ -731,7 +731,7 @@ None
 
 `T_BOOL` - boolean value representing if a given address is a deployer or not
 
-### getDeployers
+### getDeployers() []Address
 
 * Returns the entire addresses that are allowed to deploy a score
 
@@ -773,7 +773,7 @@ None
 
 `T_DICT` - addresses that are allowed to deploy a score
 
-### grantValidator
+### grantValidator(address Address)
 
 * Adds an address to validator list
 * Contract address is not available
@@ -809,7 +809,7 @@ None
 
 `T_HASH` - txHash
 
-### revokeValidator
+### revokeValidator(address Address)
 
 * Removes a validator from validator list
 * Called by Governance SCORE
@@ -844,7 +844,7 @@ None
 
 `T_HASH` - txHash
 
-### getValidators
+### getValidators() []Address
 
 * Returns the current validator list
 
@@ -888,7 +888,7 @@ None
 
 `T_LIST` - the current validator list
 
-### setRoundLimitFactor
+### setRoundLimitFactor(factor int)
 
 * Sets a roundLimitFactor that is used for roundLimit calculation
 * Called by Governance SCORE
@@ -924,7 +924,7 @@ None
 
 `T_HASH` - txHash
 
-### getRoundLimitFactor
+### getRoundLimitFactor() int
 
 * Returns the current roundLimitFactor
 
@@ -967,7 +967,7 @@ None
 
 HAVAH-specific JSON-RPC APIs
 
-### startRewardIssue
+### startRewardIssue(height int)
 
 * Set up the block height when to issue rewards begins
 * Called by Governance SCORE
@@ -1002,7 +1002,7 @@ HAVAH-specific JSON-RPC APIs
 
 `T_HASH` - txHash
 
-### addPlanetManager
+### addPlanetManager(address Address)
 
 * Adds a specified address to PlanetManager list
 * Called by Governance SCORE
@@ -1037,7 +1037,7 @@ HAVAH-specific JSON-RPC APIs
 
 `T_HASH` - txHash
 
-### removePlanetManager
+### removePlanetManager(address Address)
 
 * Removes a specific address from PlanetManager list
 * Called by Governance SCORE
@@ -1072,7 +1072,7 @@ HAVAH-specific JSON-RPC APIs
 
 `T_HASH` - txHash
 
-### isPlanetManager
+### isPlanetManager(address Address) bool
 
 * Query if a specific address is a PlanetManager or not
 
@@ -1118,7 +1118,7 @@ HAVAH-specific JSON-RPC APIs
 |:----|:-----------|:---------|:----------------------|
 | -   | T_BOOL     | true     | true(0x0), false(0x1) |
 
-### registerPlanet
+### registerPlanet(id int, isPrivate bool, isCompany bool, owner Address, usdt int, price int)
 
 * Registers a planet to the network
 * Called by PlanetNFT SCORE
@@ -1163,7 +1163,7 @@ HAVAH-specific JSON-RPC APIs
 
 `T_HASH` - txHash
 
-### getPlanetInfo
+### getPlanetInfo(id int) dict
 
 * Returns the information on the planet specified by id
 
@@ -1221,7 +1221,7 @@ HAVAH-specific JSON-RPC APIs
 | havahPrice | T_INT      | true     | Planet price in HVH                        |
 | height     | T_INT      | true     | BlockHeight when the planet was registered |
 
-### unregisterPlanet
+### unregisterPlanet(id int)
 
 * Unregisters a planet
 * Called by PlanetNFT SCORE
@@ -1256,10 +1256,31 @@ HAVAH-specific JSON-RPC APIs
 
 `T_HASH` - txHash
 
-### setPlanetOwner
+### setPlanetOwner(id int, owner Address)
 
 * Changes a planet owner
 * Called by PlanetNFT SCORE
+ 
+> Request
+ 
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1234,
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "setPlannetOwner",
+      "params": {
+        "id": "0x1",
+        "owner": "hx0123456789012345678901234567890123456789"
+      }
+    }
+  }
+}
+```
 
 #### Parameters
 
@@ -1272,7 +1293,7 @@ HAVAH-specific JSON-RPC APIs
 
 `T_HASH` - txHash
 
-### reportPlanetWork
+### reportPlanetWork(id int)
 
 * PlanetManager reports a planet's work
 * The network offers the rewards to a planet whose work has been reported in a term
@@ -1314,10 +1335,11 @@ HAVAH-specific JSON-RPC APIs
 
 * [`RewardOffered(int,int,int,int)`](#rewardofferedintintintint)
 
-### claimPlanetReward
+### claimPlanetReward(ids []int)
 
-* Claims remaining rewards for a specific planet
+* Claims remaining rewards for specific planets
 * Claimed rewards are transferred from `PublicTreasury` to the planet owner
+* The rewards of up to `50` planets can be claimed at once.
 * Called by a planet owner
  
 > Request
@@ -1354,7 +1376,7 @@ HAVAH-specific JSON-RPC APIs
 
 * [`RewardClaimed(Address,int,int,int)`](#rewardclaimedaddressintintint)
 
-### getRewardInfoOf
+### getRewardInfoOf(id int) dict
 
 * Returns the information on a planet reward
 
@@ -1408,7 +1430,7 @@ HAVAH-specific JSON-RPC APIs
 | remain    | T_INT      | true     | Difference between Total Rewards and Claimed Rewards      |
 | claimable | T_INT      | true     | Rewards that a planet owner can receive when claiming now |
 
-### getRewardInfo
+### getRewardInfo() dict
 
 * Returns the overall reward information
 * This call returns an error response before the start of the first term
@@ -1459,7 +1481,7 @@ None
 * `rewardPerActivePlanet` does not include the fund from HooverFund SCORE
 * `rewardPerActivePlanet` is zero if no active planet exists
  
-### getIssueInfo
+### getIssueInfo() dict
 
 * Returns the information on issue-related configuration
  
@@ -1515,7 +1537,7 @@ None
 * `issueStart` is provided after the blockHeight has been set by `startRewardIssue` call
 * `termSequence` is provided after the start of the first term
 
-### getUSDTPrice
+### getUSDTPrice() int
 
 * Returns 1 USDT price in HVH
 
@@ -1556,7 +1578,7 @@ None
 |:----|:-----------|:---------|:--------------------|
 | -   | T_INT      | true     | 1 USDT price in HVH |
 
-### setUSDTPrice
+### setUSDTPrice(price int)
 
 * Set 1 USDT price in HVH
 * Temporary API
@@ -1628,6 +1650,90 @@ N/A
 #### EventLog
 
 * [`Burned(Address,int,int)`](#burnedaddressintint)
+
+### setPrivateClaimableRate(numerator int, denominator int)
+
+* Sets claimable rate for a private planet
+* Called by Governance SCORE
+
+> Request
+
+```json
+{
+  "id": 1234,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "setPrivateClaimableRate",
+      "params": {
+        "numerator": "0x1",
+        "denominator": "0x18"
+      }
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key         | VALUE Type | Required | Description                         |
+|:------------|:-----------|:---------|:------------------------------------|
+| numerator   | T_INT      | true     | Numerator of PrivateClaimableRate   |
+| denominator | T_INT      | true     | Denominator of PrivateClaimableRate |
+
+* 0 <= numerator <= 10000
+* 0 < denominator <= 10000
+* numerator <= denominator
+
+#### Returns
+
+`T_HASH` - txHash
+
+### getPrivateClaimableRate() dict
+
+* Returns claimable rate for a private planet
+* If PrivateClaimableRate has not changed, this call returns numerator=0, denominator=24 as default
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getPrivateClaimableRate"
+    }
+  }
+}
+```
+
+> Response
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "numerator": "0x0",
+    "denominator": "0x18"
+  }
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+`T_DICT` - numerator and denominator representing PrivateClaimableRate
 
 ## EventLogs
 

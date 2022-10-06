@@ -66,37 +66,34 @@ const (
 
 // PlatformConfig default values
 const (
-	TermPeriod             = DayBlock    // unit: block
-	IssueAmount            = 4_300_000   // unit: HVH
-	IssueReductionCycle    = DayPerYear  // 1 year (360) in term
-	PrivateLockup          = DayPerYear  // 1 year (360) in term
-	PrivateReleaseCycle    = DayPerMonth // unit: term
-	PrivateReleaseDivision = MonthPerYear * 2
-	HooverBudget           = 4_300_000                // unit: HVH
-	IssueLimit             = 50 * IssueReductionCycle // unit: term
+	TermPeriod           = DayBlock                 // unit: block
+	IssueAmount          = 4_300_000                // unit: HVH, IssueAmount per term
+	IssueReductionCycle  = DayPerYear               // 1 year (360) in term
+	HooverBudget         = 4_300_000                // unit: HVH
+	IssueLimit           = 50 * IssueReductionCycle // unit: term
+	PrivateClaimableRate = MonthPerYear * 2         // 0 / 24
 )
 
 // VarDB, DictDB, ArrayDB keys
 const (
-	VarIssueAmount         = "issue_amount"          // unit: loop
-	VarIssueStart          = "issue_start"           // block height
-	VarIssueLimit          = "issue_limit"           // unit: term
-	VarTermPeriod          = "term_period"           // unit: block
-	VarIssueReductionCycle = "issue_reduction_cycle" // unit: term
-	VarPrivateReleaseCycle = "private_release_cycle" // unit: term
-	VarPrivateLockup       = "private_lockup"        // unit: term
-	VarHooverBudget        = "hoover_budget"         // unit: hvh
-	VarUSDTPrice           = "usdt_price"            // unit: hvh
-	VarActiveUSDTPrice     = "active_usdt_price"     // unit: hvh
-	DictPlanet             = "planet"
-	ArrayPlanetManager     = "planet_manager"
-	DictPlanetReward       = "planet_reward"
-	VarAllPlanet           = "all_planet"
-	VarActivePlanet        = "active_planet"
-	VarWorkingPlanet       = "working_planet"
-	VarRewardTotal         = "reward_total"  // unit: hvh
-	VarRewardRemain        = "reward_remain" // unit: hvh
-	VarEcoReward           = "eco_reward"    // unit: hvh
+	VarIssueAmount          = "issue_amount"          // unit: loop
+	VarIssueStart           = "issue_start"           // block height
+	VarIssueLimit           = "issue_limit"           // unit: term
+	VarTermPeriod           = "term_period"           // unit: block
+	VarIssueReductionCycle  = "issue_reduction_cycle" // unit: term
+	VarHooverBudget         = "hoover_budget"         // unit: hvh
+	VarUSDTPrice            = "usdt_price"            // unit: hvh
+	VarActiveUSDTPrice      = "active_usdt_price"     // unit: hvh
+	DictPlanet              = "planet"
+	ArrayPlanetManager      = "planet_manager"
+	DictPlanetReward        = "planet_reward"
+	VarAllPlanet            = "all_planet"
+	VarActivePlanet         = "active_planet"
+	VarWorkingPlanet        = "working_planet"
+	VarRewardTotal          = "reward_total"  // unit: hvh
+	VarRewardRemain         = "reward_remain" // unit: hvh
+	VarEcoReward            = "eco_reward"    // unit: hvh
+	VarPrivateClaimableRate = "private_claimable_rate"
 )
 
 // VarDBs in SustainableFund Score
