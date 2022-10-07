@@ -454,7 +454,7 @@ func (es *ExtensionStateImpl) BurnCoin(cc hvhmodule.CallContext, amount *big.Int
 	if err != nil {
 		return err
 	}
-	onBurnedEvent(cc, from, amount, totalSupply)
+	onBurnedEvent(cc, state.SystemAddress, amount, totalSupply)
 	es.Logger().Debugf(
 		"BurnCoin() end: from=%s amount=%d ts=%d", from, amount, totalSupply)
 	return nil
