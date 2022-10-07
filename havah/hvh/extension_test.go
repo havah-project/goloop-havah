@@ -15,6 +15,7 @@ import (
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/contract"
 	"github.com/icon-project/goloop/service/state"
+	"github.com/icon-project/goloop/service/trace"
 )
 
 var (
@@ -118,6 +119,10 @@ func (cc *mockCallContext) GetBalance(address module.Address) *big.Int {
 func (cc *mockCallContext) SetBalance(address module.Address, amount *big.Int) {
 	as := cc.GetAccountState(address.ID())
 	as.SetBalance(amount)
+}
+
+func (cc *mockCallContext) FrameLogger() *trace.Logger {
+	return nil
 }
 
 func newMockCallContext() *mockCallContext {
