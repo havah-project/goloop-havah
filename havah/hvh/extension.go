@@ -313,7 +313,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 	}
 
 	if err = cc.Transfer(
-		hvhmodule.HooverFund, hvhmodule.PublicTreasury, hooverRequest); err != nil {
+		hvhmodule.HooverFund, hvhmodule.PublicTreasury, hooverRequest, module.Transfer); err != nil {
 		return err
 	}
 
@@ -407,7 +407,7 @@ func (es *ExtensionStateImpl) ClaimPlanetReward(cc hvhmodule.CallContext, ids []
 			es.Logger().Warnf("Failed to claim a reward for %d", id)
 		}
 		if reward != nil && reward.Sign() > 0 {
-			if err = cc.Transfer(hvhmodule.PublicTreasury, owner, reward); err != nil {
+			if err = cc.Transfer(hvhmodule.PublicTreasury, owner, reward, module.Claim); err != nil {
 				return nil
 			}
 			onRewardClaimedEvent(cc, owner, termSeq, id, reward)

@@ -114,7 +114,8 @@ func (ctx *callContextImpl) Burn(amount *big.Int) (*big.Int, error) {
 	return totalSupply, nil
 }
 
-func (ctx *callContextImpl) Transfer(from module.Address, to module.Address, amount *big.Int) (err error) {
+func (ctx *callContextImpl) Transfer(
+	from module.Address, to module.Address, amount *big.Int, opType module.OpType) (err error) {
 	if err = validateAmount(amount); err != nil {
 		return
 	}
@@ -129,7 +130,7 @@ func (ctx *callContextImpl) Transfer(from module.Address, to module.Address, amo
 	if err = ctx.addBalance(to, amount); err != nil {
 		return
 	}
-	ctx.onBalanceChange(module.Transfer, from, to, amount)
+	ctx.onBalanceChange(opType, from, to, amount)
 	ctx.CallContext.OnEvent(
 		state.SystemAddress,
 		[][]byte{

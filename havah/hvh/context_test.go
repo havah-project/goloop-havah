@@ -69,7 +69,7 @@ func TestCallContextImpl_Transfer(t *testing.T) {
 	balance = cc.GetBalance(to)
 	assert.Zero(t, balance.Sign())
 
-	err = cc.Transfer(from, to, amount)
+	err = cc.Transfer(from, to, amount, module.Transfer)
 	assert.NoError(t, err)
 
 	balance = cc.GetBalance(from)
