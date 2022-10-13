@@ -1514,8 +1514,7 @@ None
     "issueReductionCycle": "0x168",
     "issueStart": "0x14",
     "termPeriod": "0x1e",
-    "termSequence": "0x1",
-    "rewardPerActivePlanet": "0xde0b6b3a7640000"
+    "termSequence": "0x1"
   }
 }
 ```
