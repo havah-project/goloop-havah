@@ -304,19 +304,15 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 	}
 
 	termPeriod := es.state.GetTermPeriod()
-	baseTxCount := height - issueStart
-	termSeq := baseTxCount / termPeriod
+	termSeq, blockIndexInTerm := hvhstate.GetTermSequenceAndBlockIndex(height, issueStart, termPeriod)
 	es.Logger().Debugf(
-		"height=%d istart=%d tperiod=%d basetx=%d tseq=%d issue=%v",
-		height, issueStart, termPeriod, baseTxCount, termSeq, baseData.IssueAmount.Value())
+		"height=%d istart=%d tperiod=%d blockIndex=%d tseq=%d issue=%v",
+		height, issueStart, termPeriod, blockIndexInTerm, termSeq, baseData.IssueAmount.Value())
 
-	if (baseTxCount % termPeriod) != 0 {
-		if baseData.IssueAmount.Value().Sign() != 0 {
-			return transaction.InvalidTxValue.Errorf(
-				"Invalid issueAmount(%s)", baseData.IssueAmount.Value())
-		}
-		return nil
+	if blockIndexInTerm != 0 {
+		return errors.InvalidStateError.Errorf("InvalidBaseTx")
 	}
+
 	issueLimit := es.state.GetIssueLimit()
 	if termSeq > 0 && (issueLimit == 0 || termSeq <= issueLimit) {
 		if err = es.onTermEnd(cc); err != nil {

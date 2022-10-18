@@ -147,6 +147,10 @@ func (es *ExtensionStateImpl) GetIssueStart() int64 {
 	return es.state.GetIssueStart()
 }
 
+func (es *ExtensionStateImpl) GetTermPeriod() int64 {
+	return es.state.GetTermPeriod()
+}
+
 // NewBaseTransactionData creates data part of a baseTransaction
 func (es *ExtensionStateImpl) NewBaseTransactionData(height, issueStart int64) map[string]interface{} {
 	es.Logger().Debugf("NewBaseTransactionData() start: height=%d istart=%d", height, issueStart)

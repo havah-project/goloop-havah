@@ -165,6 +165,7 @@ func newSimplePlatformConfig(termPeriod, usdtPrice int64) *PlatformConfig {
 func newMockContextAndExtensionState(t *testing.T, cfg *PlatformConfig) (*mockCallContext, *ExtensionStateImpl) {
 	cc := newMockCallContext()
 	es := newMockExtensionState(t, cfg)
+	assert.Equal(t, cfg.TermPeriod.Value, es.GetTermPeriod())
 	return cc, es
 }
 
@@ -179,16 +180,21 @@ func goByCount(t *testing.T, count int64,
 	es *ExtensionStateImpl, mcc *mockCallContext, from module.Address) {
 	cc := NewCallContext(mcc, from)
 	is := es.GetIssueStart()
+	termPeriod := es.GetTermPeriod()
 
 	for i := int64(0); i < count; i++ {
 		mcc.height++
 		if hvhstate.IsIssueStarted(mcc.height, is) {
-			data := es.NewBaseTransactionData(mcc.height, is)
-			bs, err := json.Marshal(data)
-			assert.NoError(t, err)
+			_, blockIndex := hvhstate.GetTermSequenceAndBlockIndex(mcc.height, is, termPeriod)
+			if blockIndex == 0 {
+				// A baseTx is created only at the beginning of each term
+				data := es.NewBaseTransactionData(mcc.height, is)
+				bs, err := json.Marshal(data)
+				assert.NoError(t, err)
 
-			err = es.OnBaseTx(cc, bs)
-			assert.NoError(t, err)
+				err = es.OnBaseTx(cc, bs)
+				assert.NoError(t, err)
+			}
 		}
 	}
 }
