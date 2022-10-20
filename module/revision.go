@@ -34,6 +34,8 @@ const (
 	FixLostFeeByDeposit
 	MultipleFeePayers
 	PurgeEnumCache
+	ContractSetEvent
+	FixMapValues
 	LastRevisionBit
 )
 
