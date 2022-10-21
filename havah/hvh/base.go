@@ -313,6 +313,7 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 		return errors.InvalidStateError.Errorf("InvalidBaseTx")
 	}
 
+	// The code below should be executed only at the first block of each term
 	issueLimit := es.state.GetIssueLimit()
 	if termSeq > 0 && (issueLimit == 0 || termSeq <= issueLimit) {
 		if err = es.onTermEnd(cc); err != nil {
