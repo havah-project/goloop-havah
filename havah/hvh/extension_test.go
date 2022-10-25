@@ -523,6 +523,7 @@ func TestExtensionStateImpl_Reward3(t *testing.T) {
 	priceInUSDT := toUSDT(5_000)
 	priceInHVH := toHVH(50_000)
 	err = es.RegisterPlanet(cc, id, false, true, owner, priceInUSDT, priceInHVH)
+	assert.NoError(t, err)
 
 	// Before reporting a planet work, the balances of related accounts are 0
 	assert.Zero(t, cc.GetBalance(hvhmodule.EcoSystem).Sign())

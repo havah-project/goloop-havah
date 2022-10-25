@@ -12,7 +12,6 @@ import (
 const (
 	SigRewardOffered  = "RewardOffered(int,int,int,int)"
 	SigRewardClaimed  = "RewardClaimed(Address,int,int,int)"
-	SigTermStarted    = "TermStarted(int)"
 	SigIssued         = "Issued(int,int,int)"
 	SigBurned         = "Burned(Address,int,int)"
 	SigHooverRefilled = "HooverRefilled(int,int,int)"
@@ -43,14 +42,6 @@ func onRewardClaimedEvent(
 			intconv.Int64ToBytes(id),
 			intconv.BigIntToBytes(amount),
 		},
-	)
-}
-
-func onTermStartedEvent(cc hvhmodule.CallContext, termSeq int64) {
-	cc.OnEvent(
-		state.SystemAddress,
-		[][]byte{[]byte(SigTermStarted)},
-		[][]byte{intconv.Int64ToBytes(termSeq)},
 	)
 }
 

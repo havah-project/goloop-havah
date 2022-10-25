@@ -46,6 +46,7 @@ func TestCallContextImpl_Burn(t *testing.T) {
 
 	ts, err := cc.Issue(state.SystemAddress, amount)
 	assert.Zero(t, ts.Cmp(amount))
+	assert.NoError(t, err)
 
 	nts, err := cc.Burn(amount)
 	assert.NoError(t, err)
