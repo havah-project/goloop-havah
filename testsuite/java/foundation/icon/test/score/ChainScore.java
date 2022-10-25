@@ -18,6 +18,7 @@ package foundation.icon.test.score;
 
 import foundation.icon.icx.Wallet;
 import foundation.icon.icx.data.Address;
+import foundation.icon.icx.data.IconAmount;
 import foundation.icon.icx.data.TransactionResult;
 import foundation.icon.icx.transport.jsonrpc.RpcArray;
 import foundation.icon.icx.transport.jsonrpc.RpcItem;
@@ -109,5 +110,19 @@ public class ChainScore extends Score {
                 .put("address", new RpcValue(address))
                 .build();
         return invokeAndWaitResult(wallet, "enableScore", params, null, Constants.DEFAULT_STEPS);
+    }
+
+    public void ensureCoinTransfer(TransactionResult result, Address from, Address to, long value) throws IOException {
+        TransactionResult.EventLog event = findEventLog(result, "Transfer(Address,Address,int)");
+        if (event != null) {
+            BigInteger icxValue = IconAmount.of(BigInteger.valueOf(value), IconAmount.Unit.ICX).toLoop();
+            Address _from = event.getIndexed().get(1).asAddress();
+            Address _to = event.getIndexed().get(2).asAddress();
+            BigInteger _value = event.getData().get(0).asInteger();
+            if (from.equals(_from) && to.equals(_to) && icxValue.equals(_value)) {
+                return; // ensured
+            }
+        }
+        throw new IOException("Failed to get Transfer.");
     }
 }
