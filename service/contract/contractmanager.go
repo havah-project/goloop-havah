@@ -414,7 +414,7 @@ func storeJava(path string, code []byte, log log.Logger) error {
 		}
 	}
 	sPath := filepath.Join(path, javaCode)
-	if err := ioutil.WriteFile(sPath, code, 0755); err != nil {
+	if err := ioutil.WriteFile(sPath, code, 0600); err != nil {
 		_ = os.RemoveAll(sPath)
 		return errors.WithCode(err, errors.CriticalIOError)
 	}
