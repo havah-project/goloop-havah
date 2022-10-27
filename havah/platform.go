@@ -55,8 +55,16 @@ func (p *platform) NewBaseTransaction(wc state.WorldContext) (module.Transaction
 	if es == nil {
 		return nil, nil
 	}
+
+	// The block height when coin issuing is started
 	issueStart := es.GetIssueStart()
 	if !hvhstate.IsIssueStarted(height, issueStart) {
+		return nil, nil
+	}
+
+	termPeriod := es.GetTermPeriod()
+	_, blockIndex := hvhstate.GetTermSequenceAndBlockIndex(height, issueStart, termPeriod)
+	if blockIndex != 0 {
 		return nil, nil
 	}
 
@@ -96,7 +104,14 @@ func (p *platform) OnValidateTransactions(wc state.WorldContext, patches, txs mo
 	needBaseTX := false
 	es := hvh.GetExtensionStateFromWorldContext(wc, nil)
 	if es != nil {
-		needBaseTX = hvhstate.IsIssueStarted(wc.BlockHeight(), es.GetIssueStart())
+		issueStart := es.GetIssueStart()
+		termPeriod := es.GetTermPeriod()
+		termSeq, blockIndex := hvhstate.GetTermSequenceAndBlockIndex(wc.BlockHeight(), issueStart, termPeriod)
+		needBaseTX = termSeq >= 0 && blockIndex == 0
+		log.GlobalLogger().Debugf(
+			"is=%d tperiod=%d termSeq=%d blockIndex=%d needBaseTX=%t",
+			issueStart, termPeriod, termSeq, blockIndex, needBaseTX,
+		)
 	}
 	if hasBaseTX := checkBaseTX(txs); needBaseTX == hasBaseTX {
 		return nil

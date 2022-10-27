@@ -107,7 +107,7 @@ class ChainTest extends Test {
         commands.add("data/dockerenv/" + dockerEnv)
         commands.add("--name")
         commands.add("gochain-" + dockerEnv)
-        commands.add("goloop/gochain")
+        commands.add("goloop/gochain-havah")
         process = commands.execute()
         process.waitFor(1, TimeUnit.SECONDS)
     }

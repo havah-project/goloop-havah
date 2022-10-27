@@ -493,3 +493,25 @@ func TestState_SetPrivateClaimableRate(t *testing.T) {
 		assert.Equal(t, expDenom, denom)
 	}
 }
+
+func TestGetTermSequenceAndBlockIndex(t *testing.T) {
+	termSeq, blockIndex := GetTermSequenceAndBlockIndex(5, 20, 10)
+	assert.True(t, termSeq < 0)
+	assert.True(t, blockIndex < 0)
+
+	termSeq, blockIndex = GetTermSequenceAndBlockIndex(20, 20, 10)
+	assert.Zero(t, termSeq)
+	assert.Zero(t, blockIndex)
+
+	termSeq, blockIndex = GetTermSequenceAndBlockIndex(21, 20, 10)
+	assert.Equal(t, int64(0), termSeq)
+	assert.Equal(t, int64(1), blockIndex)
+
+	termSeq, blockIndex = GetTermSequenceAndBlockIndex(30, 20, 10)
+	assert.Equal(t, int64(1), termSeq)
+	assert.Equal(t, int64(0), blockIndex)
+
+	termSeq, blockIndex = GetTermSequenceAndBlockIndex(34, 20, 10)
+	assert.Equal(t, int64(1), termSeq)
+	assert.Equal(t, int64(4), blockIndex)
+}

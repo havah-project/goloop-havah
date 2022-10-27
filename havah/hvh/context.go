@@ -85,6 +85,7 @@ func (ctx *callContextImpl) Issue(address module.Address, amount *big.Int) (*big
 		if err = ctx.deposit(address, amount); err != nil {
 			return nil, err
 		}
+		ctx.onBalanceChange(module.Issue, nil, address, amount)
 	} else {
 		totalSupply = ctx.GetTotalSupply()
 	}
@@ -106,13 +107,15 @@ func (ctx *callContextImpl) Burn(amount *big.Int) (*big.Int, error) {
 		if err = ctx.withdraw(state.SystemAddress, amount); err != nil {
 			return nil, err
 		}
+		ctx.onBalanceChange(module.Burn, state.SystemAddress, nil, amount)
 	} else {
 		totalSupply = ctx.GetTotalSupply()
 	}
 	return totalSupply, nil
 }
 
-func (ctx *callContextImpl) Transfer(from module.Address, to module.Address, amount *big.Int) (err error) {
+func (ctx *callContextImpl) Transfer(
+	from module.Address, to module.Address, amount *big.Int, opType module.OpType) (err error) {
 	if err = validateAmount(amount); err != nil {
 		return
 	}
@@ -127,6 +130,7 @@ func (ctx *callContextImpl) Transfer(from module.Address, to module.Address, amo
 	if err = ctx.addBalance(to, amount); err != nil {
 		return
 	}
+	ctx.onBalanceChange(opType, from, to, amount)
 	ctx.CallContext.OnEvent(
 		state.SystemAddress,
 		[][]byte{
@@ -222,6 +226,12 @@ func (ctx *callContextImpl) SetScoreOwner(from module.Address, score module.Addr
 
 func (ctx *callContextImpl) From() module.Address {
 	return ctx.from
+}
+
+func (ctx *callContextImpl) onBalanceChange(opType module.OpType, from, to module.Address, amount *big.Int) {
+	if tlog := ctx.FrameLogger(); tlog != nil {
+		tlog.OnBalanceChange(opType, from, to, amount)
+	}
 }
 
 func NewCallContext(cc contract.CallContext, from module.Address) hvhmodule.CallContext {

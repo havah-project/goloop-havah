@@ -1514,8 +1514,7 @@ None
     "issueReductionCycle": "0x168",
     "issueStart": "0x14",
     "termPeriod": "0x1e",
-    "termSequence": "0x1",
-    "rewardPerActivePlanet": "0xde0b6b3a7640000"
+    "termSequence": "0x1"
   }
 }
 ```
@@ -1800,7 +1799,7 @@ HAVAH records the following eventLogs:
   "scoreAddress": "cx0000000000000000000000000000000000000000",
   "indexed":[
     "Burned(Address,int,int)",
-    "hx0123456789012345678901234567890123456789"
+    "cx0000000000000000000000000000000000000000"
   ],
   "data":[
     "0xde0b6b3a7640000",
@@ -1811,8 +1810,8 @@ HAVAH records the following eventLogs:
 
 | Key         | VALUE Type | Indexed | Description                     |
 |:------------|:-----------|:--------|:--------------------------------|
-| from        | T_ADDRESS  | true    | from address                    |
-| amount      | T_INT      | false   | Amount of coins burned          |
+| owner       | T_ADDRESS  | true    | Address of burned coin owner    |
+| amount      | T_INT      | false   | Amount of burned coins          |
 | totalSupply | T_INT      | false   | totalSupply after burning coins |
 
 ### HooverRefilled(int,int,int)

@@ -20,6 +20,7 @@ import "github.com/icon-project/goloop/module"
 
 const (
 	Revision0 = iota
+	Revision1
 	RevisionReserved
 )
 
@@ -32,7 +33,9 @@ const (
 var revisionFlags = []module.Revision{
 	// Revision 0
 	module.FixLostFeeByDeposit | module.InputCostingWithJSON | module.ExpandErrorCode | module.UseChainID |
-		module.UseMPTOnEvents | module.UseCompactAPIInfo | module.PurgeEnumCache,
+		module.UseMPTOnEvents | module.UseCompactAPIInfo | module.PurgeEnumCache | module.FixMapValues,
+	// Revision 1
+	module.ContractSetEvent,
 }
 
 func init() {

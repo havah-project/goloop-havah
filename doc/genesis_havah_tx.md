@@ -5,6 +5,21 @@
 * This document explains the havah-specific configurations in genesis file format
 * Common configuration is also available in havah-specific genesis file
 * For more details on common configuration, refer to [genesis_tx.md](genesis_tx.md)
+ 
+## Predefined addresses
+
+| Name            | Address                                      |
+|:----------------|:---------------------------------------------|
+| ChainScore      | `cx0000000000000000000000000000000000000000` |
+| Governance      | `cx0000000000000000000000000000000000000001` |
+| SystemTreasury  | `hx1000000000000000000000000000000000000000` |
+| PublicTreasury  | `hx3000000000000000000000000000000000000000` |
+| SustainableFund | `cx4000000000000000000000000000000000000000` |
+| HooverFund      | `hx6000000000000000000000000000000000000000` |
+| EcoSystem       | `cx7000000000000000000000000000000000000000` |
+| PlanetNFT       | `cx8000000000000000000000000000000000000000` |
+| ServiceTreasury | `hx9000000000000000000000000000000000000000` |
+| Vault           | `cx1100000000000000000000000000000000000000` |
 
 ## HAVAH-specific Configuration
 

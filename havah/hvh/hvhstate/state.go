@@ -83,6 +83,17 @@ func IsIssueStarted(height, issueStart int64) bool {
 	return issueStart > 0 && height >= issueStart
 }
 
+func GetTermSequenceAndBlockIndex(height, issueStart, termPeriod int64) (int64, int64) {
+	blocks := height - issueStart
+	if issueStart == 0 || blocks < 0 {
+		// Issuing has not been started yet.
+		return -1, -1
+	}
+	termSeq := blocks / termPeriod
+	blocks %= termPeriod
+	return termSeq, blocks
+}
+
 func (s *State) GetIssueStart() int64 {
 	return s.getInt64(hvhmodule.VarIssueStart)
 }

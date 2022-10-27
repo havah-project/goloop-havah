@@ -21,7 +21,6 @@ import example.StringTokenizer;
 import example.Transaction;
 import foundation.icon.icx.Wallet;
 import foundation.icon.icx.data.Address;
-import foundation.icon.icx.data.IconAmount;
 import foundation.icon.icx.data.TransactionResult;
 import foundation.icon.icx.transport.jsonrpc.RpcItem;
 import foundation.icon.icx.transport.jsonrpc.RpcObject;
@@ -185,20 +184,6 @@ public class MultiSigWalletScore extends Score {
             }
         }
         throw new IOException("Failed to get Revocation.");
-    }
-
-    public void ensureIcxTransfer(TransactionResult result, Address from, Address to, long value) throws IOException {
-        TransactionResult.EventLog event = findEventLog(result, "ICXTransfer(Address,Address,int)");
-        if (event != null) {
-            BigInteger icxValue = IconAmount.of(BigInteger.valueOf(value), IconAmount.Unit.ICX).toLoop();
-            Address _from = event.getIndexed().get(1).asAddress();
-            Address _to = event.getIndexed().get(2).asAddress();
-            BigInteger _value = event.getIndexed().get(3).asInteger();
-            if (from.equals(_from) && to.equals(_to) && icxValue.equals(_value)) {
-                return; // ensured
-            }
-        }
-        throw new IOException("Failed to get ICXTransfer.");
     }
 
     public void ensureExecution(TransactionResult result, BigInteger txId) throws IOException {

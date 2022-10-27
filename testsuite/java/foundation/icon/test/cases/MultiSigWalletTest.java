@@ -26,6 +26,7 @@ import foundation.icon.test.common.Constants;
 import foundation.icon.test.common.Env;
 import foundation.icon.test.common.TestBase;
 import foundation.icon.test.common.TransactionHandler;
+import foundation.icon.test.score.ChainScore;
 import foundation.icon.test.score.HelloWorld;
 import foundation.icon.test.score.MultiSigWalletScore;
 import org.junit.jupiter.api.AfterAll;
@@ -120,7 +121,8 @@ public class MultiSigWalletTest extends TestBase {
         // Alice confirms the tx to make it executed
         LOG.info("confirmTransaction() by Alice");
         result = multiSigWalletScore.confirmTransaction(aliceWallet, txId);
-        multiSigWalletScore.ensureIcxTransfer(result, multiSigWalletAddress, bobWallet.getAddress(), 2);
+        ChainScore chainScore = new ChainScore(txHandler);
+        chainScore.ensureCoinTransfer(result, multiSigWalletAddress, bobWallet.getAddress(), 2);
         multiSigWalletScore.ensureExecution(result, txId);
 
         // check icx balances
@@ -141,7 +143,7 @@ public class MultiSigWalletTest extends TestBase {
         // Bob confirms the tx to make it executed
         LOG.info("confirmTransaction() by Bob");
         result = multiSigWalletScore.confirmTransaction(bobWallet, txId);
-        multiSigWalletScore.ensureIcxTransfer(result, multiSigWalletAddress, helloScore.getAddress(), 1);
+        chainScore.ensureCoinTransfer(result, multiSigWalletAddress, helloScore.getAddress(), 1);
         multiSigWalletScore.ensureExecution(result, txId);
 
         // check icx balances

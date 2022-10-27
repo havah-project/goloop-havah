@@ -304,19 +304,16 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 	}
 
 	termPeriod := es.state.GetTermPeriod()
-	baseTxCount := height - issueStart
-	termSeq := baseTxCount / termPeriod
+	termSeq, blockIndexInTerm := hvhstate.GetTermSequenceAndBlockIndex(height, issueStart, termPeriod)
 	es.Logger().Debugf(
-		"height=%d istart=%d tperiod=%d basetx=%d tseq=%d issue=%v",
-		height, issueStart, termPeriod, baseTxCount, termSeq, baseData.IssueAmount.Value())
+		"height=%d istart=%d tperiod=%d blockIndex=%d tseq=%d issue=%v",
+		height, issueStart, termPeriod, blockIndexInTerm, termSeq, baseData.IssueAmount.Value())
 
-	if (baseTxCount % termPeriod) != 0 {
-		if baseData.IssueAmount.Value().Sign() != 0 {
-			return transaction.InvalidTxValue.Errorf(
-				"Invalid issueAmount(%s)", baseData.IssueAmount.Value())
-		}
-		return nil
+	if blockIndexInTerm != 0 {
+		return errors.InvalidStateError.Errorf("InvalidBaseTx")
 	}
+
+	// The code below should be executed only at the first block of each term
 	issueLimit := es.state.GetIssueLimit()
 	if termSeq > 0 && (issueLimit == 0 || termSeq <= issueLimit) {
 		if err = es.onTermEnd(cc); err != nil {
@@ -367,7 +364,7 @@ func (es *ExtensionStateImpl) TransferEcoSystemReward(cc hvhmodule.CallContext) 
 	if err != nil {
 		return err
 	}
-	if err = cc.Transfer(hvhmodule.PublicTreasury, hvhmodule.EcoSystem, reward); err != nil {
+	if err = cc.Transfer(hvhmodule.PublicTreasury, hvhmodule.EcoSystem, reward, module.Transfer); err != nil {
 		return err
 	}
 
@@ -388,7 +385,7 @@ func (es *ExtensionStateImpl) TransferMissedReward(cc hvhmodule.CallContext) err
 			"Invalid PublicTreasury balance=%d missed=%d",
 			balance, missed)
 	}
-	if err = cc.Transfer(hvhmodule.PublicTreasury, hvhmodule.SustainableFund, missed); err != nil {
+	if err = cc.Transfer(hvhmodule.PublicTreasury, hvhmodule.SustainableFund, missed, module.Transfer); err != nil {
 		return err
 	}
 	if err = increaseVarDBInSustainableFund(cc, hvhmodule.VarMissingReward, missed); err != nil {
@@ -432,7 +429,7 @@ func (es *ExtensionStateImpl) refillHooverFund(cc hvhmodule.CallContext) error {
 		if sfBalance.Cmp(amount) < 0 {
 			amount.Set(sfBalance)
 		}
-		if err := cc.Transfer(sf, hf, amount); err != nil {
+		if err := cc.Transfer(sf, hf, amount, module.Transfer); err != nil {
 			return err
 		}
 		if err := increaseVarDBInSustainableFund(cc, hvhmodule.VarHooverRefill, amount); err != nil {
@@ -542,10 +539,10 @@ func (es *ExtensionStateImpl) distributeFee(
 		ecoAmount.Div(ecoAmount, proportion.Denom())
 		susAmount = new(big.Int).Sub(balance, ecoAmount)
 
-		if err = cc.Transfer(from, hvhmodule.SustainableFund, susAmount); err != nil {
+		if err = cc.Transfer(from, hvhmodule.SustainableFund, susAmount, module.Transfer); err != nil {
 			return nil, nil, err
 		}
-		if err = cc.Transfer(from, hvhmodule.EcoSystem, ecoAmount); err != nil {
+		if err = cc.Transfer(from, hvhmodule.EcoSystem, ecoAmount, module.Transfer); err != nil {
 			return nil, nil, err
 		}
 	}
