@@ -947,3 +947,54 @@ func TestExtensionStateImpl_ReportPlanetWork_BeforeStartRewardIssue(t *testing.T
 	err = es.ReportPlanetWork(cc, id)
 	assert.Error(t, err)
 }
+
+func TestExtensionStateImpl_WithdrawLostTo(t *testing.T) {
+	var err error
+	termPeriod := int64(10)
+	issueReductionCycle := int64(10)
+	issueAmount := toHVH(100)
+	usdtPrice := toHVH(1) // 1 USDT == 1 HVH
+	toEOA := common.MustNewAddressFromString("hx1234")
+	toContract := common.MustNewAddressFromString("cx5678")
+
+	stateCfg := hvhstate.StateConfig{
+		TermPeriod:          &common.HexInt64{Value: termPeriod},
+		USDTPrice:           new(common.HexInt).SetValue(usdtPrice),
+		IssueAmount:         new(common.HexInt).SetValue(issueAmount),
+		IssueReductionCycle: &common.HexInt64{Value: issueReductionCycle},
+	}
+	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
+	mcc.height = 1
+	cc := NewCallContext(mcc, nil)
+
+	lost, err := es.GetLost()
+	assert.NoError(t, err)
+
+	err = es.WithdrawLostTo(cc, toContract)
+	assert.Error(t, err)
+
+	err = es.WithdrawLostTo(cc, toEOA)
+	assert.NoError(t, err)
+
+	balance := cc.GetBalance(toEOA)
+	assert.Zero(t, balance.Cmp(lost))
+}
+
+func TestExtensionSnapshotImpl_GetLost(t *testing.T) {
+	termPeriod := int64(10)
+	issueReductionCycle := int64(10)
+	issueAmount := toHVH(100)
+	usdtPrice := toHVH(1) // 1 USDT == 1 HVH
+
+	stateCfg := hvhstate.StateConfig{
+		TermPeriod:          &common.HexInt64{Value: termPeriod},
+		USDTPrice:           new(common.HexInt).SetValue(usdtPrice),
+		IssueAmount:         new(common.HexInt).SetValue(issueAmount),
+		IssueReductionCycle: &common.HexInt64{Value: issueReductionCycle},
+	}
+	_, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
+
+	lost, err := es.GetLost()
+	assert.NoError(t, err)
+	assert.Zero(t, lost.Sign())
+}

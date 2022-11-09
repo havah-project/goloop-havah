@@ -94,6 +94,7 @@ const (
 	VarRewardRemain         = "reward_remain" // unit: hvh
 	VarEcoReward            = "eco_reward"    // unit: hvh
 	VarPrivateClaimableRate = "private_claimable_rate"
+	VarLost                 = "lost"
 )
 
 // VarDBs in SustainableFund Score

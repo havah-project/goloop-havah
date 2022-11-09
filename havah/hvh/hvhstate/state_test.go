@@ -2,6 +2,7 @@ package hvhstate
 
 import (
 	"math/big"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -514,4 +515,101 @@ func TestGetTermSequenceAndBlockIndex(t *testing.T) {
 	termSeq, blockIndex = GetTermSequenceAndBlockIndex(34, 20, 10)
 	assert.Equal(t, int64(1), termSeq)
 	assert.Equal(t, int64(4), blockIndex)
+}
+
+func TestState_Lost(t *testing.T) {
+	var err error
+	var lost, amount *big.Int
+	expLost := new(big.Int)
+	state := newDummyState()
+
+	lost, err = state.GetLost()
+	assert.NoError(t, err)
+	assert.Zero(t, lost.Sign())
+
+	for i := 0; i < 3; i++ {
+		amount = big.NewInt(100)
+		expLost.Add(expLost, amount)
+
+		err = state.addLost(amount)
+		assert.NoError(t, err)
+		lost, err = state.GetLost()
+		assert.NoError(t, err)
+		assert.Zero(t, lost.Cmp(expLost))
+	}
+
+	lost, err = state.DeleteLost()
+	assert.NoError(t, err)
+	assert.Zero(t, lost.Cmp(expLost))
+
+	lost, err = state.GetLost()
+	assert.NoError(t, err)
+	assert.Zero(t, lost.Sign())
+
+	amount = big.NewInt(10)
+	err = state.addLost(amount)
+	assert.NoError(t, err)
+	lost, err = state.GetLost()
+	assert.NoError(t, err)
+	assert.Zero(t, lost.Cmp(amount))
+}
+
+func TestState_UnregisterPlanet(t *testing.T) {
+	var err error
+	usdt := big.NewInt(10)
+	price := big.NewInt(1)
+	expLost := new(big.Int)
+
+	type planet struct {
+		isPrivate bool
+		isCompany bool
+		owner     module.Address
+	}
+	planets := []planet{
+		{true, false, common.MustNewAddressFromString("hx1")},
+		{false, true, common.MustNewAddressFromString("hx2")},
+		{false, false, common.MustNewAddressFromString("hx3")},
+	}
+	rewards := []*big.Int{
+		big.NewInt(rand.Int63()),
+		big.NewInt(rand.Int63()),
+		big.NewInt(rand.Int63()),
+	}
+
+	state := newDummyState()
+
+	for i := 0; i < len(planets); i++ {
+		id := int64(i + 1)
+		p := planets[i]
+		err = state.RegisterPlanet(
+			id, p.isPrivate, p.isCompany, p.owner, usdt, price, 5)
+		assert.NoError(t, err)
+
+		pr, err := state.GetPlanetReward(id)
+		assert.NoError(t, err)
+		assert.Zero(t, pr.Total().Sign())
+		assert.Zero(t, pr.Current().Sign())
+
+		reward := rewards[i]
+		err = state.OfferReward(1, id, pr, reward, reward)
+		assert.NoError(t, err)
+
+		expLost.Add(expLost, reward)
+	}
+
+	for i := 0; i < len(planets); i++ {
+		id := int64(i + 1)
+		err = state.UnregisterPlanet(id)
+		assert.NoError(t, err)
+
+		pr, err := state.GetPlanetReward(id)
+		assert.NoError(t, err)
+		assert.Zero(t, pr.Total().Sign())
+		assert.Zero(t, pr.Current().Sign())
+	}
+
+	lost, err := state.GetLost()
+	assert.NoError(t, err)
+	assert.True(t, lost.Sign() > 0)
+	assert.Zero(t, expLost.Cmp(lost))
 }

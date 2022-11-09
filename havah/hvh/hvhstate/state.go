@@ -262,7 +262,15 @@ func (s *State) UnregisterPlanet(id int64) error {
 	allPlanetVarDB := s.getVarDB(hvhmodule.VarAllPlanet)
 	planetCount := allPlanetVarDB.Int64()
 	if planetCount < 1 {
-		return scoreresult.Errorf(hvhmodule.StatusCriticalError, "Planet state mismatch")
+		return errors.InvalidStateError.Errorf("Planet state mismatch: planetCount=%d", planetCount)
+	}
+
+	if pr, err := s.GetPlanetReward(id); err != nil {
+		return errors.InvalidStateError.Errorf("PlanetReward not found: id=%d", id)
+	} else {
+		if err = s.addLost(pr.Current()); err != nil {
+			return err
+		}
 	}
 
 	if err := planetDictDB.Delete(id); err != nil {
@@ -271,8 +279,11 @@ func (s *State) UnregisterPlanet(id int64) error {
 	if err := allPlanetVarDB.Set(planetCount - 1); err != nil {
 		return err
 	}
+	planetRewardDictDB := s.getDictDB(hvhmodule.DictPlanetReward, 1)
+	if err := planetRewardDictDB.Delete(id); err != nil {
+		return err
+	}
 
-	// TODO: Remaining reward and active Planet state handling
 	return nil
 }
 
@@ -702,6 +713,41 @@ func (s *State) GetPrivateClaimableRate() (int64, int64) {
 	num := value >> 16
 	denom := value & 0xffff
 	return num, denom
+}
+
+func (s *State) GetLost() (*big.Int, error) {
+	return s.getBigInt(hvhmodule.VarLost), nil
+}
+
+func (s *State) DeleteLost() (*big.Int, error) {
+	db := s.getVarDB(hvhmodule.VarLost)
+	value, err := db.Delete()
+	if err != nil {
+		return nil, err
+	}
+
+	amount := value.BigInt()
+	if amount == nil {
+		amount = hvhmodule.BigIntZero
+	}
+	return amount, nil
+}
+
+func (s *State) addLost(amount *big.Int) error {
+	if amount == nil || amount.Sign() < 0 {
+		return scoreresult.Errorf(
+			hvhmodule.StatusIllegalArgument, "Invalid amount: %v", amount)
+	}
+	if amount.Sign() == 0 {
+		return nil
+	}
+
+	var lost *big.Int
+	db := s.getVarDB(hvhmodule.VarLost)
+	if lost = db.BigInt(); lost == nil {
+		lost = hvhmodule.BigIntZero
+	}
+	return db.Set(new(big.Int).Add(lost, amount))
 }
 
 func validatePrivateClaimableRate(num, denom int64) bool {

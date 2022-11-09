@@ -480,6 +480,36 @@ func (es *ExtensionStateImpl) GetPrivateClaimableRate() (map[string]interface{},
 	}, nil
 }
 
+func (es *ExtensionStateImpl) WithdrawLostTo(cc hvhmodule.CallContext, to module.Address) error {
+	es.Logger().Debugf("WithdrawLostTo() start: to=%s height=%d", to, cc.BlockHeight())
+	defer es.Logger().Debugf("WithdrawLostTo() end")
+
+	var err error
+	var lost *big.Int
+
+	if !to.IsContract() {
+		if lost, err = es.state.DeleteLost(); err == nil {
+			if lost.Sign() > 0 {
+				if err = cc.Transfer(hvhmodule.PublicTreasury, to, lost, module.Transfer); err == nil {
+					onLostWithdrawnEvent(cc, lost, to)
+				}
+			}
+		}
+	} else {
+		err = scoreresult.Errorf(
+			hvhmodule.StatusIllegalArgument, "ContractNotAllowed(to=%s)", to)
+	}
+
+	if err != nil {
+		es.Logger().Infof("WithdrawLostTo() is failed: err=%v", err)
+	}
+	return err
+}
+
+func (es *ExtensionStateImpl) GetLost() (*big.Int, error) {
+	return es.state.GetLost()
+}
+
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {
 	es := wc.GetExtensionState()
 	if es == nil {

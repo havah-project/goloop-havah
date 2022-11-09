@@ -15,6 +15,8 @@ const (
 	SigIssued         = "Issued(int,int,int)"
 	SigBurned         = "Burned(Address,int,int)"
 	SigHooverRefilled = "HooverRefilled(int,int,int)"
+	SigLostDeposited  = "LostDeposited(int,str)"     // amount, reason
+	SigLostWithdrawn  = "LostWithdrawn(int,Address)" // amount, to
 )
 
 func onRewardOfferedEvent(
@@ -76,6 +78,28 @@ func onHooverRefilledEvent(cc hvhmodule.CallContext, amount, hooverBalance, sust
 			intconv.BigIntToBytes(amount),
 			intconv.BigIntToBytes(hooverBalance),
 			intconv.BigIntToBytes(sustainableFundBalance),
+		},
+	)
+}
+
+func onLostDepositedEvent(cc hvhmodule.CallContext, amount *big.Int, reason string) {
+	cc.OnEvent(
+		state.SystemAddress,
+		[][]byte{[]byte(SigLostDeposited)},
+		[][]byte{
+			intconv.BigIntToBytes(amount),
+			[]byte(reason),
+		},
+	)
+}
+
+func onLostWithdrawnEvent(cc hvhmodule.CallContext, amount *big.Int, to module.Address) {
+	cc.OnEvent(
+		state.SystemAddress,
+		[][]byte{[]byte(SigLostWithdrawn)},
+		[][]byte{
+			intconv.BigIntToBytes(amount),
+			to.Bytes(),
 		},
 	)
 }

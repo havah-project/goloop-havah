@@ -396,6 +396,20 @@ var chainMethods = []*chainMethod{
 		nil,
 		nil,
 	}, 0, 0},
+	{scoreapi.Method{scoreapi.Function, "withdrawLostTo",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"to", scoreapi.Address, nil, nil},
+		},
+		nil,
+	}, 0, 0},
+	{scoreapi.Method{scoreapi.Function, "getLost",
+		scoreapi.FlagReadOnly, 0,
+		nil,
+		[]scoreapi.DataType{
+			scoreapi.Integer,
+		},
+	}, 0, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {
