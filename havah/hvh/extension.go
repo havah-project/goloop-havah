@@ -428,6 +428,24 @@ func (es *ExtensionStateImpl) GetRewardInfoOf(cc hvhmodule.CallContext, id int64
 	return es.state.GetRewardInfoOf(height, id)
 }
 
+func (es *ExtensionStateImpl) GetRewardInfosOf(cc hvhmodule.CallContext, ids []int64) ([]interface{}, error) {
+	if len(ids) > hvhmodule.MaxCountToClaim {
+		return nil, scoreresult.Errorf(
+			hvhmodule.StatusIllegalArgument,
+			"Too many ids: ids(%d) > max(%d)", len(ids), hvhmodule.MaxCountToClaim)
+	}
+
+	jso := make([]interface{}, len(ids))
+	for i, id := range ids {
+		if info, err := es.GetRewardInfoOf(cc, id); err == nil {
+			jso[i] = info
+		} else {
+			jso[i] = nil
+		}
+	}
+	return jso, nil
+}
+
 func (es *ExtensionStateImpl) GetRewardInfo(cc hvhmodule.CallContext) (map[string]interface{}, error) {
 	es.Logger().Debugf("GetRewardInfo() start")
 

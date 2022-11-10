@@ -215,6 +215,21 @@ func (s *chainScore) Ex_getRewardInfoOf(id *common.HexInt) (map[string]interface
 	return es.GetRewardInfoOf(s.newCallContext(), id.Int64())
 }
 
+func (s *chainScore) Ex_getRewardInfosOf(ids []interface{}) ([]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	es, err := s.getExtensionState()
+	if err != nil {
+		return nil, err
+	}
+	planetIds := make([]int64, len(ids))
+	for i := 0; i < len(ids); i++ {
+		planetIds[i] = (ids[i].(*common.HexInt)).Int64()
+	}
+	return es.GetRewardInfosOf(s.newCallContext(), planetIds)
+}
+
 func (s *chainScore) Ex_getRewardInfo() (map[string]interface{}, error) {
 	if err := s.tryChargeCall(); err != nil {
 		return nil, err

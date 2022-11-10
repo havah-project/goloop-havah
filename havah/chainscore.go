@@ -300,6 +300,16 @@ var chainMethods = []*chainMethod{
 		},
 	}, 0, 0},
 	{scoreapi.Method{
+		scoreapi.Function, "getRewardInfosOf",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"ids", scoreapi.ListTypeOf(1, scoreapi.Integer), nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.List,
+		},
+	}, 0, 0},
+	{scoreapi.Method{
 		scoreapi.Function, "getRewardInfo",
 		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 0,
 		nil,
