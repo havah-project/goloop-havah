@@ -998,3 +998,79 @@ func TestExtensionSnapshotImpl_GetLost(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Zero(t, lost.Sign())
 }
+
+func TestExtensionStateImpl_calcHooverLimit(t *testing.T) {
+	price := big.NewInt(100)
+	type input struct {
+		total  *big.Int
+		reward *big.Int
+		price  *big.Int
+	}
+	inputs := []input{
+		{big.NewInt(0), big.NewInt(10), price},
+		{big.NewInt(10), big.NewInt(10), price},
+		{big.NewInt(100), big.NewInt(10), price},
+		{big.NewInt(200), big.NewInt(10), price},
+	}
+	expHooverLimits := []*big.Int{
+		big.NewInt(90),
+		big.NewInt(80),
+		big.NewInt(-10),
+		big.NewInt(-110),
+	}
+
+	for i := 0; i < len(inputs); i++ {
+		in := inputs[i]
+		limit := calcHooverLimit(in.total, in.reward, in.price)
+		assert.Zero(t, expHooverLimits[i].Cmp(limit))
+	}
+}
+
+func TestExtensionStateImpl_calcHooverGuide(t *testing.T) {
+	// 1 USDT = 10 HVH
+	activeUSDTPrice := big.NewInt(1)
+
+	pricesInUDST := []int64{
+		3600_000_000,
+		3800_000_000,
+		7200_000_000,
+		7500_000_000,
+	}
+	expHooverGuides := []int64{1, 1, 2, 2}
+
+	for i := 0; i < len(pricesInUDST); i++ {
+		priceInUDST := big.NewInt(pricesInUDST[i])
+
+		ret := calcHooverGuide(priceInUDST, activeUSDTPrice)
+		assert.Equal(t, expHooverGuides[i], ret.Int64())
+	}
+}
+
+func TestExtensionSnapshotImpl_calcSubsidyFromHooverFund(t *testing.T) {
+	type input struct {
+		limit, guide, balance, reward int64
+	}
+	inputs := []input{
+		{100, 20, 1000, 20},
+		{100, 20, 1000, 10},
+		{15, 20, 1000, 10},
+		{5, 20, 1000, 10},
+		{100, 30, 20, 10},
+		{100, 30, 10, 10},
+		{100, 30, 0, 10},
+	}
+	outputs := []int64{0, 10, 10, 5, 20, 10, 0}
+
+	for i, in := range inputs {
+		name := fmt.Sprintf("case-%d", i)
+		t.Run(name, func(t *testing.T) {
+			ret := calcSubsidyFromHooverFund(
+				big.NewInt(in.limit),
+				big.NewInt(in.guide),
+				big.NewInt(in.balance),
+				big.NewInt(in.reward),
+			)
+			assert.Equal(t, outputs[i], ret.Int64())
+		})
+	}
+}

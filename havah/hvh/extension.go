@@ -305,12 +305,12 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 
 	hooverRequest := hvhmodule.BigIntZero
 	if hooverLimit.Sign() > 0 {
-		hooverGuide := es.calcHooverGuide(p)
+		hooverGuide := calcHooverGuide(p.USDT(), es.state.GetActiveUSDTPrice())
 		es.Logger().Debugf("hooverGuide=%d", hooverGuide)
 		if reward.Cmp(hooverGuide) < 0 {
 			hooverBalance := cc.GetBalance(hvhmodule.HooverFund)
 			if hooverBalance.Sign() > 0 {
-				hooverRequest = es.calcSubsidyFromHooverFund(hooverLimit, hooverGuide, hooverBalance, reward)
+				hooverRequest = calcSubsidyFromHooverFund(hooverLimit, hooverGuide, hooverBalance, reward)
 				rewardWithHoover = new(big.Int).Add(rewardWithHoover, hooverRequest)
 			}
 		}
@@ -361,15 +361,15 @@ var DividerFor10Percent = big.NewInt(10)
 
 // calcHooverGuide returns the rewards
 // that a planet should receive every term to get 10% of its price in usdt as a reward
-func (es *ExtensionStateImpl) calcHooverGuide(p *hvhstate.Planet) *big.Int {
-	hooverGuide := new(big.Int).Mul(p.USDT(), es.state.GetActiveUSDTPrice())
+func calcHooverGuide(priceInUSDT, activeUSDTPrice *big.Int) *big.Int {
+	hooverGuide := new(big.Int).Mul(priceInUSDT, activeUSDTPrice)
 	hooverGuide.Div(hooverGuide, hvhmodule.BigIntUSDTDecimal)
 	hooverGuide.Div(hooverGuide, DividerFor10Percent)
 	hooverGuide.Div(hooverGuide, hvhmodule.BigIntDayPerYear)
 	return hooverGuide
 }
 
-func (es *ExtensionStateImpl) calcSubsidyFromHooverFund(
+func calcSubsidyFromHooverFund(
 	hooverLimit, hooverGuide, hooverBalance, reward *big.Int) *big.Int {
 	hooverRequest := new(big.Int).Sub(hooverGuide, reward)
 	// if hooverRequest > hooverLimit
