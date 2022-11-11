@@ -308,7 +308,7 @@ var chainMethods = []*chainMethod{
 		[]scoreapi.DataType{
 			scoreapi.List,
 		},
-	}, 0, 0},
+	}, 1, 0},
 	{scoreapi.Method{
 		scoreapi.Function, "getRewardInfo",
 		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 0,
@@ -412,14 +412,14 @@ var chainMethods = []*chainMethod{
 			{"to", scoreapi.Address, nil, nil},
 		},
 		nil,
-	}, 0, 0},
+	}, 1, 0},
 	{scoreapi.Method{scoreapi.Function, "getLost",
 		scoreapi.FlagReadOnly, 0,
 		nil,
 		[]scoreapi.DataType{
 			scoreapi.Integer,
 		},
-	}, 0, 0},
+	}, 1, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {
