@@ -10,6 +10,7 @@ import (
 
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/db"
+	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/havah/hvh/hvhstate"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
@@ -197,6 +198,25 @@ func goByCount(t *testing.T, count int64,
 			}
 		}
 	}
+}
+
+func goToNextTerm(t *testing.T, es *ExtensionStateImpl, mcc *mockCallContext, from module.Address, offset int64) error {
+	height := mcc.BlockHeight()
+	is := es.GetIssueStart()
+	termPeriod := es.GetTermPeriod()
+
+	if is <= 0 {
+		return errors.Errorf("NoIssueStart")
+	}
+
+	if height < is {
+		goByHeight(t, is+offset, es, mcc, from)
+	} else {
+		rest := (height - is) % termPeriod
+		count := termPeriod - rest + offset
+		goByCount(t, count, es, mcc, from)
+	}
+	return nil
 }
 
 func checkRewardInfo(t *testing.T,
@@ -946,6 +966,176 @@ func TestExtensionStateImpl_ReportPlanetWork_BeforeStartRewardIssue(t *testing.T
 
 	err = es.ReportPlanetWork(cc, id)
 	assert.Error(t, err)
+}
+
+// StartRewardIssue
+// RegisterPlanet
+// ReportPlanetWork
+// UnregisterPlanet
+// Check if Lost exists
+// RegisterPlanet
+// Check if RewardInfo is reset
+func TestExtensionStateImpl_UnregisterPlanetWithLost(t *testing.T) {
+	var err error
+	const planetCount = 10
+
+	id := int64(1)
+	termPeriod := int64(10)
+	issueReductionCycle := int64(10)
+	issueAmount := toHVH(100)
+	usdtPrice := toHVH(10) // 1 USDT == 1 HVH
+	owners := make([]module.Address, planetCount)
+
+	for i := 0; i < planetCount; i++ {
+		s := fmt.Sprintf("hx%d%d", i+1, i+1)
+		owners[i] = common.MustNewAddressFromString(s)
+	}
+
+	stateCfg := hvhstate.StateConfig{
+		TermPeriod:          &common.HexInt64{Value: termPeriod},
+		USDTPrice:           new(common.HexInt).SetValue(usdtPrice),
+		IssueAmount:         new(common.HexInt).SetValue(issueAmount),
+		IssueReductionCycle: &common.HexInt64{Value: issueReductionCycle},
+	}
+	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
+	mcc.height = 1
+	cc := NewCallContext(mcc, nil)
+
+	// StartRewardIssue: 10
+	issueStartBH := int64(10)
+	err = es.StartRewardIssue(cc, issueStartBH)
+	assert.NoError(t, err)
+
+	_, err = es.GetRewardInfo(cc)
+	assert.Error(t, err)
+
+	// Register planets
+	priceInUSDT := toUSDT(1_000)
+	priceInHVH := toHVH(10_000)
+	for i := 0; i < planetCount; i++ {
+		id = int64(i + 1)
+		err = es.RegisterPlanet(
+			cc, id, false, false, owners[i], priceInUSDT, priceInHVH)
+		assert.NoError(t, err)
+	}
+
+	// Move to the next term
+	err = goToNextTerm(t, es, mcc, nil, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, issueStartBH, mcc.BlockHeight())
+
+	// GetRewardInfo()
+	jso, err := es.GetRewardInfo(cc)
+	assert.NoError(t, err)
+	expRewardPerActivePlanet := new(big.Int).Div(issueAmount, big.NewInt(planetCount))
+	rewardPerActivePlanet := jso["rewardPerActivePlanet"].(*big.Int)
+	assert.Zero(t, rewardPerActivePlanet.Cmp(expRewardPerActivePlanet))
+
+	// ReportPlanetWork success
+	for i := 0; i < planetCount; i++ {
+		id = int64(i + 1)
+		err = es.ReportPlanetWork(cc, id)
+		assert.NoError(t, err)
+	}
+
+	rewardSum := new(big.Int)
+	for i := 0; i < planetCount; i++ {
+		id = int64(i + 1)
+		ret, err := es.GetRewardInfoOf(cc, id)
+		assert.NoError(t, err)
+
+		total := ret["total"].(*big.Int)
+		remain := ret["remain"].(*big.Int)
+		assert.Zero(t, total.Cmp(remain))
+		assert.Zero(t, remain.Cmp(rewardPerActivePlanet))
+
+		rewardSum.Add(rewardSum, remain)
+	}
+
+	err = goToNextTerm(t, es, mcc, nil, 0)
+	assert.NoError(t, err)
+
+	// Unregister planets
+	for i := 0; i < planetCount; i++ {
+		id = int64(i + 1)
+		err = es.UnregisterPlanet(cc, id)
+		assert.NoError(t, err)
+
+		// RewardInfo must be removed together when unregistering a planet
+		ret, err := es.GetRewardInfoOf(cc, id)
+		assert.Nil(t, ret)
+		assert.Error(t, err)
+	}
+
+	// Check if non-claimed rewards are moved to lost variable
+	lost, err := es.GetLost()
+	assert.NoError(t, err)
+	assert.Zero(t, rewardSum.Cmp(lost))
+
+	goByCount(t, 2, es, mcc, nil)
+
+	// Reuse the same ids on registering planets
+	for i := 0; i < planetCount; i++ {
+		id = int64(i + 1)
+		err = es.RegisterPlanet(
+			cc, id, false, false, owners[i], priceInUSDT, priceInHVH)
+		assert.NoError(t, err)
+
+		ret, err := es.GetRewardInfoOf(cc, id)
+		assert.NoError(t, err)
+
+		// Check if RewardInfo is reset
+		total := ret["total"].(*big.Int)
+		remain := ret["remain"].(*big.Int)
+		claimable := ret["claimable"].(*big.Int)
+		assert.Zero(t, total.Sign())
+		assert.Zero(t, remain.Sign())
+		assert.Zero(t, claimable.Sign())
+	}
+
+	// ReportPlanetWork is failed in the same term when the planets have been registered
+	for i := 0; i < planetCount; i++ {
+		id = int64(i + 1)
+		err = es.ReportPlanetWork(cc, id)
+		assert.Error(t, err)
+	}
+
+	err = goToNextTerm(t, es, mcc, nil, 2)
+	assert.NoError(t, err)
+
+	// ReportPlanetWork
+	for i := 0; i < planetCount; i++ {
+		id = int64(i + 1)
+		err = es.ReportPlanetWork(cc, id)
+		assert.NoError(t, err)
+
+		ret, err := es.GetRewardInfoOf(cc, id)
+		assert.NoError(t, err)
+
+		total := ret["total"].(*big.Int)
+		remain := ret["remain"].(*big.Int)
+		claimable := ret["claimable"].(*big.Int)
+		assert.Zero(t, total.Cmp(remain))
+		assert.Zero(t, total.Cmp(claimable))
+		assert.Zero(t, total.Cmp(rewardPerActivePlanet))
+	}
+
+	lost, err = es.GetLost()
+	assert.NoError(t, err)
+	assert.True(t, lost.Sign() > 0)
+
+	// Withdraw lost to a given address
+	lostCoinReceiver := common.MustNewAddressFromString("hx9999")
+	balance := cc.GetBalance(lostCoinReceiver)
+	assert.Zero(t, balance.Sign())
+	err = es.WithdrawLostTo(cc, lostCoinReceiver)
+	assert.NoError(t, err)
+	balance = cc.GetBalance(lostCoinReceiver)
+	assert.Zero(t, balance.Cmp(lost))
+
+	lost, err = es.GetLost()
+	assert.NoError(t, err)
+	assert.Zero(t, lost.Sign())
 }
 
 func TestExtensionStateImpl_WithdrawLostTo(t *testing.T) {

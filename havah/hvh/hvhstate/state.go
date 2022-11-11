@@ -614,7 +614,6 @@ func (s *State) GetRewardInfoOf(height, id int64) (map[string]interface{}, error
 	}
 
 	return map[string]interface{}{
-		"height":    height,
 		"total":     pr.Total(),
 		"remain":    pr.Current(),
 		"claimable": claimable,

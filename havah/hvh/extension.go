@@ -276,7 +276,9 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 
 	if p.Height() >= termStart {
 		// If a planet is registered in this term, ignore its work report
-		return nil
+		return scoreresult.Errorf(
+			hvhmodule.StatusRewardError,
+			"ReportPlanetWork not allowed during this term: tseq=%d id=%d", termSeq, id)
 	}
 
 	// All planets have their own planetReward info
@@ -425,7 +427,11 @@ func (es *ExtensionStateImpl) ClaimPlanetReward(cc hvhmodule.CallContext, ids []
 
 func (es *ExtensionStateImpl) GetRewardInfoOf(cc hvhmodule.CallContext, id int64) (map[string]interface{}, error) {
 	height := cc.BlockHeight()
-	return es.state.GetRewardInfoOf(height, id)
+	jso, err := es.state.GetRewardInfoOf(height, id)
+	if err == nil {
+		jso["height"] = height
+	}
+	return jso, err
 }
 
 func (es *ExtensionStateImpl) GetRewardInfosOf(cc hvhmodule.CallContext, ids []int64) ([]interface{}, error) {
