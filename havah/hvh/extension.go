@@ -17,6 +17,7 @@
 package hvh
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/icon-project/goloop/common"
@@ -228,7 +229,14 @@ func (es *ExtensionStateImpl) RegisterPlanet(
 
 func (es *ExtensionStateImpl) UnregisterPlanet(cc hvhmodule.CallContext, id int64) error {
 	es.Logger().Debugf("UnregisterPlanet() start: height=%d id=%d", id, cc.BlockHeight())
-	err := es.state.UnregisterPlanet(id)
+
+	lostDelta, err := es.state.UnregisterPlanet(id)
+	if err == nil && lostDelta != nil && lostDelta.Sign() > 0 {
+		lost, _ := es.state.GetLost()
+		reason := fmt.Sprintf("PlanetUnregistered(id=%d)", id)
+		onLostDepositedEvent(cc, lostDelta, lost, reason)
+		es.Logger().Debugf("LostDeposited(lostDelta=%d,lost=%d,reason=%s)", lostDelta, lost, reason)
+	}
 	es.Logger().Debugf("UnregisterPlanet() end: err=%#v", err)
 	return err
 }

@@ -221,26 +221,30 @@ func TestState_RegisterPlanet(t *testing.T) {
 	}
 
 	for i := 0; i < 2; i++ {
-		err := state.UnregisterPlanet(int64(i))
+		lostDelta, err := state.UnregisterPlanet(int64(i))
 		assert.NoError(t, err)
+		assert.Zero(t, lostDelta.Sign())
 		expectedCount--
 		checkAllPlanet(t, state, expectedCount)
 	}
 
 	planetCount = state.getVarDB(hvhmodule.VarAllPlanet).Int64()
-	err := state.UnregisterPlanet(int64(100))
+	lostDelta, err := state.UnregisterPlanet(int64(100))
 	assert.Error(t, err)
+	assert.Nil(t, lostDelta)
 	checkAllPlanet(t, state, planetCount)
 }
 
 func TestState_UnregisterPlanet_InAbnormalCase(t *testing.T) {
 	state := newDummyState()
 	checkAllPlanet(t, state, int64(0))
-	err := state.UnregisterPlanet(int64(-1))
+	lostDelta, err := state.UnregisterPlanet(int64(-1))
 	assert.Error(t, err)
+	assert.Nil(t, lostDelta)
 
-	err = state.UnregisterPlanet(int64(100))
+	lostDelta, err = state.UnregisterPlanet(int64(100))
 	assert.Error(t, err)
+	assert.Nil(t, lostDelta)
 
 	checkAllPlanet(t, state, int64(0))
 }
@@ -599,8 +603,9 @@ func TestState_UnregisterPlanet(t *testing.T) {
 
 	for i := 0; i < len(planets); i++ {
 		id := int64(i + 1)
-		err = state.UnregisterPlanet(id)
+		lostDelta, err := state.UnregisterPlanet(id)
 		assert.NoError(t, err)
+		assert.Zero(t, lostDelta.Cmp(rewards[i]))
 
 		pr, err := state.GetPlanetReward(id)
 		assert.NoError(t, err)
