@@ -215,7 +215,7 @@ func (s *chainScore) Ex_getRewardInfoOf(id *common.HexInt) (map[string]interface
 	return es.GetRewardInfoOf(s.newCallContext(), id.Int64())
 }
 
-func (s *chainScore) Ex_getRewardInfosOf(ids []interface{}) ([]interface{}, error) {
+func (s *chainScore) Ex_getRewardInfosOf(ids []interface{}) (map[string]interface{}, error) {
 	if err := s.tryChargeCall(); err != nil {
 		return nil, err
 	}

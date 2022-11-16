@@ -306,7 +306,7 @@ var chainMethods = []*chainMethod{
 			{"ids", scoreapi.ListTypeOf(1, scoreapi.Integer), nil, nil},
 		},
 		[]scoreapi.DataType{
-			scoreapi.List,
+			scoreapi.Dict,
 		},
 	}, 1, 0},
 	{scoreapi.Method{

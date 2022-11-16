@@ -434,21 +434,25 @@ func (es *ExtensionStateImpl) GetRewardInfoOf(cc hvhmodule.CallContext, id int64
 	return jso, err
 }
 
-func (es *ExtensionStateImpl) GetRewardInfosOf(cc hvhmodule.CallContext, ids []int64) ([]interface{}, error) {
+func (es *ExtensionStateImpl) GetRewardInfosOf(cc hvhmodule.CallContext, ids []int64) (map[string]interface{}, error) {
 	if len(ids) > hvhmodule.MaxCountToClaim {
 		return nil, scoreresult.Errorf(
 			hvhmodule.StatusIllegalArgument,
 			"Too many ids: ids(%d) > max(%d)", len(ids), hvhmodule.MaxCountToClaim)
 	}
 
-	jso := make([]interface{}, len(ids))
+	jso := make(map[string]interface{})
+	ris := make([]interface{}, len(ids))
 	for i, id := range ids {
-		if info, err := es.GetRewardInfoOf(cc, id); err == nil {
-			jso[i] = info
+		if ri, err := es.GetRewardInfoOf(cc, id); err == nil {
+			ris[i] = ri
 		} else {
-			jso[i] = nil
+			ris[i] = nil
 		}
 	}
+
+	jso["height"] = cc.BlockHeight()
+	jso["rewardInfos"] = ris
 	return jso, nil
 }
 
