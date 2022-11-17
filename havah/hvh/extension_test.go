@@ -86,6 +86,7 @@ type mockCallContext struct {
 	contract.CallContext
 	height   int64
 	accounts map[string]*mockAccount
+	revision module.Revision
 }
 
 func (cc *mockCallContext) BlockHeight() int64 {
@@ -126,9 +127,18 @@ func (cc *mockCallContext) FrameLogger() *trace.Logger {
 	return nil
 }
 
+func (cc *mockCallContext) Revision() module.Revision {
+	return cc.revision
+}
+
+func (cc *mockCallContext) SetRevision(revision module.Revision) {
+	cc.revision = revision
+}
+
 func newMockCallContext() *mockCallContext {
 	return &mockCallContext{
 		accounts: make(map[string]*mockAccount),
+		revision: hvhmodule.Revision0,
 	}
 }
 
@@ -987,7 +997,7 @@ func TestExtensionStateImpl_UnregisterPlanetWithLost(t *testing.T) {
 	owners := make([]module.Address, planetCount)
 
 	for i := 0; i < planetCount; i++ {
-		s := fmt.Sprintf("hx%d%d", i+1, i+1)
+		s := fmt.Sprintf("hx%x%x", i+1, i+1)
 		owners[i] = common.MustNewAddressFromString(s)
 	}
 
@@ -1138,6 +1148,164 @@ func TestExtensionStateImpl_UnregisterPlanetWithLost(t *testing.T) {
 	assert.Zero(t, lost.Sign())
 }
 
+func TestExtensionStateImpl_HooverFund(t *testing.T) {
+	type input struct {
+		issueAmount *big.Int
+		priceInUSDT *big.Int
+		priceInHVH  *big.Int
+		hooverFund  *big.Int
+
+		expReward *big.Int
+	}
+	inputs := []input{
+		{
+			// Condition: OR > G && OR > L
+			// Result: FR = OR
+			toHVH(15),
+			toUSDT(36000), toHVH(10), hvhmodule.BigIntZero,
+			toHVH(15),
+		},
+		{
+			// Condition: OR > G && OR == L
+			// Result: FR = OR
+			toHVH(15),
+			toUSDT(36000), toHVH(15), hvhmodule.BigIntZero,
+			toHVH(15),
+		},
+		{
+			// Condition: OR > G && OR < L
+			// Result: FR = OR
+			toHVH(15),
+			toUSDT(36000), toHVH(20), hvhmodule.BigIntZero,
+			toHVH(15),
+		},
+		{
+			// Condition: OR == G && OR > L
+			// Result: FR = OR
+			toHVH(10),
+			toUSDT(36000), toHVH(5), hvhmodule.BigIntZero,
+			toHVH(10),
+		},
+		{
+			// Condition: OR == G && OR == L
+			// Result: FR = OR
+			toHVH(10),
+			toUSDT(36000), toHVH(10), hvhmodule.BigIntZero,
+			toHVH(10),
+		},
+		{
+			// Condition: OR == G && OR < L
+			// Result: FR = OR
+			toHVH(10),
+			toUSDT(36000), toHVH(20), hvhmodule.BigIntZero,
+			toHVH(10),
+		},
+		{
+			// Condition: OR < G && OR > L
+			// Result: FR = OR
+			toHVH(5),
+			toUSDT(36000), toHVH(3), hvhmodule.BigIntZero,
+			toHVH(5),
+		},
+		{
+			// Condition: OR < G && OR == L
+			// Result: FR = OR
+			toHVH(5),
+			toUSDT(36000), toHVH(5), hvhmodule.BigIntZero,
+			toHVH(5),
+		},
+		{
+			// Condition: OR < G && OR < L && HF == 0
+			// Result: FR = OR
+			toHVH(5),
+			toUSDT(36000), toHVH(3), hvhmodule.BigIntZero,
+			toHVH(5),
+		},
+		{
+			// Condition: OR < G && OR < L && HF < (G - OR)
+			// Result: FR = OR
+			toHVH(5),
+			toUSDT(36000), toHVH(100), toHVH(3),
+			toHVH(8),
+		},
+		{
+			// Condition: OR < G && OR < L && HF == (G - OR)
+			// Result: FR = OR + HF
+			toHVH(5),
+			toUSDT(36000), toHVH(100), toHVH(5),
+			toHVH(10),
+		},
+		{
+			// Condition: OR < G && OR < L && HF > (G - OR)
+			// Result: FR = OR + HF
+			toHVH(5),
+			toUSDT(36000), toHVH(100), toHVH(100),
+			toHVH(10),
+		},
+	}
+	var err error
+	var balance *big.Int
+	termPeriod := int64(10)
+	usdtPrice := toHVH(1) // 1 USDT == 1 HVH
+	owner := common.MustNewAddressFromString("hx1234")
+	id := int64(1)
+
+	for i, inp := range inputs {
+		name := fmt.Sprintf("case-%d", i)
+		t.Run(name, func(t *testing.T) {
+			// Initialize
+			issueAmount := inp.issueAmount
+			stateCfg := hvhstate.StateConfig{
+				TermPeriod:  &common.HexInt64{Value: termPeriod},
+				USDTPrice:   new(common.HexInt).SetValue(usdtPrice),
+				IssueAmount: new(common.HexInt).SetValue(issueAmount),
+			}
+			mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
+			mcc.height = 1
+			cc := NewCallContext(mcc, nil)
+			mcc.SetBalance(hvhmodule.HooverFund, inp.hooverFund)
+
+			// StartRewardIssue: 10
+			issueStartBH := int64(10)
+			err = es.StartRewardIssue(cc, issueStartBH)
+			assert.NoError(t, err)
+
+			// Register planets
+			err = es.RegisterPlanet(
+				cc, id, false, false,
+				owner, inp.priceInUSDT, inp.priceInHVH)
+			assert.NoError(t, err)
+
+			balance = cc.GetBalance(hvhmodule.PublicTreasury)
+			assert.Zero(t, balance.Sign())
+
+			// Go to the next term
+			err = goToNextTerm(t, es, mcc, nil, 0)
+			assert.NoError(t, err)
+
+			balance = cc.GetBalance(hvhmodule.PublicTreasury)
+			assert.Zero(t, issueAmount.Cmp(balance))
+
+			err = es.ReportPlanetWork(cc, id)
+			assert.NoError(t, err)
+
+			ri, err := es.GetRewardInfo(cc)
+			assert.NoError(t, err)
+			rewardPerActivePlanet := ri["rewardPerActivePlanet"].(*big.Int)
+			assert.Zero(t, rewardPerActivePlanet.Cmp(inp.issueAmount))
+
+			rio, err := es.GetRewardInfoOf(cc, id)
+			assert.NoError(t, err)
+			total := rio["total"].(*big.Int)
+			assert.Zero(t, inp.expReward.Cmp(total))
+
+			subsidyFromHooverFund := new(big.Int).Sub(total, rewardPerActivePlanet)
+			balance = cc.GetBalance(hvhmodule.HooverFund)
+			assert.Zero(t, balance.Cmp(new(big.Int).Sub(inp.hooverFund, subsidyFromHooverFund)))
+		})
+	}
+}
+
 func TestExtensionStateImpl_WithdrawLostTo(t *testing.T) {
 	var err error
 	termPeriod := int64(10)
@@ -1239,17 +1407,17 @@ func TestExtensionStateImpl_calcHooverGuide(t *testing.T) {
 func TestExtensionSnapshotImpl_calcSubsidyFromHooverFund(t *testing.T) {
 	type input struct {
 		limit, guide, balance, reward int64
+		subsidy                       int64
 	}
 	inputs := []input{
-		{100, 20, 1000, 20},
-		{100, 20, 1000, 10},
-		{15, 20, 1000, 10},
-		{5, 20, 1000, 10},
-		{100, 30, 20, 10},
-		{100, 30, 10, 10},
-		{100, 30, 0, 10},
+		{100, 20, 1000, 20, 0},
+		{100, 20, 1000, 10, 10},
+		{15, 20, 1000, 10, 10},
+		{5, 20, 1000, 10, 5},
+		{100, 30, 20, 10, 20},
+		{100, 30, 10, 10, 10},
+		{100, 30, 0, 10, 0},
 	}
-	outputs := []int64{0, 10, 10, 5, 20, 10, 0}
 
 	for i, in := range inputs {
 		name := fmt.Sprintf("case-%d", i)
@@ -1260,7 +1428,7 @@ func TestExtensionSnapshotImpl_calcSubsidyFromHooverFund(t *testing.T) {
 				big.NewInt(in.balance),
 				big.NewInt(in.reward),
 			)
-			assert.Equal(t, outputs[i], ret.Int64())
+			assert.Equal(t, in.subsidy, ret.Int64())
 		})
 	}
 }
