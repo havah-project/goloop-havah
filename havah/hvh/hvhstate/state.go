@@ -636,6 +636,17 @@ func (s *State) GetRewardPerActivePlanet() *big.Int {
 	)
 }
 
+func (s *State) GetActivePlanetCountAndReward() (*big.Int, *big.Int) {
+	activePlanets := s.getBigInt(hvhmodule.VarActivePlanet)
+	rewardPerActivePlanet := hvhmodule.BigIntZero
+
+	if activePlanets.Sign() > 0 {
+		rewardPerActivePlanet = new(big.Int).Div(s.getBigInt(hvhmodule.VarRewardTotal), activePlanets)
+	}
+
+	return activePlanets, rewardPerActivePlanet
+}
+
 type StateConfig struct {
 	TermPeriod          *common.HexInt64 `json:"termPeriod,omitempty"`          // 43200 in block
 	IssueReductionCycle *common.HexInt64 `json:"issueReductionCycle,omitempty"` // 360 in term

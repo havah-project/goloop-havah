@@ -17,8 +17,10 @@ const (
 	SigHooverRefilled = "HooverRefilled(int,int,int)"
 	// LostDepositied(lostDelta int, lost int, reason str)
 	SigLostDeposited = "LostDeposited(int,int,str)"
-	// LostWithdrawn(amount int, to Address)
-	SigLostWithdrawn = "LostWithdrawn(int,Address)" // amount, to
+	// LostWithdrawn(to Address, amount int)
+	SigLostWithdrawn = "LostWithdrawn(Address,int)"
+	// TermStarted(termSeq int, planetCount int, rewardPerActivePlanet int)
+	SigTermStarted = "TermStarted(int,int,int)"
 )
 
 func onRewardOfferedEvent(
@@ -96,13 +98,25 @@ func onLostDepositedEvent(cc hvhmodule.CallContext, lostDelta, lost *big.Int, re
 	)
 }
 
-func onLostWithdrawnEvent(cc hvhmodule.CallContext, amount *big.Int, to module.Address) {
+func onLostWithdrawnEvent(cc hvhmodule.CallContext, to module.Address, amount *big.Int) {
 	cc.OnEvent(
 		state.SystemAddress,
 		[][]byte{[]byte(SigLostWithdrawn)},
 		[][]byte{
-			intconv.BigIntToBytes(amount),
 			to.Bytes(),
+			intconv.BigIntToBytes(amount),
+		},
+	)
+}
+
+func onTermStartedEvent(cc hvhmodule.CallContext, termSeq int64, planetCount, rewardPerActivePlanet *big.Int) {
+	cc.OnEvent(
+		state.SystemAddress,
+		[][]byte{[]byte(SigTermStarted)},
+		[][]byte{
+			intconv.Int64ToBytes(termSeq),
+			intconv.BigIntToBytes(planetCount),
+			intconv.BigIntToBytes(rewardPerActivePlanet),
 		},
 	)
 }

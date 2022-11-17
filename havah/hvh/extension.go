@@ -527,7 +527,7 @@ func (es *ExtensionStateImpl) WithdrawLostTo(cc hvhmodule.CallContext, to module
 		if lost, err = es.state.DeleteLost(); err == nil {
 			if lost.Sign() > 0 {
 				if err = cc.Transfer(hvhmodule.PublicTreasury, to, lost, module.Transfer); err == nil {
-					onLostWithdrawnEvent(cc, lost, to)
+					onLostWithdrawnEvent(cc, to, lost)
 				}
 			}
 		}

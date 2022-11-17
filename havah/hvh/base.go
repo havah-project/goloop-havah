@@ -475,6 +475,10 @@ func (es *ExtensionStateImpl) onTermStart(cc hvhmodule.CallContext, termSeq int6
 		return err
 	}
 
+	// Log TermStarted(int,int,int) event
+	planetCount, rewardPerActivePlanet := es.state.GetActivePlanetCountAndReward()
+	onTermStartedEvent(cc, termSeq, planetCount, rewardPerActivePlanet)
+
 	es.Logger().Debugf("onTermStart() end: termSeq=%d", termSeq)
 	return nil
 }
