@@ -21,13 +21,18 @@ import "github.com/icon-project/goloop/module"
 const (
 	Revision0 = iota
 	Revision1
+	Revision2
 	RevisionReserved
 )
 
 const (
 	DefaultRevision = Revision0
 	MaxRevision     = RevisionReserved - 1
-	LatestRevision  = Revision0
+	LatestRevision  = Revision2
+)
+
+const (
+	RevisionTermStartedEventLog = Revision2
 )
 
 var revisionFlags = []module.Revision{
@@ -36,6 +41,8 @@ var revisionFlags = []module.Revision{
 		module.UseMPTOnEvents | module.UseCompactAPIInfo | module.PurgeEnumCache | module.FixMapValues,
 	// Revision 1
 	module.ContractSetEvent,
+	// Revision 2
+	0,
 }
 
 func init() {

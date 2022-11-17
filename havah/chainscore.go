@@ -300,16 +300,6 @@ var chainMethods = []*chainMethod{
 		},
 	}, 0, 0},
 	{scoreapi.Method{
-		scoreapi.Function, "getRewardInfosOf",
-		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 1,
-		[]scoreapi.Parameter{
-			{"ids", scoreapi.ListTypeOf(1, scoreapi.Integer), nil, nil},
-		},
-		[]scoreapi.DataType{
-			scoreapi.Dict,
-		},
-	}, 1, 0},
-	{scoreapi.Method{
 		scoreapi.Function, "getRewardInfo",
 		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 0,
 		nil,
@@ -406,20 +396,30 @@ var chainMethods = []*chainMethod{
 		nil,
 		nil,
 	}, 0, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "getRewardInfosOf",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"ids", scoreapi.ListTypeOf(1, scoreapi.Integer), nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.Dict,
+		},
+	}, 2, 0},
 	{scoreapi.Method{scoreapi.Function, "withdrawLostTo",
 		scoreapi.FlagExternal, 1,
 		[]scoreapi.Parameter{
 			{"to", scoreapi.Address, nil, nil},
 		},
 		nil,
-	}, 1, 0},
+	}, 2, 0},
 	{scoreapi.Method{scoreapi.Function, "getLost",
 		scoreapi.FlagReadOnly, 0,
 		nil,
 		[]scoreapi.DataType{
 			scoreapi.Integer,
 		},
-	}, 1, 0},
+	}, 2, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {
