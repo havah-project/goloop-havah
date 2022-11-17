@@ -449,17 +449,18 @@ func (es *ExtensionStateImpl) GetRewardInfosOf(cc hvhmodule.CallContext, ids []i
 			"Too many ids: ids(%d) > max(%d)", len(ids), hvhmodule.MaxCountToClaim)
 	}
 
+	height := cc.BlockHeight()
 	jso := make(map[string]interface{})
 	ris := make([]interface{}, len(ids))
 	for i, id := range ids {
-		if ri, err := es.GetRewardInfoOf(cc, id); err == nil {
+		if ri, err := es.state.GetRewardInfoOf(height, id); err == nil {
 			ris[i] = ri
 		} else {
 			ris[i] = nil
 		}
 	}
 
-	jso["height"] = cc.BlockHeight()
+	jso["height"] = height
 	jso["rewardInfos"] = ris
 	return jso, nil
 }
