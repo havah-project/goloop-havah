@@ -1256,6 +1256,10 @@ HAVAH-specific JSON-RPC APIs
 
 `T_HASH` - txHash
 
+#### EventLog
+
+* [`LostDeposited(int,int,str)`](#lostdepositedintintstr)
+
 ### setPlanetOwner(id int, owner Address)
 
 * Changes a planet owner
@@ -1378,7 +1382,8 @@ HAVAH-specific JSON-RPC APIs
 
 ### getRewardInfoOf(id int) dict
 
-* Returns the information on a planet reward
+* Returns the reward information on a given planet
+* If a given planet id is not valid, error response is returned.
 
 > Request
 
@@ -1426,6 +1431,83 @@ HAVAH-specific JSON-RPC APIs
 | Key       | VALUE Type | Required | Description                                               |
 |:----------|:-----------|:---------|:----------------------------------------------------------|
 | height    | T_INT      | true     | Current block height                                      |
+| id        | T_INT      | true     | Planet ID                                                 |
+| total     | T_INT      | true     | Total accumulated rewards until now                       |
+| remain    | T_INT      | true     | Difference between Total Rewards and Claimed Rewards      |
+| claimable | T_INT      | true     | Rewards that a planet owner can receive when claiming now |
+
+### getRewardInfosOf(ids []int) dict
+
+* Returns the reward information on given planets
+* If it is failed to get reward information on some planets, the only corresponding information will be replaced with `null`.
+* Maximum number of ids: `50`
+* Since `revision 2`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getRewardInfosOf",
+      "params": {
+        "ids": ["0x1", "0x2", "0x3"]
+      }
+    }
+  }
+}
+```
+
+> Response
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "height": "0x20e",
+    "rewardInfos": [
+      {
+        "id": "0x1",
+        "total": "0xb61cb183c4b7e1800000",
+        "remain": "0xb61cb183c4b7e1800000",
+        "claimable": "0xb61cb183c4b7e1800000"
+      },
+      null,
+      {
+        "id": "0x3",
+        "total": "0xb61cb183c4b7e1800000",
+        "remain": "0x0",
+        "claimable": "0x0"
+      }
+    ]
+  }
+}
+```
+
+#### Parameters
+
+| Key | VALUE Type | Required | Description |
+|:----|:-----------|:---------|:------------|
+| id  | T_INT      | true     | Planet ID   |
+
+#### Returns
+
+| Key         | VALUE Type      | Required | Description                              |
+|:------------|:----------------|:---------|:-----------------------------------------|
+| height      | T_INT           | true     | Current block height                     |
+| rewardInfos | []T_REWARD_INFO | true     | Reward information list of given planets |
+
+> T_REWARD_INFO
+ 
+ | Key       | VALUE Type | Required | Description                                               |
+|:----------|:-----------|:---------|:----------------------------------------------------------|
+| id        | T_INT      | true     | Planet ID                                                 |
 | total     | T_INT      | true     | Total accumulated rewards until now                       |
 | remain    | T_INT      | true     | Difference between Total Rewards and Claimed Rewards      |
 | claimable | T_INT      | true     | Rewards that a planet owner can receive when claiming now |
@@ -1472,11 +1554,11 @@ None
 
 #### Returns
 
-| Key                   | VALUE Type | Required | Description                                            |
-|:----------------------|:-----------|:---------|:-------------------------------------------------------|
-| height                | T_INT      | true     | Current block height                                   |
-| termSequence          | T_INT      | false    | Sequence of a term starting with 0                     |
-| rewardPerActivePlanet | T_INT      | false    | Estimated reward per active planet in the current term |
+| Key                   | VALUE Type | Required | Description                                  |
+|:----------------------|:-----------|:---------|:---------------------------------------------|
+| height                | T_INT      | true     | Current block height                         |
+| termSequence          | T_INT      | false    | Sequence of a term starting with 0           |
+| rewardPerActivePlanet | T_INT      | false    | Estimated reward per active planet each term |
 
 * `rewardPerActivePlanet` does not include the fund from HooverFund SCORE
 * `rewardPerActivePlanet` is zero if no active planet exists
@@ -1645,6 +1727,89 @@ N/A
 #### Returns
 
 `T_HASH` - txHash
+
+### withdrawLostTo(to Address)
+
+* Withdraw all lost coins to a given `to` address
+* Only EOA is allowed for `to` address
+* Called by Governance SCORE
+* Since `revision 2`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "withdrawLostTo",
+      "params": {
+        "to": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
+      }
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key | VALUE Type | Required | Description                                |
+|:----|:-----------|:---------|:-------------------------------------------|
+| to  | T_ADDRESS  | true     | Address where lost coins will be withdrawn |
+
+#### Returns
+
+`T_HASH` - txHash
+
+#### EventLog
+
+* [`LostWithdrawn(Address,int)`](#lostwithdrawnaddressint)
+ 
+### getLost() int
+
+* Returns the amount of lost coins
+* Since `revision 2`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getLost"
+    }
+  }
+}
+```
+
+> Response
+ 
+ ```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": "0x8ac7230489e80000"
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+| Key | VALUE Type | Required | Description          |
+|:----|:-----------|:---------|:---------------------|
+| -   | T_INT      | true     | Amount of lost coins |
 
 #### EventLog
 
@@ -1841,7 +2006,7 @@ HAVAH records the following eventLogs:
 
 ### RewardOffered(int,int,int,int)
 
-* Logged when [`reportPlanetWork`](#reportplanetwork) is called
+* Logged when [`reportPlanetWork`](#reportplanetworkid-int) is called
 * ScoreAddress: `cx0000000000000000000000000000000000000000`
 
 ```json
@@ -1868,7 +2033,7 @@ HAVAH records the following eventLogs:
 
 ### RewardClaimed(Address,int,int,int)
 
-* Logged when [`claimPlanetReward`](#claimplanetreward) is called
+* Logged when [`claimPlanetReward`](#claimplanetrewardids-int) is called
 * ScoreAddress: `cx0000000000000000000000000000000000000000`
 
 ```json
@@ -1892,3 +2057,80 @@ HAVAH records the following eventLogs:
 | termSequence | T_INT      | false   | Term sequence starting with 0 |
 | id           | T_INT      | false   | Planet ID                     |
 | amount       | T_INT      | false   | Claimed reward amount         |
+
+### LostDeposited(int,int,str)
+
+* Logged when [`unregisterPlanet`](#unregisterplanetid-int) is called
+* If all rewards for an unregistered planet have been already claimed, this event is not logged as there is no lost coin
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "LostDeposited(int,int,str)"
+  ],
+  "data":[
+    "0xde0b6b3a7640000",
+    "0x16345785d8a00000",
+    "PlanetUnregistered(id=1)"
+  ]
+}
+```
+
+| Key       | VALUE Type | Indexed | Description                                                 |
+|:----------|:-----------|:--------|:------------------------------------------------------------|
+| lostDelta | T_INT      | false   | Amount of lost coins newly added                            |
+| lostTotal | T_INT      | false   | Amount of accumulated lost coins remaining deposited so far |
+| reason    | T_STRING   | false   | Reason for new lost coins                                   |
+
+### LostWithdrawn(Address,int)
+
+* Logged when [`withdrawLostTo`](#withdrawlosttoto-address) is called
+* If the amount of lost coins to withdraw is 0, no event will be logged
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "LostWithdrawn(Address,int)"
+  ],
+  "data":[
+    "hx3ece50aaa01f7c4d128c029d569dd86950c34215",
+    "0x16345785d8a00000"
+  ]
+}
+```
+
+| Key    | VALUE Type | Indexed | Description                    |
+|:-------|:-----------|:--------|:-------------------------------|
+| to     | T_ADDRESS  | false   | Recipient to get lost coins    |
+| amount | T_INT      | false   | Amount of lost coins withdrawn |
+
+### TermStarted(int,int,int)
+
+* Logged at the beginning of each term
+* This event is located in base transaction result
+* Since `revision 2`
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "TermStarted(int,int,int)"
+  ],
+  "data":[
+    "0x1",
+    "0xa",
+    "0xde0b6b3a7640000"
+  ]
+}
+```
+
+| Key                   | VALUE Type | Indexed | Description                                            |
+|:----------------------|:-----------|:--------|:-------------------------------------------------------|
+| termSequence          | T_INT      | false   | Sequence of a term starting with 0                     |
+| planetCount           | T_INT      | false   | Number of active planets at the beginning of each term |
+| rewardPerActivePlanet | T_INT      | false   | Estimated reward per active planet each term           |
