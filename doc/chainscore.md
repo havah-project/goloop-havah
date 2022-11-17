@@ -1224,6 +1224,7 @@ HAVAH-specific JSON-RPC APIs
 ### unregisterPlanet(id int)
 
 * Unregisters a planet
+* Unregistered planet ID can be reused
 * Called by PlanetNFT SCORE
 
 > Request
