@@ -1437,82 +1437,6 @@ HAVAH-specific JSON-RPC APIs
 | remain    | T_INT      | true     | Difference between Total Rewards and Claimed Rewards      |
 | claimable | T_INT      | true     | Rewards that a planet owner can receive when claiming now |
 
-### getRewardInfosOf(ids []int) dict
-
-* Returns the reward information on given planets
-* If it is failed to get reward information on some planets, the only corresponding information will be replaced with `null`.
-* Maximum number of ids: `50`
-* Since `revision 2`
-
-> Request
-
-```json
-{
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getRewardInfosOf",
-      "params": {
-        "ids": ["0x1", "0x2", "0x3"]
-      }
-    }
-  }
-}
-```
-
-> Response
- 
-```json
-{
-  "id": 1,
-  "jsonrpc": "2.0",
-  "result": {
-    "height": "0x20e",
-    "rewardInfos": [
-      {
-        "id": "0x1",
-        "total": "0xb61cb183c4b7e1800000",
-        "remain": "0xb61cb183c4b7e1800000",
-        "claimable": "0xb61cb183c4b7e1800000"
-      },
-      null,
-      {
-        "id": "0x3",
-        "total": "0xb61cb183c4b7e1800000",
-        "remain": "0x0",
-        "claimable": "0x0"
-      }
-    ]
-  }
-}
-```
-
-#### Parameters
-
-| Key | VALUE Type | Required | Description |
-|:----|:-----------|:---------|:------------|
-| id  | T_INT      | true     | Planet ID   |
-
-#### Returns
-
-| Key         | VALUE Type      | Required | Description                              |
-|:------------|:----------------|:---------|:-----------------------------------------|
-| height      | T_INT           | true     | Current block height                     |
-| rewardInfos | []T_REWARD_INFO | true     | Reward information list of given planets |
-
-> T_REWARD_INFO
- 
- | Key       | VALUE Type | Required | Description                                               |
-|:----------|:-----------|:---------|:----------------------------------------------------------|
-| id        | T_INT      | true     | Planet ID                                                 |
-| total     | T_INT      | true     | Total accumulated rewards until now                       |
-| remain    | T_INT      | true     | Difference between Total Rewards and Claimed Rewards      |
-| claimable | T_INT      | true     | Rewards that a planet owner can receive when claiming now |
-
 ### getRewardInfo() dict
 
 * Returns the overall reward information
@@ -1729,89 +1653,6 @@ N/A
 
 `T_HASH` - txHash
 
-### withdrawLostTo(to Address)
-
-* Withdraw all lost coins to a given `to` address
-* Only EOA is allowed for `to` address
-* Called by Governance SCORE
-* Since `revision 2`
-
-> Request
-
-```json
-{
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "withdrawLostTo",
-      "params": {
-        "to": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
-      }
-    }
-  }
-}
-```
-
-#### Parameters
-
-| Key | VALUE Type | Required | Description                                |
-|:----|:-----------|:---------|:-------------------------------------------|
-| to  | T_ADDRESS  | true     | Address where lost coins will be withdrawn |
-
-#### Returns
-
-`T_HASH` - txHash
-
-#### EventLog
-
-* [`LostWithdrawn(Address,int)`](#lostwithdrawnaddressint)
- 
-### getLost() int
-
-* Returns the amount of lost coins
-* Since `revision 2`
-
-> Request
-
-```json
-{
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getLost"
-    }
-  }
-}
-```
-
-> Response
- 
- ```json
-{
-  "id": 1,
-  "jsonrpc": "2.0",
-  "result": "0x8ac7230489e80000"
-}
-```
-
-#### Parameters
-
-None
-
-#### Returns
-
-| Key | VALUE Type | Required | Description          |
-|:----|:-----------|:---------|:---------------------|
-| -   | T_INT      | true     | Amount of lost coins |
-
 #### EventLog
 
 * [`Burned(Address,int,int)`](#burnedaddressintint)
@@ -1899,6 +1740,165 @@ None
 #### Returns
 
 `T_DICT` - numerator and denominator representing PrivateClaimableRate
+
+### getRewardInfosOf(ids []int) dict
+
+* Returns the reward information on given planets
+* If it is failed to get reward information on some planets, the only corresponding information will be replaced with `null`.
+* Maximum number of ids: `50`
+* Since `revision 2`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getRewardInfosOf",
+      "params": {
+        "ids": ["0x1", "0x2", "0x3"]
+      }
+    }
+  }
+}
+```
+
+> Response
+ 
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "height": "0x20e",
+    "rewardInfos": [
+      {
+        "id": "0x1",
+        "total": "0xb61cb183c4b7e1800000",
+        "remain": "0xb61cb183c4b7e1800000",
+        "claimable": "0xb61cb183c4b7e1800000"
+      },
+      null,
+      {
+        "id": "0x3",
+        "total": "0xb61cb183c4b7e1800000",
+        "remain": "0x0",
+        "claimable": "0x0"
+      }
+    ]
+  }
+}
+```
+
+#### Parameters
+
+| Key | VALUE Type | Required | Description |
+|:----|:-----------|:---------|:------------|
+| id  | T_INT      | true     | Planet ID   |
+
+#### Returns
+
+| Key         | VALUE Type      | Required | Description                              |
+|:------------|:----------------|:---------|:-----------------------------------------|
+| height      | T_INT           | true     | Current block height                     |
+| rewardInfos | []T_REWARD_INFO | true     | Reward information list of given planets |
+
+> T_REWARD_INFO
+ 
+ | Key       | VALUE Type | Required | Description                                               |
+|:----------|:-----------|:---------|:----------------------------------------------------------|
+| id        | T_INT      | true     | Planet ID                                                 |
+| total     | T_INT      | true     | Total accumulated rewards until now                       |
+| remain    | T_INT      | true     | Difference between Total Rewards and Claimed Rewards      |
+| claimable | T_INT      | true     | Rewards that a planet owner can receive when claiming now |
+
+### withdrawLostTo(to Address)
+
+* Withdraw all lost coins to a given `to` address
+* Only EOA is allowed for `to` address
+* Called by Governance SCORE
+* Since `revision 2`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "withdrawLostTo",
+      "params": {
+        "to": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
+      }
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key | VALUE Type | Required | Description                                |
+|:----|:-----------|:---------|:-------------------------------------------|
+| to  | T_ADDRESS  | true     | Address where lost coins will be withdrawn |
+
+#### Returns
+
+`T_HASH` - txHash
+
+#### EventLog
+
+* [`LostWithdrawn(Address,int)`](#lostwithdrawnaddressint)
+ 
+### getLost() int
+
+* Returns the amount of lost coins
+* Since `revision 2`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getLost"
+    }
+  }
+}
+```
+
+> Response
+ 
+ ```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": "0x8ac7230489e80000"
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+| Key | VALUE Type | Required | Description          |
+|:----|:-----------|:---------|:---------------------|
+| -   | T_INT      | true     | Amount of lost coins |
 
 ## EventLogs
 
@@ -2090,6 +2090,7 @@ HAVAH records the following eventLogs:
 * Logged when [`withdrawLostTo`](#withdrawlosttoto-address) is called
 * If the amount of lost coins to withdraw is 0, no event will be logged
 * ScoreAddress: `cx0000000000000000000000000000000000000000`
+* Since `revision 2`
 
 ```json
 {
@@ -2113,8 +2114,8 @@ HAVAH records the following eventLogs:
 
 * Logged at the beginning of each term
 * This event is located in base transaction result
-* Since `revision 2`
 * ScoreAddress: `cx0000000000000000000000000000000000000000`
+* Since `revision 2`
 
 ```json
 {
