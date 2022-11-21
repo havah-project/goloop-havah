@@ -21,12 +21,7 @@ import foundation.icon.ee.util.Crypto;
 import foundation.icon.icx.IconService;
 import foundation.icon.icx.KeyWallet;
 import foundation.icon.icx.SignedTransaction;
-import foundation.icon.icx.data.Address;
-import foundation.icon.icx.data.Base64;
-import foundation.icon.icx.data.Block;
-import foundation.icon.icx.data.Bytes;
-import foundation.icon.icx.data.ConfirmedTransaction;
-import foundation.icon.icx.data.TransactionResult;
+import foundation.icon.icx.data.*;
 import foundation.icon.icx.transport.http.HttpProvider;
 import foundation.icon.icx.transport.jsonrpc.RpcError;
 import foundation.icon.icx.transport.jsonrpc.RpcItem;
@@ -42,6 +37,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import testcases.APITest;
+import testcases.BLSTestScore;
 import testcases.DeployScore;
 import testcases.HelloWorld;
 
@@ -52,11 +48,7 @@ import java.security.SecureRandom;
 import java.util.List;
 
 import static foundation.icon.test.common.Env.LOG;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 @Tag(Constants.TAG_JAVA_SCORE)
 class JavaAPITest extends TestBase {
@@ -539,6 +531,19 @@ class JavaAPITest extends TestBase {
         RpcItem address = apiScore.call("getAddressFromKeyQuery", params);
         LOG.info("expected (" + caller.getAddress() + "), got (" + address.asAddress() + ")");
         assertEquals(caller.getAddress(), address.asAddress());
+        LOG.infoExiting();
+    }
+
+    @Test
+    public void testAPIForBLS() throws Exception {
+        LOG.infoEntering("deploy", "blsTestScore");
+        Score blsScore = txHandler.deploy(ownerWallet, BLSTestScore.class, null);
+        LOG.info("scoreAddr = " + blsScore.getAddress());
+        LOG.infoExiting();
+
+        LOG.infoEntering("invoke", "test");
+        var tr = blsScore.invokeAndWaitResult(caller, "test", null);
+        assertSuccess(tr);
         LOG.infoExiting();
     }
 

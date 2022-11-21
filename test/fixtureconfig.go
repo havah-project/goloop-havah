@@ -44,6 +44,7 @@ type FixtureConfig struct {
 	NewCS             func(ctx *NodeContext) module.Consensus
 	AddValidatorNodes int
 	Genesis           string
+	GenesisStorage    module.GenesisStorage
 	Wallet            module.Wallet
 	AddDefaultNode    *bool
 }
@@ -53,10 +54,10 @@ func NewFixtureConfig(t *testing.T, o ...FixtureOption) *FixtureConfig {
 	cf := &FixtureConfig{
 		T:      t,
 		Prefix: "goloop-block-fixture",
-		Dbase:  func() db.Database {
+		Dbase: func() db.Database {
 			return db.NewMapDB()
 		},
-		CVSD:   consensus.NewCommitVoteSetFromBytes,
+		CVSD: consensus.NewCommitVoteSetFromBytes,
 		NewPlatform: func(ctx *NodeContext) base.Platform {
 			return basic.Platform
 		},
@@ -79,6 +80,7 @@ func NewFixtureConfig(t *testing.T, o ...FixtureOption) *FixtureConfig {
 		},
 		AddValidatorNodes: 0,
 		Genesis:           defaultGenesis,
+		GenesisStorage:    nil,
 		AddDefaultNode:    &tru,
 	}
 	return cf.ApplyOption(o...)
@@ -128,6 +130,9 @@ func (cf *FixtureConfig) Override(cf2 *FixtureConfig) *FixtureConfig {
 	}
 	if len(cf2.Genesis) != 0 {
 		res.Genesis = cf2.Genesis
+	}
+	if cf2.GenesisStorage != nil {
+		res.GenesisStorage = cf2.GenesisStorage
 	}
 	if cf2.Wallet != nil {
 		res.Wallet = cf2.Wallet

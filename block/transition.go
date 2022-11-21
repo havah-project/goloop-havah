@@ -12,14 +12,6 @@ const (
 	configTraceTransition = false
 )
 
-type exeState int
-
-const (
-	notValidated exeState = iota
-	validated
-	executed
-)
-
 type transitionCallback interface {
 	onValidate(error)
 	onExecute(error)
@@ -59,26 +51,6 @@ type transition struct {
 
 func (ti *transitionImpl) running() bool {
 	return len(ti._cbs) != 0
-}
-
-func (ti *transitionImpl) err() error {
-	if ti._valErr != nil && *ti._valErr != nil {
-		return *ti._valErr
-	}
-	if ti._exeErr != nil && *ti._exeErr != nil {
-		return *ti._exeErr
-	}
-	return nil
-}
-
-func (ti *transitionImpl) exeState() exeState {
-	if ti._valErr == nil || *ti._valErr != nil {
-		return notValidated
-	}
-	if ti._exeErr == nil || *ti._exeErr != nil {
-		return validated
-	}
-	return executed
 }
 
 func (ti *transitionImpl) _newTransition(cb transitionCallback) *transition {
@@ -287,6 +259,19 @@ func (ti *transitionImpl) verifyResult(block module.BlockData) error {
 	}
 	if !bytes.Equal(mtr.NextValidators().Hash(), block.NextValidatorsHash()) {
 		return errors.Errorf("bad next validators calc:%x block:%x", mtr.NextValidators().Hash(), block.NextValidatorsHash())
+	}
+	bs := mtr.BTPSection()
+	trNSF := bs.Digest().NetworkSectionFilter()
+	blkNSF := block.NetworkSectionFilter()
+	if !bytes.Equal(trNSF.Bytes(), blkNSF.Bytes()) {
+		return errors.Errorf("bad nsFilter calc:%x block:%x", trNSF, blkNSF)
+	}
+	bd, err := block.BTPDigest()
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(bs.Digest().Hash(), bd.Hash()) {
+		return errors.Errorf("bad digest hash calc:%x block:%x", bs.Digest().Hash(), bd.Hash())
 	}
 	return nil
 }

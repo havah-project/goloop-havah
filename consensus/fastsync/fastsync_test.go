@@ -60,7 +60,7 @@ func (b *tBlock) NextValidators() module.ValidatorList {
 }
 
 func (b *tBlock) Votes() module.CommitVoteSet {
-	return &tCommitVoteSet{b: b.Prev}
+	return newTCommitVoteSet(b.Prev)
 }
 
 func (b *tBlock) MarshalHeader(w io.Writer) error {
@@ -96,6 +96,10 @@ func (vs *tCommitVoteSet) VerifyBlock(block module.BlockData, validators module.
 
 func (vs *tCommitVoteSet) Bytes() []byte {
 	return vs.b
+}
+
+func (vs *tCommitVoteSet) VoteRound() int32 {
+	return 0
 }
 
 type tBlockManager struct {

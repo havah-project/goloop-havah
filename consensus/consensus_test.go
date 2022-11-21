@@ -17,13 +17,17 @@
 package consensus_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/icon-project/goloop/btp/ntm"
+	"github.com/icon-project/goloop/common/log"
 	"github.com/icon-project/goloop/consensus"
 	"github.com/icon-project/goloop/consensus/fastsync"
 	"github.com/icon-project/goloop/module"
+	"github.com/icon-project/goloop/service/platform/basic"
 	"github.com/icon-project/goloop/test"
 )
 
@@ -174,7 +178,8 @@ func TestConsensus_BasicConsensus(t *testing.T) {
 			consensus.NewVoteMessage(
 				h[i].Wallet(),
 				consensus.VoteTypePrevote, 3, 0, blk.ID(),
-				ps.ID(), blk.Timestamp()+1,
+				ps.ID(), blk.Timestamp()+1, nil, nil,
+				0,
 			),
 			func(rb bool, e error) {
 				assert.True(t, rb)
@@ -189,7 +194,8 @@ func TestConsensus_BasicConsensus(t *testing.T) {
 			consensus.NewVoteMessage(
 				h[i].Wallet(),
 				consensus.VoteTypePrecommit, 3, 0, blk.ID(),
-				ps.ID(), blk.Timestamp()+1,
+				ps.ID(), blk.Timestamp()+1, nil, nil,
+				0,
 			),
 			func(rb bool, e error) {
 				assert.True(t, rb)
@@ -225,4 +231,505 @@ func TestConsensus_BasicConsensus2(t *testing.T) {
 	blk := <-chn
 	assert.EqualValues(t, 3, blk.Height())
 	assert.EqualValues(t, 4, f.CS.GetStatus().Height)
+}
+
+type btpTest struct {
+	*testing.T
+	*assert.Assertions
+	*test.Fixture
+}
+
+func newBTPTest(t *testing.T) *btpTest {
+	const dsa = "ecdsa/secp256k1"
+	const uid = "eth"
+	assert := assert.New(t)
+	f := test.NewFixture(t, test.AddDefaultNode(false), test.AddValidatorNodes(4))
+
+	tx := test.NewTx().Call("setRevision", map[string]string{
+		"code": fmt.Sprintf("0x%x", basic.MaxRevision),
+	}).Call("setMinimizeBlockGen", map[string]string{
+		"yn": "0x1",
+	})
+	for i, v := range f.Validators {
+		tx.CallFrom(v.CommonAddress(), "setBTPPublicKey", map[string]string{
+			"name":   dsa,
+			"pubKey": fmt.Sprintf("0x%x", v.Chain.WalletFor(dsa).PublicKey()),
+		})
+		t.Logf("register key index=%d %s=%x", i, dsa, v.Chain.WalletFor(dsa).PublicKey())
+	}
+	tx.Call("openBTPNetwork", map[string]string{
+		"networkTypeName": uid,
+		"name":            fmt.Sprintf("%s-test", uid),
+		"owner":           f.CommonAddress().String(),
+	})
+	f.SendTransactionToProposer(tx)
+
+	test.NodeInterconnect(f.Nodes)
+	for _, n := range f.Nodes {
+		err := n.CS.Start()
+		assert.NoError(err)
+	}
+	return &btpTest{
+		T:          t,
+		Assertions: assert,
+		Fixture:    f,
+	}
+}
+
+func (tst *btpTest) Close() {
+	if tst.Fixture != nil {
+		tst.Fixture.Close()
+	}
+}
+
+func TestConsensus_NoNTSVoteCountForFirstNTS(t *testing.T) {
+	tst := newBTPTest(t)
+	defer tst.Close()
+	f := tst.Fixture
+	assert := tst.Assertions
+
+	blk := f.WaitForBlock(2)
+	bd, err := blk.BTPDigest()
+	assert.NoError(err)
+	assert.EqualValues(1, len(bd.NetworkTypeDigests()))
+
+	blk = f.SendTXToAllAndWaitForBlock(f.NewTx())
+	assert.EqualValues(0, blk.Votes().NTSDProofCount())
+}
+
+func TestConsensus_BTPBasic(t *testing.T) {
+	tst := newBTPTest(t)
+	defer tst.Close()
+	f := tst.Fixture
+	assert := tst.Assertions
+
+	blk := f.WaitForBlock(2)
+	bd, err := blk.BTPDigest()
+	assert.NoError(err)
+	assert.EqualValues(1, len(bd.NetworkTypeDigests()))
+	assert.EqualValues(1, bd.NetworkTypeDigestFor(1).NetworkTypeID())
+	assert.EqualValues(1, bd.NetworkTypeDigestFor(1).NetworkDigestFor(1).NetworkID())
+
+	testMsg := ([]byte)("test message")
+	blk = f.SendTXToAllAndWaitForResultBlock(
+		f.NewTx().CallFrom(f.CommonAddress(), "sendBTPMessage", map[string]string{
+			"networkId": "0x1",
+			"message":   fmt.Sprintf("0x%x", testMsg),
+		}),
+	)
+	assert.EqualValues(4, blk.Height())
+	bd, err = blk.BTPDigest()
+	assert.NoError(err)
+	assert.EqualValues(1, len(bd.NetworkTypeDigests()))
+
+	bbh, pfBytes, err := f.CS.GetBTPBlockHeaderAndProof(
+		blk, 1,
+		module.FlagBTPBlockHeader|module.FlagBTPBlockProof,
+	)
+	assert.NoError(err)
+	assert.EqualValues(1, bbh.NetworkID())
+	assert.EqualValues(0, bbh.FirstMessageSN())
+	prevBlk, err := f.BM.GetBlockByHeight(blk.Height() - 1)
+	assert.NoError(err)
+	pcm, err := prevBlk.NextProofContextMap()
+	assert.NoError(err)
+	pc, err := pcm.ProofContextFor(1)
+	assert.NoError(err)
+	pf, err := pc.NewProofFromBytes(pfBytes)
+	assert.NoError(err)
+	ntsd := pc.NewDecision(module.SourceNetworkUID(1), 1, 4, bbh.Round(), bd.NetworkTypeDigestFor(1).NetworkTypeSectionHash())
+	err = pc.Verify(ntsd.Hash(), pf)
+	assert.NoError(err)
+}
+
+func TestConsensus_BTPBlockBasic(t_ *testing.T) {
+	assert := assert.New(t_)
+	f := test.NewFixture(t_, test.AddDefaultNode(false), test.AddValidatorNodes(4))
+	defer f.Close()
+
+	h := make([]*test.SimplePeerHandler, 3)
+	for i := 0; i < len(h); i++ {
+		_, h[i] = f.NM.NewPeerForWithAddress(module.ProtoConsensus, f.Validators[i+1].Chain.Wallet())
+	}
+
+	tx := test.NewTx().Call("setRevision", map[string]string{
+		"code": fmt.Sprintf("0x%x", basic.MaxRevision),
+	})
+	const dsa = "ecdsa/secp256k1"
+	for _, v := range f.Validators {
+		tx.CallFrom(v.CommonAddress(), "setBTPPublicKey", map[string]string{
+			"name":   dsa,
+			"pubKey": fmt.Sprintf("0x%x", v.Chain.WalletFor(dsa).PublicKey()),
+		})
+	}
+	f.ProposeFinalizeBlockWithTX(
+		consensus.NewEmptyCommitVoteList(),
+		tx.Call("openBTPNetwork", map[string]string{
+			"networkTypeName": "eth",
+			"name":            "eth-test",
+			"owner":           f.CommonAddress().String(),
+		}).String(),
+	)
+	f.ProposeFinalizeBlock(f.NewCommitVoteListForLastBlock(0, 0))
+
+	cvl := f.NewCommitVoteListForLastBlock(0, 0)
+
+	err := consensus.StartConsensusWithLastVotes(f.CS, &consensus.LastVoteData{
+		Height:     f.LastBlock.Height(),
+		VotesBytes: cvl.Bytes(),
+	})
+	assert.NoError(err)
+	assert.EqualValues(2, f.LastBlock.Height())
+	bbh, _, err := f.CS.GetBTPBlockHeaderAndProof(
+		f.LastBlock, 1,
+		module.FlagBTPBlockHeader,
+	)
+	assert.NoError(err)
+	assert.EqualValues(1, bbh.NetworkID())
+	assert.EqualValues(0, bbh.FirstMessageSN())
+	assert.EqualValues(2, bbh.MainHeight())
+	assert.EqualValues(true, bbh.NextProofContextChanged())
+	assert.EqualValues(1, bbh.UpdateNumber())
+	assert.EqualValues(0, bbh.MessageCount())
+	assert.EqualValues([]byte(nil), bbh.MessagesRoot())
+	assert.EqualValues([]byte(nil), bbh.PrevNetworkSectionHash())
+	blk := f.LastBlock
+	pcm, err := blk.NextProofContextMap()
+	assert.NoError(err)
+	pc, err := pcm.ProofContextFor(1)
+	assert.NoError(err)
+	assert.EqualValues(pc.Bytes(), bbh.NextProofContext())
+	assert.EqualValues(pc.Hash(), bbh.NextProofContextHash())
+	assert.EqualValues(0, len(bbh.NetworkSectionToRoot()))
+}
+
+func TestConsensus_ChangeBTPKey(t_ *testing.T) {
+	const dsa = "ecdsa/secp256k1"
+	const uid = "eth"
+	tst := newBTPTest(t_)
+	defer tst.Close()
+	f := tst.Fixture
+	assert := tst.Assertions
+
+	blk := f.WaitForBlock(2)
+	bd, err := blk.BTPDigest()
+	assert.NoError(err)
+	assert.EqualValues(1, len(bd.NetworkTypeDigests()))
+
+	wp := test.NewWalletProvider()
+	wp2 := test.NewWalletProvider()
+	tx := test.NewTx().CallFrom(f.CommonAddress(), "setBTPPublicKey", map[string]string{
+		"name":   dsa,
+		"pubKey": fmt.Sprintf("0x%x", wp.WalletFor(dsa).PublicKey()),
+	}).CallFrom(f.Nodes[1].CommonAddress(), "setBTPPublicKey", map[string]string{
+		"name":   uid,
+		"pubKey": fmt.Sprintf("0x%x", wp2.WalletFor(dsa).PublicKey()),
+	}).SetTimestamp(blk.Timestamp())
+	blk = f.SendTXToAllAndWaitForBlock(tx)
+	_, err = blk.NormalTransactions().Get(0)
+	assert.NoError(err)
+
+	blk = f.WaitForNextBlock()
+	bd, err = blk.BTPDigest()
+	assert.NoError(err)
+	assert.EqualValues(1, len(bd.NetworkTypeDigests()))
+
+	testMsg := ([]byte)("test message")
+	tx = test.NewTx().CallFrom(f.CommonAddress(), "sendBTPMessage", map[string]string{
+		"networkId": "0x1",
+		"message":   fmt.Sprintf("0x%x", testMsg),
+	}).SetTimestamp(blk.Timestamp())
+	blk = f.SendTXToAllAndWaitForBlock(tx)
+	_, err = blk.NormalTransactions().Get(0)
+	assert.NoError(err)
+
+	f.Nodes[0].Chain.SetWalletFor(dsa, wp.WalletFor(dsa))
+	f.Nodes[1].Chain.SetWalletFor(dsa, wp2.WalletFor(dsa))
+	_ = f.WaitForNextBlock()
+}
+
+func TestConsensus_SetWrongBTPKey(t_ *testing.T) {
+	const dsa = "ecdsa/secp256k1"
+	tst := newBTPTest(t_)
+	defer tst.Close()
+	f := tst.Fixture
+	assert := tst.Assertions
+
+	blk := f.WaitForBlock(2)
+	bd, err := blk.BTPDigest()
+	assert.NoError(err)
+	assert.EqualValues(1, len(bd.NetworkTypeDigests()))
+
+	wp := test.NewWalletProvider()
+	wp2 := test.NewWalletProvider()
+	blk = f.SendTXToAllAndWaitForBlock(
+		f.NewTx().CallFrom(f.CommonAddress(), "setBTPPublicKey", map[string]string{
+			"name":   dsa,
+			"pubKey": fmt.Sprintf("0x%x", wp.WalletFor(dsa).PublicKey()),
+		}).CallFrom(f.Nodes[1].CommonAddress(), "setBTPPublicKey", map[string]string{
+			"name":   dsa,
+			"pubKey": fmt.Sprintf("0x%x", wp2.WalletFor(dsa).PublicKey()),
+		}),
+	)
+	_, err = blk.NormalTransactions().Get(0)
+	assert.NoError(err)
+
+	blk = f.WaitForNextBlock()
+	bd, err = blk.BTPDigest()
+	assert.NoError(err)
+	assert.EqualValues(1, len(bd.NetworkTypeDigests()))
+
+	testMsg := ([]byte)("test message")
+	blk = f.SendTXToAllAndWaitForBlock(
+		f.NewTx().CallFrom(f.CommonAddress(), "sendBTPMessage", map[string]string{
+			"networkId": "0x1",
+			"message":   fmt.Sprintf("0x%x", testMsg),
+		}),
+	)
+	_, err = blk.NormalTransactions().Get(0)
+	assert.NoError(err)
+
+	f.Nodes[0].Chain.SetWalletFor(dsa, wp.WalletFor(dsa))
+	f.Nodes[1].Chain.SetWalletFor(dsa, wp2.WalletFor(dsa))
+	f.WaitForNextBlock()
+
+	// set wrong pub key
+	wrongWP := test.NewWalletProvider()
+	f.SendTXToAllAndWaitForResultBlock(
+		f.NewTx().CallFrom(f.Nodes[0].CommonAddress(), "setBTPPublicKey", map[string]string{
+			"name":   dsa,
+			"pubKey": fmt.Sprintf("0x%x", wrongWP.WalletFor(dsa).PublicKey()),
+		}),
+	)
+
+	// send message
+	blk = f.SendTXToAllAndWaitForResultBlock(
+		f.NewTx().CallFrom(f.CommonAddress(), "sendBTPMessage", map[string]string{
+			"networkId": "0x1",
+			"message":   fmt.Sprintf("0x%x", testMsg),
+		}),
+	)
+	assert.NoError(err)
+	votes, err := f.CS.GetVotesByHeight(blk.Height())
+	assert.NoError(err)
+	assert.EqualValues(3, len(votes.(*consensus.CommitVoteList).Items))
+}
+
+func TestConsensus_RevokeValidator(t_ *testing.T) {
+	ntm.InitIconModule()
+	const uid2 = "icon"
+	tst := newBTPTest(t_)
+	defer tst.Close()
+	f := tst.Fixture
+	assert := tst.Assertions
+
+	blk := f.WaitForBlock(2)
+	bd, err := blk.BTPDigest()
+	assert.NoError(err)
+	assert.EqualValues(1, len(bd.NetworkTypeDigests()))
+
+	blk = f.SendTXToAllAndWaitForBlock(
+		f.NewTx().Call("revokeValidator", map[string]string{
+			"address": f.Nodes[0].CommonAddress().String(),
+		}),
+	)
+	assert.EqualValues(4, blk.NextValidators().Len())
+
+	tx := f.NewTx().Call("openBTPNetwork", map[string]string{
+		"networkTypeName": uid2,
+		"name":            fmt.Sprintf("%s-test", uid2),
+		"owner":           f.CommonAddress().String(),
+	})
+	_ = f.SendTXToAllAndWaitForBlock(tx)
+	// prepare the case when the above tx is included in blk.Height() + 2
+	blk, err = f.BM.GetBlockByHeight(blk.Height() + 1)
+	assert.NoError(err)
+	assert.EqualValues(3, blk.NextValidators().Len())
+	bs, err := blk.BTPSection()
+	assert.NoError(err)
+	nts, err := bs.NetworkTypeSectionFor(1)
+	assert.NoError(err)
+	_ = nts.NextProofContext()
+	bysl := nts.NextProofContext().Bytes()
+	log.Infof("%s", test.DumpRLP("  ", bysl))
+
+	blk = f.WaitForNextBlock()
+	assert.EqualValues(3, blk.NextValidators().Len())
+	bs, err = blk.BTPSection()
+	assert.NoError(err)
+	nts, err = bs.NetworkTypeSectionFor(2)
+	assert.NoError(err)
+	_ = nts.NextProofContext()
+	bysl = nts.NextProofContext().Bytes()
+	log.Infof("%s", test.DumpRLP("  ", bysl))
+
+	f.SendTXToAllAndWaitForResultBlock(f.NewTx())
+
+	testMsg := ([]byte)("test message")
+	f.SendTXToAllAndWaitForResultBlock(
+		f.NewTx().CallFrom(f.CommonAddress(), "sendBTPMessage", map[string]string{
+			"networkId": "0x1",
+			"message":   fmt.Sprintf("0x%x", testMsg),
+		}),
+	)
+}
+
+func TestConsensus_OpenCloseRevokeValidatorOpen(t_ *testing.T) {
+	const uid = "eth"
+	tst := newBTPTest(t_)
+	defer tst.Close()
+	f := tst.Fixture
+	assert := tst.Assertions
+
+	blk := f.WaitForBlock(2)
+	bd, err := blk.BTPDigest()
+	assert.NoError(err)
+	assert.EqualValues(1, len(bd.NetworkTypeDigests()))
+
+	f.SendTXToAllAndWaitForResultBlock(
+		f.NewTx().Call("closeBTPNetwork", map[string]string{
+			"id": "0x1",
+		}),
+	)
+
+	blk = f.SendTXToAllAndWaitForBlock(
+		f.NewTx().Call("revokeValidator", map[string]string{
+			"address": f.Nodes[0].CommonAddress().String(),
+		}),
+	)
+	assert.EqualValues(4, blk.NextValidators().Len())
+	revokeHeight := blk.Height()
+
+	_ = f.SendTXToAllAndWaitForBlock(
+		f.NewTx().Call("openBTPNetwork", map[string]string{
+			"networkTypeName": uid,
+			"name":            fmt.Sprintf("%s-test", uid),
+			"owner":           f.CommonAddress().String(),
+		}),
+	)
+	blk, err = f.BM.GetBlockByHeight(revokeHeight + 1)
+	assert.NoError(err)
+	assert.EqualValues(3, blk.NextValidators().Len())
+
+	blk = f.WaitForNextBlock()
+	bs, err := blk.BTPSection()
+	assert.NoError(err)
+	nts, err := bs.NetworkTypeSectionFor(1)
+	assert.NoError(err)
+	bysl := nts.NextProofContext().Bytes()
+	log.Infof("NextProofContext=%s", test.DumpRLP("  ", bysl))
+
+	f.SendTXToAllAndWaitForResultBlock(f.NewTx())
+}
+
+func TestConsensus_OpenSetNilKey(t_ *testing.T) {
+	const dsa = "ecdsa/secp256k1"
+	tst := newBTPTest(t_)
+	defer tst.Close()
+	f := tst.Fixture
+	assert := tst.Assertions
+
+	blk := f.WaitForBlock(2)
+	bd, err := blk.BTPDigest()
+	assert.NoError(err)
+	assert.EqualValues(1, len(bd.NetworkTypeDigests()))
+
+	blk = f.SendTXToAllAndWaitForBlock(
+		f.NewTx().CallFrom(f.CommonAddress(), "setBTPPublicKey", map[string]string{
+			"name":   dsa,
+			"pubKey": "0x",
+		}),
+	)
+	assert.EqualValues(4, blk.NextValidators().Len())
+
+	blk = f.WaitForNextBlock()
+	assert.EqualValues(4, blk.NextValidators().Len())
+	bs, err := blk.BTPSection()
+	assert.NoError(err)
+	nts, err := bs.NetworkTypeSectionFor(1)
+	assert.NoError(err)
+	_ = nts.NextProofContext()
+	bysl := nts.NextProofContext().Bytes()
+	log.Infof("%s", test.DumpRLP("  ", bysl))
+}
+
+func TestConsensus_Restart(t *testing.T) {
+	tst := newBTPTest(t)
+	defer tst.Close()
+	f := tst.Fixture
+	assert := tst.Assertions
+
+	blk := f.WaitForBlock(2)
+	bd, err := blk.BTPDigest()
+	assert.NoError(err)
+	assert.EqualValues(1, len(bd.NetworkTypeDigests()))
+
+	testMsg := ([]byte)("test message")
+	blk = f.SendTXToAllAndWaitForResultBlock(
+		f.NewTx().CallFrom(f.CommonAddress(), "sendBTPMessage", map[string]string{
+			"networkId": "0x1",
+			"message":   fmt.Sprintf("0x%x", testMsg),
+		}),
+	)
+	bs, err := blk.BTPSection()
+	assert.EqualValues(4, blk.Height())
+	assert.NoError(err)
+	assert.EqualValues(1, len(bs.NetworkTypeSections()))
+
+	bd, err = blk.BTPDigest()
+	assert.NoError(err)
+	assert.EqualValues(1, len(bd.NetworkTypeDigests()))
+	f.Close()
+	oldF := f
+	tst.Fixture = nil
+
+	f2 := test.NewFixture(t, test.UseWallet(oldF.Chain.Wallet()), test.UseDB(oldF.Chain.Database()), test.UseGenesis(string(oldF.Chain.Genesis())))
+	defer f2.Close()
+	err = f2.CS.Start()
+	assert.NoError(err)
+}
+
+func TestConsensus_Sync(t *testing.T) {
+	assert := assert.New(t)
+	f := test.NewFixture(t, test.AddValidatorNodes(4))
+	defer func() {
+		if f != nil {
+			f.Close()
+		}
+	}()
+
+	tx := test.NewTx().Call("setRevision", map[string]string{
+		"code": fmt.Sprintf("0x%x", basic.MaxRevision),
+	}).Call("setMinimizeBlockGen", map[string]string{
+		"yn": "0x1",
+	})
+	f.SendTransactionToProposer(tx)
+
+	validators := f.Nodes[:4]
+	test.NodeInterconnect(validators)
+	for _, v := range validators {
+		err := v.CS.Start()
+		assert.NoError(err)
+	}
+
+	blk := test.NodeWaitForBlock(validators, 2)
+	assert.EqualValues(2, blk.Height())
+
+	// just increase block heights
+	for h := int64(4); h <= 10; h += 2 {
+		f.SendTransactionToAll(validators[0].NewTx())
+		_ = test.NodeWaitForBlock(validators, h)
+	}
+
+	nd := f.Nodes[4]
+	blk = nd.GetLastBlock()
+	assert.EqualValues(0, blk.Height())
+
+	for _, n := range validators {
+		nd.NM.Connect(n.NM)
+	}
+	err := nd.CS.Start()
+	assert.NoError(err)
+	blk = nd.WaitForBlock(10)
+	assert.EqualValues(10, blk.Height())
 }

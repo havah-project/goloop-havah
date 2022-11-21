@@ -16,20 +16,11 @@
 
 package foundation.icon.icx.data;
 
-import foundation.icon.icx.transport.jsonrpc.RpcArray;
-import foundation.icon.icx.transport.jsonrpc.RpcConverter;
+import foundation.icon.icx.transport.jsonrpc.*;
 import foundation.icon.icx.transport.jsonrpc.RpcConverter.RpcConverterFactory;
-import foundation.icon.icx.transport.jsonrpc.RpcItem;
-import foundation.icon.icx.transport.jsonrpc.RpcItemCreator;
-import foundation.icon.icx.transport.jsonrpc.RpcObject;
-import foundation.icon.icx.transport.jsonrpc.RpcValue;
 
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 @SuppressWarnings("unchecked")
 public final class Converters {
@@ -256,6 +247,48 @@ public final class Converters {
 
         @Override
         public RpcItem convertFrom(List<ScoreApi> object) {
+            return RpcItemCreator.create(object);
+        }
+    };
+
+    public static final RpcConverter<BTPNetworkInfo> BTP_NETWORK_INFO
+            = new RpcConverter<BTPNetworkInfo>() {
+
+        @Override
+        public BTPNetworkInfo convertTo(RpcItem rpcItem) {
+            return new BTPNetworkInfo(rpcItem.asObject());
+        }
+
+        @Override
+        public RpcItem convertFrom(BTPNetworkInfo object) {
+            return RpcItemCreator.create(object);
+        }
+    };
+
+    public static final RpcConverter<BTPNetworkTypeInfo> BTP_NETWORK_TYPE_INFO
+            = new RpcConverter<BTPNetworkTypeInfo>() {
+
+        @Override
+        public BTPNetworkTypeInfo convertTo(RpcItem rpcItem) {
+            return new BTPNetworkTypeInfo(rpcItem.asObject());
+        }
+
+        @Override
+        public RpcItem convertFrom(BTPNetworkTypeInfo object) {
+            return RpcItemCreator.create(object);
+        }
+    };
+
+    public static final RpcConverter<BTPSourceInfo> BTP_SOURCE_INFO
+            = new RpcConverter<BTPSourceInfo>() {
+
+        @Override
+        public BTPSourceInfo convertTo(RpcItem rpcItem) {
+            return new BTPSourceInfo(rpcItem.asObject());
+        }
+
+        @Override
+        public RpcItem convertFrom(BTPSourceInfo object) {
             return RpcItemCreator.create(object);
         }
     };

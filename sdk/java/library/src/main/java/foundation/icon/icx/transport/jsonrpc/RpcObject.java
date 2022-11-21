@@ -16,11 +16,7 @@
 
 package foundation.icon.icx.transport.jsonrpc;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * A read-only data class of RpcObject
@@ -50,6 +46,14 @@ public class RpcObject implements RpcItem {
     @Override
     public boolean isEmpty() {
         return items == null || items.isEmpty();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof  RpcObject)) return false;
+        RpcObject obj = (RpcObject) o;
+        return items.equals(obj.items);
     }
 
     /**

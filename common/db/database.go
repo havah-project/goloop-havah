@@ -3,7 +3,7 @@ package db
 import (
 	"sort"
 
-	"github.com/pkg/errors"
+	"github.com/icon-project/goloop/common/errors"
 )
 
 type Database interface {
@@ -14,6 +14,7 @@ type Database interface {
 type LayerDB interface {
 	Database
 	Flush(write bool) error
+	Unwrap() Database
 }
 
 type BackendType string
@@ -60,7 +61,7 @@ func openDatabase(backend BackendType, name string, dir string) (Database, error
 
 func GetSupportedTypes() []string {
 	types := make([]string, 0, len(backends))
-	for be, _ := range backends {
+	for be := range backends {
 		types = append(types, string(be))
 	}
 	return types

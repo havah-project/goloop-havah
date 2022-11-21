@@ -20,18 +20,20 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/icon-project/goloop/chain/gs"
 	"github.com/icon-project/goloop/common/db"
 	"github.com/icon-project/goloop/common/log"
+	"github.com/icon-project/goloop/common/wallet"
 	"github.com/icon-project/goloop/consensus"
 	"github.com/icon-project/goloop/module"
 )
 
 type Chain struct {
-	t         *testing.T
+	module.Chain
 	database  db.Database
 	wallet    module.Wallet
 	log       log.Logger
@@ -43,6 +45,9 @@ type Chain struct {
 	gs        module.GenesisStorage
 	cvd       module.CommitVoteSetDecoder
 	gsBytes   []byte
+
+	mu    sync.Mutex
+	bwMap map[string]module.BaseWallet
 }
 
 func (c *Chain) Database() db.Database {
@@ -58,7 +63,8 @@ func (c *Chain) NID() int {
 }
 
 func (c *Chain) CID() int {
-	return 1
+	cid, _ := c.gs.CID()
+	return cid
 }
 
 func (c *Chain) NetID() int {
@@ -215,6 +221,43 @@ func (c *Chain) SetServiceManager(sm module.ServiceManager) {
 	c.sm = sm
 }
 
+func (c *Chain) WalletFor(dsa string) module.BaseWallet {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if bw, ok := c.bwMap[dsa]; ok {
+		return bw
+	}
+	switch dsa {
+	case "ecdsa/secp256k1":
+		return c.wallet
+	}
+	return nil
+}
+
+func (c *Chain) SetWalletFor(keyType string, bw module.BaseWallet) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	c.bwMap[keyType] = bw
+}
+
+type walletProvider struct {
+	wallet module.Wallet
+}
+
+func (wp *walletProvider) WalletFor(dsa string) module.BaseWallet {
+	switch dsa {
+	case "ecdsa/secp256k1":
+		return wp.wallet
+	}
+	return nil
+}
+
+func NewWalletProvider() module.WalletProvider {
+	return &walletProvider{wallet.New()}
+}
+
 func (c *Chain) DoDBTask(f func(database db.Database)) {
 	panic("implement me")
 }
@@ -244,5 +287,6 @@ func NewChain(
 		gs:        gs.NewFromTx(gsBytes),
 		cvd:       cvd,
 		gsBytes:   gsBytes,
+		bwMap:     make(map[string]module.BaseWallet),
 	}, nil
 }

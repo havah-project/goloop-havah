@@ -8,23 +8,9 @@ package org.aion.avm.core;
 import a.ByteArray;
 import foundation.icon.ee.io.RLPDataReader;
 import foundation.icon.ee.io.RLPDataWriter;
-import foundation.icon.ee.types.Address;
-import foundation.icon.ee.types.Bytes;
-import foundation.icon.ee.types.ManualRevertException;
-import foundation.icon.ee.types.Status;
-import foundation.icon.ee.types.Transaction;
-import foundation.icon.ee.util.Crypto;
-import foundation.icon.ee.util.LogMarker;
-import foundation.icon.ee.util.Shadower;
-import foundation.icon.ee.util.Unshadower;
-import foundation.icon.ee.util.ValueCodec;
-import i.GenericPredefinedException;
-import i.IBlockchainRuntime;
-import i.IInstrumentation;
-import i.IObject;
-import i.IObjectArray;
-import i.IRuntimeSetup;
-import i.InstrumentationHelpers;
+import foundation.icon.ee.types.*;
+import foundation.icon.ee.util.*;
+import i.*;
 import org.aion.avm.StorageFees;
 import org.aion.avm.core.persistence.LoadedDApp;
 import org.aion.parallel.TransactionTask;
@@ -344,6 +330,20 @@ public class BlockchainRuntimeImpl implements IBlockchainRuntime {
         Objects.requireNonNull(sig, "Signature can't be NULL");
         return new ByteArray(Crypto.recoverKey(alg.getUnderlying(),
                 msg.getUnderlying(), sig.getUnderlying(), compressed));
+    }
+
+    @Override
+    public ByteArray avm_aggregate(s.java.lang.String type, ByteArray prevAgg,
+            ByteArray values) {
+        Objects.requireNonNull(type, "Type can't be NULL");
+        Objects.requireNonNull(values, "Values can't be NULL");
+        byte[] pa = null;
+        if (prevAgg!=null) {
+            pa = prevAgg.getUnderlying();
+        }
+        return new ByteArray(Crypto.aggregate(
+                type.getUnderlying(), pa, values.getUnderlying()
+        ));
     }
 
     @Override

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/icon-project/goloop/btp"
 	"github.com/icon-project/goloop/chain/base"
 	"github.com/icon-project/goloop/chain/gs"
 	"github.com/icon-project/goloop/common/codec"
@@ -14,6 +15,7 @@ import (
 	"github.com/icon-project/goloop/common/log"
 	"github.com/icon-project/goloop/common/merkle"
 	"github.com/icon-project/goloop/service"
+	"github.com/icon-project/goloop/service/state"
 	"github.com/icon-project/goloop/service/transaction"
 
 	"github.com/icon-project/goloop/common"
@@ -74,6 +76,8 @@ type ServiceManager interface {
 	SendTransactionAndWait(result []byte, height int64, tx interface{}) ([]byte, <-chan interface{}, error)
 	WaitTransactionResult(id []byte) (<-chan interface{}, error)
 	ExportResult(result []byte, vh []byte, dst db.Database) error
+	BTPSectionFromResult(result []byte) (module.BTPSection, error)
+	NextProofContextMapFromResult(result []byte) (module.BTPProofContextMap, error)
 }
 
 type Chain interface {
@@ -94,6 +98,7 @@ type chainContext struct {
 	log     log.Logger
 	running bool
 	trtr    RefTracer
+	srcUID  []byte
 }
 
 type finalizationCB = func(module.Block) bool
@@ -116,6 +121,11 @@ type manager struct {
 	finalized       *bnode
 	finalizationCBs []finalizationCB
 	timestamper     module.Timestamper
+
+	// pcm for last finalized block verification
+	pcmForLastBlock module.BTPProofContextMap
+	// next pcm in the last finalized block's result
+	nextPCM module.BTPProofContextMap
 
 	handlers       handlerList
 	activeHandlers handlerList
@@ -299,16 +309,9 @@ func (m *manager) _import(
 	if bn == nil {
 		return nil, errors.Errorf("InvalidPreviousID(%x)", block.PrevID())
 	}
-	var err error
-	validators, err := bn.block.(base.BlockVersionSpec).GetVoters(m.handlerContext)
+	csi, err := m.verifyNewBlock(block, bn.block)
 	if err != nil {
-		return nil, errors.InvalidStateError.Wrapf(err, "fail to get validators")
-	}
-	var csi module.ConsensusInfo
-	if vt, err := m.verifyBlock(block, bn.block, validators); err != nil {
 		return nil, err
-	} else {
-		csi = common.NewConsensusInfo(bn.block.Proposer(), validators, vt)
 	}
 	it := &importTask{
 		block: block,
@@ -376,8 +379,7 @@ func (it *importTask) _onValidate(err error) {
 		var bn *bnode
 		var ok bool
 		if bn, ok = it.manager.nmap[string(it.block.ID())]; !ok {
-			vl := it.in.mtransition().NextValidators()
-			validatedBlock := it.block.NewBlock(vl)
+			validatedBlock := it.block.NewBlock(it.in.mtransition())
 			bn = &bnode{
 				block:  validatedBlock,
 				in:     it.in.newTransition(nil),
@@ -448,15 +450,9 @@ func (m *manager) _propose(
 	if bn == nil {
 		return nil, errors.Errorf("NoParentBlock(id=<%x>)", parentID)
 	}
-	validators, err := bn.block.(base.BlockVersionSpec).GetVoters(m.handlerContext)
+	csi, _, err := m.verifyProofForLastBlock(bn.block, votes)
 	if err != nil {
-		return nil, errors.InvalidStateError.Wrapf(err, "fail to get validators")
-	}
-	var csi module.ConsensusInfo
-	if voted, err := votes.VerifyBlock(bn.block, validators); err != nil {
 		return nil, err
-	} else {
-		csi = common.NewConsensusInfo(bn.block.Proposer(), validators, voted)
 	}
 	pt := &proposeTask{
 		task: task{
@@ -552,6 +548,7 @@ func (pt *proposeTask) _onExecute(err error) {
 		mtr.NormalTransactions(),
 		pmtr.NextValidators(),
 		pt.votes,
+		pmtr.BTPSection(),
 	)
 	var bn *bnode
 	var ok bool
@@ -572,7 +569,6 @@ func (pt *proposeTask) _onExecute(err error) {
 	pt.stop()
 	pt.state = validatedOut
 	pt.cb(pt.manager.newCandidate(bn), nil)
-	return
 }
 
 // NewManager creates BlockManager.
@@ -596,6 +592,7 @@ func NewManager(
 			sm:      chain.ServiceManager(),
 			log:     logger,
 			running: true,
+			srcUID:  module.GetSourceNetworkUID(chain),
 		},
 		nmap:        make(map[string]*bnode),
 		cache:       newCache(ConfigCacheCap),
@@ -621,6 +618,12 @@ func NewManager(
 	err = chainPropBucket.Get(db.Raw(keyLastBlockHeight), &height)
 	if errors.NotFoundError.Equals(err) || (err == nil && height == 0) {
 		if err := m.finalizeGenesis(); err != nil {
+			return nil, err
+		}
+		m.activeHandlers = m.handlers.upTo(m.sm.GetNextBlockVersion(
+			m.finalized.block.Result(),
+		))
+		if err := m.initializePCM(); err != nil {
 			return nil, err
 		}
 		return m, nil
@@ -691,23 +694,63 @@ func NewManager(
 		m.bntr.TraceNew(bn)
 	}
 	m.nmap[string(lastFinalized.ID())] = bn
+	if err := m.initializePCM(); err != nil {
+		return nil, err
+	}
 	return m, nil
+}
+
+func (m *manager) initializePCM() error {
+	lastBlk := m.finalized.block
+	nextPCM, err := lastBlk.NextProofContextMap()
+	if err != nil {
+		return err
+	}
+	m.nextPCM = nextPCM
+	if lastBlk.Height() > 0 {
+		blk, err := m.getBlockByHeight(lastBlk.Height() - 1)
+		if err != nil {
+			return err
+		}
+		pcm, err := blk.NextProofContextMap()
+		if err != nil {
+			return err
+		}
+		m.pcmForLastBlock = pcm
+	} else {
+		m.pcmForLastBlock = btp.ZeroProofContextMap
+	}
+	return nil
 }
 
 func (m *manager) Term() {
 	m.syncer.begin()
 	defer m.syncer.end()
 
+	if !m.running {
+		return
+	}
+
 	m.log.Debugf("Term block manager\n")
 
 	m.removeNode(m.finalized)
 	m.finalized = nil
 	m.running = false
+	for i := 0; i < len(m.finalizationCBs); i++ {
+		cb := m.finalizationCBs[i]
+		m.syncer.callLater(func() {
+			cb(nil)
+		})
+	}
 }
 
 func (m *manager) GetBlock(id []byte) (module.Block, error) {
 	m.syncer.begin()
 	defer m.syncer.end()
+
+	if !m.running {
+		return nil, errors.New("not running")
+	}
 
 	return m.getBlock(id)
 }
@@ -743,6 +786,10 @@ func (m *manager) Import(
 	m.syncer.begin()
 	defer m.syncer.end()
 
+	if !m.running {
+		return nil, errors.New("not running")
+	}
+
 	m.log.Debugf("Import(%x)\n", r)
 
 	v, r, err := PeekVersion(r)
@@ -771,6 +818,10 @@ func (m *manager) ImportBlock(
 ) (module.Canceler, error) {
 	m.syncer.begin()
 	defer m.syncer.end()
+
+	if !m.running {
+		return nil, errors.New("not running")
+	}
 
 	m.log.Debugf("ImportBlock(%x)\n", block.ID())
 
@@ -805,120 +856,9 @@ func (m *manager) finalizeGenesis() error {
 			m.chain.CommitVoteSetDecoder()(nil))
 		return err
 	case module.GenesisPruned:
-		return m.finalizePrunedBlock()
+		return errors.InvalidStateError.Errorf("start with PrunedGenesis without reset")
 	}
 	return errors.InvalidStateError.Errorf("InvalidGenesisType(type=%d)", gt)
-}
-
-func (m *manager) _importBlockByID(src db.Database, id []byte) (module.Block, error) {
-	ctx := merkle.NewCopyContext(src, m.db())
-	blk := newBlockWithBuilder(ctx.Builder(), m.chain.CommitVoteSetDecoder(), id)
-	if err := ctx.Run(); err != nil {
-		return nil, err
-	}
-
-	if err := m.sm.ImportResult(blk.Result(), blk.NextValidatorsHash(), ctx.SourceDB()); err != nil {
-		return nil, transaction.InvalidGenesisError.Wrap(err, "ImportResultFailure")
-	}
-
-	hb, err := m.bucketFor(db.BlockHeaderHashByHeight)
-	if err != nil {
-		return nil, errors.CriticalUnknownError.Wrap(err, "UnknownBucketError")
-	}
-	if err := hb.Set(blk.Height(), db.Raw(blk.ID())); err != nil {
-		return nil, errors.CriticalUnknownError.Wrap(err, "FailOnBlockIndex")
-	}
-
-	if err = WriteTransactionLocators(
-		m.db(),
-		blk.Height(),
-		blk.PatchTransactions(),
-		blk.NormalTransactions(),
-	); err != nil {
-		return nil, err
-	}
-	return blk, nil
-}
-
-func (m *manager) finalizePrunedBlock() error {
-	s := m.chain.GenesisStorage()
-	g, err := gs.NewPrunedGenesis(s.Genesis())
-	if err != nil {
-		return transaction.InvalidGenesisError.Wrap(err, "InvalidGenesis")
-	}
-	d := gs.NewDatabaseWithStorage(s)
-
-	blk, err := m._importBlockByID(d, g.Block)
-	if err != nil {
-		return err
-	}
-
-	pblk, err := m._importBlockByID(d, blk.PrevID())
-	if err != nil {
-		return err
-	}
-	if ppid := pblk.PrevID(); len(ppid) > 0 {
-		_, err := m._importBlockByID(d, ppid)
-		if err != nil {
-			return transaction.InvalidGenesisError.Wrap(err, "NoVoterInformation")
-		}
-	}
-
-	m.activeHandlers = m.handlers.upTo(blk.Version())
-	csi, err := m.newConsensusInfo(blk)
-	if err != nil {
-		return transaction.InvalidGenesisError.Wrap(err, "FailOnGetConsensusInfo")
-	}
-
-	cid, err := m.sm.GetChainID(blk.Result())
-	if err != nil {
-		return transaction.InvalidGenesisError.Wrap(err, "FailOnGetChainID")
-	}
-	if cid != int64(g.CID.Value) {
-		return transaction.InvalidGenesisError.Errorf("InvalidChainID(cid=%d,state_cid=%d)",
-			g.CID.Value, cid)
-	}
-
-	nid, err := m.sm.GetNetworkID(blk.Result())
-	if err != nil {
-		return transaction.InvalidGenesisError.Wrap(err, "FailOnGetChainID")
-	}
-	if nid != int64(g.NID.Value) {
-		return transaction.InvalidGenesisError.Errorf("InvalidNetworkID(nid=%d,state_nid=%d)",
-			g.NID.Value, nid)
-	}
-
-	if bk, err := m.bucketFor(db.ChainProperty); err != nil {
-		return errors.InvalidStateError.Wrap(err, "BucketForChainProperty")
-	} else {
-		if err := bk.Set(db.Raw(keyLastBlockHeight), blk.Height()); err != nil {
-			return errors.CriticalUnknownError.Wrap(err, "FailOnSetLast")
-		}
-	}
-
-	mtr, _ := m.sm.CreateInitialTransition(blk.Result(), blk.NextValidators())
-	if mtr == nil {
-		return err
-	}
-	tr := newInitialTransition(mtr, m.chainContext)
-	bn := &bnode{
-		block: blk,
-		in:    tr,
-	}
-	if err := m.sm.Finalize(mtr, module.FinalizeResult); err != nil {
-		return err
-	}
-	bn.preexe, err = tr.transit(blk.NormalTransactions(), blk, csi, nil, true)
-	if err != nil {
-		return err
-	}
-	m.finalized = bn
-	bn.nRef++
-	if configTraceBnode {
-		m.bntr.TraceNew(bn)
-	}
-	m.nmap[string(blk.ID())] = bn
-	return nil
 }
 
 func (m *manager) finalizeGenesisBlock(
@@ -982,12 +922,13 @@ func (m *manager) finalizeGenesisBlock(
 		gtr.mtransition().NormalTransactions(),
 		gtr.mtransition().NextValidators(),
 		votes,
+		mtr.BTPSection(),
 	)
 	if configTraceBnode {
 		m.bntr.TraceNew(bn)
 	}
 	m.nmap[string(bn.block.ID())] = bn
-	err = m.finalize(bn)
+	err = m.finalize(bn, false)
 	if err != nil {
 		return nil, err
 	}
@@ -1006,6 +947,10 @@ func (m *manager) Propose(
 	m.syncer.begin()
 	defer m.syncer.end()
 
+	if !m.running {
+		return nil, errors.New("not running")
+	}
+
 	m.log.Debugf("Propose(<%x>, %v)\n", parentID, votes)
 
 	pt, err := m._propose(parentID, votes, cb)
@@ -1013,10 +958,6 @@ func (m *manager) Propose(
 		return nil, err
 	}
 	return pt, nil
-}
-
-func (m *manager) Commit(block module.BlockCandidate) error {
-	return nil
 }
 
 func (m *manager) bucketFor(id db.BucketID) (*db.CodedBucket, error) {
@@ -1027,14 +968,18 @@ func (m *manager) Finalize(block module.BlockCandidate) error {
 	m.syncer.begin()
 	defer m.syncer.end()
 
+	if !m.running {
+		return errors.New("not running")
+	}
+
 	bn := m.nmap[string(block.ID())]
 	if bn == nil || bn.parent != m.finalized {
 		return errors.Errorf("InvalidStatusForBlock(id=<%x>", block.ID())
 	}
-	return m.finalize(bn)
+	return m.finalize(bn, true)
 }
 
-func (m *manager) finalize(bn *bnode) error {
+func (m *manager) finalize(bn *bnode, updatePCM bool) error {
 	// TODO notify import/propose error due to finalization
 	// TODO update nmap
 	block := bn.block
@@ -1084,6 +1029,17 @@ func (m *manager) finalize(bn *bnode) error {
 	if err = chainProp.Set(db.Raw(keyLastBlockHeight), block.Height()); err != nil {
 		return err
 	}
+
+	if updatePCM {
+		nextPCM, err := m.nextPCM.Update(m.finalized.block)
+		if err != nil {
+			return err
+		}
+		m.pcmForLastBlock = m.nextPCM
+		m.nextPCM = nextPCM
+	}
+
+	m.cache.Put(m.finalized.block)
 
 	m.log.Debugf("Finalize(%x)\n", block.ID())
 	for i := 0; i < len(m.finalizationCBs); {
@@ -1141,19 +1097,6 @@ func WriteTransactionLocators(
 	return nil
 }
 
-func (m *manager) commitVoteSetFromHash(hash []byte) module.CommitVoteSet {
-	hb, err := m.bucketFor(db.BytesByHash)
-	if err != nil {
-		return nil
-	}
-	bs, err := hb.GetBytes(db.Raw(hash))
-	if err != nil {
-		return nil
-	}
-	dec := m.chain.CommitVoteSetDecoder()
-	return dec(bs)
-}
-
 func newProposer(bs []byte) (module.Address, error) {
 	if bs != nil {
 		addr, err := common.NewAddress(bs)
@@ -1170,6 +1113,10 @@ func newProposer(bs []byte) (module.Address, error) {
 func (m *manager) NewBlockDataFromReader(r io.Reader) (module.BlockData, error) {
 	m.syncer.begin()
 	defer m.syncer.end()
+
+	if !m.running {
+		return nil, errors.New("not running")
+	}
 
 	v, r, err := PeekVersion(r)
 	if err != nil {
@@ -1233,6 +1180,10 @@ func (m *manager) GetTransactionInfo(id []byte) (module.TransactionInfo, error) 
 	m.syncer.begin()
 	defer m.syncer.end()
 
+	if !m.running {
+		return nil, errors.New("not running")
+	}
+
 	return m.getTransactionInfo(id)
 }
 
@@ -1285,6 +1236,10 @@ func (m *manager) SendTransactionAndWait(result []byte, height int64, txi interf
 	m.syncer.begin()
 	defer m.syncer.end()
 
+	if !m.running {
+		return nil, nil, errors.New("not running")
+	}
+
 	id, rc, err := m.sm.SendTransactionAndWait(result, height, txi)
 	if err == nil {
 		return id, rc, nil
@@ -1301,6 +1256,10 @@ func (m *manager) SendTransactionAndWait(result []byte, height int64, txi interf
 func (m *manager) WaitTransactionResult(id []byte) (<-chan interface{}, error) {
 	m.syncer.begin()
 	defer m.syncer.end()
+
+	if !m.running {
+		return nil, errors.New("not running")
+	}
 
 	ch, err := m.sm.WaitTransactionResult(id)
 	if err == nil {
@@ -1332,6 +1291,10 @@ func (m *manager) waitTransactionResult(id []byte) (<-chan interface{}, error) {
 	fc := make(chan interface{}, 1)
 	if rBlockHeight > m.finalized.block.Height() {
 		m.finalizationCBs = append(m.finalizationCBs, func(blk module.Block) bool {
+			if blk == nil {
+				close(fc)
+				return true
+			}
 			if blk.Height() == rBlockHeight {
 				if info, err := m.getTransactionInfo(id); err != nil {
 					fc <- err
@@ -1358,6 +1321,10 @@ func (m *manager) waitTransactionResult(id []byte) (<-chan interface{}, error) {
 func (m *manager) GetBlockByHeight(height int64) (module.Block, error) {
 	m.syncer.begin()
 	defer m.syncer.end()
+
+	if !m.running {
+		return nil, errors.New("not running")
+	}
 
 	return m.getBlockByHeight(height)
 }
@@ -1404,6 +1371,9 @@ func (m *manager) doGetBlockByHeight(
 	}
 	br := bytes.NewReader(headerBytes)
 	v, r, err := PeekVersion(br)
+	if err != nil {
+		return nil, err
+	}
 	h, ok := hl.forVersion(v)
 	if !ok {
 		return nil, errors.UnsupportedError.Errorf("unsupported block version %d", v)
@@ -1420,12 +1390,20 @@ func (m *manager) GetLastBlock() (module.Block, error) {
 	m.syncer.begin()
 	defer m.syncer.end()
 
+	if !m.running {
+		return nil, errors.New("not running")
+	}
+
 	return m.finalized.block, nil
 }
 
 func (m *manager) WaitForBlock(height int64) (<-chan module.Block, error) {
 	m.syncer.begin()
 	defer m.syncer.end()
+
+	if !m.running {
+		return nil, errors.New("not running")
+	}
 
 	bch := make(chan module.Block, 1)
 
@@ -1438,8 +1416,13 @@ func (m *manager) WaitForBlock(height int64) (<-chan module.Block, error) {
 	}
 
 	m.finalizationCBs = append(m.finalizationCBs, func(blk module.Block) bool {
+		if blk == nil {
+			close(bch)
+			return true
+		}
 		if blk.Height() == height {
 			bch <- blk
+			close(bch)
 			return true
 		}
 		return false
@@ -1447,15 +1430,19 @@ func (m *manager) WaitForBlock(height int64) (<-chan module.Block, error) {
 	return bch, nil
 }
 
-func (m *manager) WaitForTransaction(parentID []byte, cb func()) bool {
+func (m *manager) WaitForTransaction(parentID []byte, cb func()) (bool, error) {
 	m.syncer.begin()
 	defer m.syncer.end()
 
+	if !m.running {
+		return false, errors.New("not running")
+	}
+
 	bn := m.nmap[string(parentID)]
 	if bn == nil {
-		return false
+		return false, nil
 	}
-	return m.sm.WaitForTransaction(bn.in.mtransition(), bn.block, cb)
+	return m.sm.WaitForTransaction(bn.in.mtransition(), bn.block, cb), nil
 }
 
 func (m *manager) DupBlockCandidate(bc *blockCandidate) *blockCandidate {
@@ -1489,10 +1476,17 @@ func hasBits(v int, bits int) bool {
 }
 
 func (m *manager) ExportGenesis(blk module.BlockData, votes module.CommitVoteSet, gsw module.GenesisStorageWriter) error {
+	m.syncer.begin()
+	defer m.syncer.end()
+
+	if !m.running {
+		return errors.New("not running")
+	}
+
 	height := blk.Height()
 
 	if votes == nil {
-		if nblk, err := m.GetBlockByHeight(height + 1); err != nil {
+		if nblk, err := m.getBlockByHeight(height + 1); err != nil {
 			return errors.Wrapf(err, "fail to get next block(height=%d) for votes", height+1)
 		} else {
 			votes = nblk.Votes()
@@ -1532,10 +1526,17 @@ func (m *manager) ExportGenesis(blk module.BlockData, votes module.CommitVoteSet
 }
 
 func (m *manager) ExportBlocks(from, to int64, dst db.Database, on func(h int64) error) error {
-	return m._exportBlocks(from, to, dst, exportAll, on)
+	return m.ExportBlocksWithFlag(from, to, dst, exportAll, on)
 }
 
-func (m *manager) _exportBlocks(from, to int64, dst db.Database, flag int, on func(h int64) error) error {
+func (m *manager) ExportBlocksWithFlag(from, to int64, dst db.Database, flag int, on func(h int64) error) error {
+	al := common.Lock(&m.syncer)
+	defer al.Unlock()
+
+	if !m.running {
+		return errors.New("not running")
+	}
+
 	ctx := merkle.NewCopyContext(m.db(), dst)
 	if hasBits(flag, exportValidator) && from > 0 {
 		// export the block for validators
@@ -1557,19 +1558,29 @@ func (m *manager) _exportBlocks(from, to int64, dst db.Database, flag int, on fu
 			}
 		}
 	}
+	al.Unlock()
+
 	for h := from; h <= to; h++ {
 		if on != nil {
 			if err := on(h); err != nil {
 				return err
 			}
 		}
-		blk, err := m.GetBlockByHeight(h)
+		m.syncer.begin()
+		if !m.running {
+			return errors.New("not running")
+		}
+
+		blk, err := m.getBlockByHeight(h)
 		if err != nil {
+			m.syncer.end()
 			return errors.Wrapf(err, "fail to get a block height=%d", h)
 		}
 		if err := m._export(blk, ctx, flag); err != nil {
+			m.syncer.end()
 			return errors.Wrapf(err, "fail to export block height=%d", blk.Height())
 		}
+		m.syncer.end()
 	}
 	return nil
 }
@@ -1637,6 +1648,13 @@ func (m *manager) _export(blk module.Block, ctx *merkle.CopyContext, flag int) e
 }
 
 func (m *manager) GetGenesisData() (module.Block, module.CommitVoteSet, error) {
+	m.syncer.begin()
+	defer m.syncer.end()
+
+	if !m.running {
+		return nil, nil, errors.New("not running")
+	}
+
 	storage := m.chain.GenesisStorage()
 	if genesisType, err := storage.Type(); err != nil {
 		return nil, nil, err
@@ -1654,7 +1672,7 @@ func (m *manager) GetGenesisData() (module.Block, module.CommitVoteSet, error) {
 		return nil, nil, transaction.InvalidGenesisError.Wrapf(err, "fail to get votes for hash=%x", genesis.Votes)
 	}
 	voteSetDecoder := m.chain.CommitVoteSetDecoder()
-	block, err := m.GetBlock(genesis.Block)
+	block, err := m.getBlock(genesis.Block)
 	if err != nil {
 		return nil, nil, transaction.InvalidGenesisError.Wrapf(err, "fail to get block for id=%x", genesis.Block)
 	}
@@ -1664,6 +1682,10 @@ func (m *manager) GetGenesisData() (module.Block, module.CommitVoteSet, error) {
 func (m *manager) NewConsensusInfo(blk module.Block) (module.ConsensusInfo, error) {
 	m.syncer.begin()
 	defer m.syncer.end()
+
+	if !m.running {
+		return nil, errors.New("not running")
+	}
 
 	return m.newConsensusInfo(blk)
 }
@@ -1704,7 +1726,7 @@ func GetBlockVersion(
 	height int64,
 ) (int, error) {
 	if c == nil {
-		c = codec.RLP
+		c = codec.BC
 	}
 	headerHashByHeight, err := db.NewCodedBucket(
 		dbase, db.BlockHeaderHashByHeight, c,
@@ -1737,13 +1759,9 @@ func GetBlockVersion(
 	return version, nil
 }
 
-func GetCommitVoteListBytesByHeight(
-	dbase db.Database,
-	c codec.Codec,
-	height int64,
-) ([]byte, error) {
+func getHeaderField(dbase db.Database, c codec.Codec, height int64, index int) ([]byte, error) {
 	if c == nil {
-		c = codec.RLP
+		c = codec.BC
 	}
 	headerHashByHeight, err := db.NewCodedBucket(
 		dbase, db.BlockHeaderHashByHeight, c,
@@ -1751,7 +1769,7 @@ func GetCommitVoteListBytesByHeight(
 	if err != nil {
 		return nil, err
 	}
-	hash, err := headerHashByHeight.GetBytes(height + 1)
+	hash, err := headerHashByHeight.GetBytes(height)
 	if err != nil {
 		return nil, err
 	}
@@ -1770,19 +1788,82 @@ func GetCommitVoteListBytesByHeight(
 	if err != nil {
 		return nil, err
 	}
-	if err = d2.Skip(5); err != nil {
+	if index > 0 {
+		if err = d2.Skip(index); err != nil {
+			return nil, err
+		}
+	}
+	var str []byte
+	if err = d2.Decode(&str); err != nil {
 		return nil, err
 	}
-	var votesHash []byte
-	if err = d2.Decode(&votesHash); err != nil {
+	return str, nil
+}
+
+func GetCommitVoteListBytesForHeight(
+	dbase db.Database,
+	c codec.Codec,
+	height int64,
+) ([]byte, error) {
+	votesHash, err := getHeaderField(dbase, c, height+1, 5)
+	if err != nil {
 		return nil, err
 	}
 	return db.DoGetWithBucketID(dbase, db.BytesByHash, votesHash)
 }
 
+func GetBlockResultByHeight(
+	dbase db.Database,
+	c codec.Codec,
+	height int64,
+) ([]byte, error) {
+	return getHeaderField(dbase, c, height, 10)
+}
+
+func GetBTPDigestFromResult(
+	dbase db.Database,
+	c codec.Codec,
+	result []byte,
+) (module.BTPDigest, error) {
+	if c == nil {
+		c = codec.BC
+	}
+	dh, err := service.BTPDigestHashFromResult(result)
+	if err != nil {
+		return nil, err
+	}
+	if dh == nil {
+		return btp.ZeroDigest, nil
+	}
+	bk, err := dbase.GetBucket(db.BytesByHash)
+	if err != nil {
+		return nil, err
+	}
+	bs, err := bk.Get(dh)
+	if err != nil {
+		return nil, err
+	}
+	return btp.NewDigestFromBytes(bs)
+}
+
+func GetNextValidatorsByHeight(
+	dbase db.Database,
+	c codec.Codec,
+	height int64,
+) (module.ValidatorList, error) {
+	if c == nil {
+		c = codec.BC
+	}
+	validatorsHash, err := getHeaderField(dbase, c, height, 6)
+	if err != nil {
+		return nil, err
+	}
+	return state.ValidatorSnapshotFromHash(dbase, validatorsHash)
+}
+
 func GetLastHeightWithCodec(dbase db.Database, c codec.Codec) (int64, error) {
 	if c == nil {
-		c = codec.RLP
+		c = codec.BC
 	}
 	bk, err := dbase.GetBucket(db.ChainProperty)
 	if err != nil {
@@ -1818,7 +1899,7 @@ func SetLastHeight(dbase db.Database, c codec.Codec, height int64) error {
 		return err
 	}
 	if c == nil {
-		c = codec.RLP
+		c = codec.BC
 	}
 	err = bk.Set([]byte(keyLastBlockHeight), c.MustMarshalToBytes(height))
 	if err != nil {

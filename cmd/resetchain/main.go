@@ -23,12 +23,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-errors/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/icon-project/goloop/block"
 	"github.com/icon-project/goloop/common/codec"
 	"github.com/icon-project/goloop/common/db"
+	"github.com/icon-project/goloop/common/errors"
 	cs "github.com/icon-project/goloop/consensus"
 	"github.com/icon-project/goloop/module"
 )
@@ -87,13 +87,28 @@ func reset(height int64) error {
 		return err
 	}
 
-	cvlBytes, err := block.GetCommitVoteListBytesByHeight(d, cod, height)
+	cvlBytes, err := block.GetCommitVoteListBytesForHeight(d, cod, height)
+	if err != nil {
+		return err
+	}
+
+	result, err := block.GetBlockResultByHeight(d, cod, height)
+	if err != nil {
+		return err
+	}
+
+	bd, err := block.GetBTPDigestFromResult(d, cod, result)
+	if err != nil {
+		return err
+	}
+
+	vl, err := block.GetNextValidatorsByHeight(d, cod, height)
 	if err != nil {
 		return err
 	}
 
 	vlmBytes, err := cs.WALRecordBytesFromCommitVoteListBytes(
-		cvlBytes, height, bid, cod,
+		cvlBytes, height, bid, result, vl, bd, d, cod,
 	)
 	if err != nil {
 		return err

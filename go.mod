@@ -4,7 +4,6 @@ require (
 	contrib.go.opencensus.io/exporter/prometheus v0.1.0
 	github.com/bshuster-repo/logrus-logstash-hook v0.4.1
 	github.com/evalphobia/logrus_fluent v0.5.4
-	github.com/go-errors/errors v1.0.1
 	github.com/gofrs/uuid v3.2.0+incompatible
 	github.com/gorilla/websocket v1.4.1
 	github.com/gosuri/uitable v0.0.0-20160404203958-36ee7e946282
@@ -12,16 +11,17 @@ require (
 	github.com/jroimartin/gocui v0.4.0
 	github.com/labstack/echo/v4 v4.9.0
 	github.com/mitchellh/mapstructure v1.1.2
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.6.0
-	github.com/spf13/cobra v0.0.5
-	github.com/spf13/pflag v1.0.3
+	github.com/spf13/cobra v1.6.1
+	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.3.2
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.0
 	github.com/vmihailenco/msgpack/v4 v4.3.11
 	go.opencensus.io v0.22.3
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
+	golang.org/x/sync v0.0.0-20190227155943-e225da77a7e6
 	golang.org/x/tools v0.0.0-20190312170243-e65039ee4138
 	gopkg.in/go-playground/validator.v9 v9.28.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
@@ -40,7 +40,7 @@ require (
 	github.com/golang/protobuf v1.3.4 // indirect
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
 	github.com/labstack/gommon v0.3.1 // indirect
 	github.com/leodido/go-urn v1.1.0 // indirect
@@ -71,7 +71,7 @@ require (
 	google.golang.org/appengine v1.6.5 // indirect
 	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/yaml.v2 v2.2.2 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-go 1.17
+go 1.18

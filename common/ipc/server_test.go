@@ -1,11 +1,13 @@
+//go:build ignore
 // +build ignore
 
 package ipc
 
 import (
-	"github.com/pkg/errors"
 	"testing"
 	"time"
+
+	"github.com/icon-project/goloop/common/errors"
 )
 
 type testConnectionHandler struct {
