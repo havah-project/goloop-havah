@@ -1414,6 +1414,7 @@ HAVAH-specific JSON-RPC APIs
   "jsonrpc": "2.0",
   "result": {
     "height": "0x3e8",
+    "id": "0x1",
     "total": "0x8ac7230489e80000",
     "remain": "0xde0b6b3a7640000",
     "claimable": "0xde0b6b3a7640000"
