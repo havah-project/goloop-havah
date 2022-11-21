@@ -584,17 +584,18 @@ func (s *State) OnTermStart(issueAmount *big.Int) error {
 	if err := s.setBigInt(hvhmodule.VarActiveUSDTPrice, usdtPrice); err != nil {
 		return err
 	}
-	rewardRemain := new(big.Int).Add(s.getBigInt(hvhmodule.VarRewardRemain), issueAmount)
-	if err := s.setBigInt(hvhmodule.VarRewardRemain, rewardRemain); err != nil {
+	oldRewardRemain := s.getBigInt(hvhmodule.VarRewardRemain)
+	rewardTotal := new(big.Int).Add(oldRewardRemain, issueAmount)
+	if err := s.setBigInt(hvhmodule.VarRewardRemain, rewardTotal); err != nil {
 		return err
 	}
-	if err := s.setBigInt(hvhmodule.VarRewardTotal, rewardRemain); err != nil {
+	if err := s.setBigInt(hvhmodule.VarRewardTotal, rewardTotal); err != nil {
 		return err
 	}
 
 	s.logger.Debugf(
-		"OnTermStart() end: allPlanet=%d activeUSDT=%d rwdRemain=%d rwdTotal=%d",
-		allPlanet, usdtPrice, rewardRemain, rewardRemain,
+		"OnTermStart() end: allPlanet=%d activeUSDT=%d issued=%d oldRwdRemain=%d rwdTotal=%d",
+		allPlanet, usdtPrice, issueAmount, oldRewardRemain, rewardTotal,
 	)
 	return nil
 }
