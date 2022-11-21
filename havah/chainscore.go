@@ -420,6 +420,65 @@ var chainMethods = []*chainMethod{
 			scoreapi.Integer,
 		},
 	}, 2, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "getBTPNetworkTypeID",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"name", scoreapi.String, nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.Integer,
+		},
+	}, hvhmodule.Revision3, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "getBTPPublicKey",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 2,
+		[]scoreapi.Parameter{
+			{"address", scoreapi.Address, nil, nil},
+			{"name", scoreapi.String, nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.Bytes,
+		},
+	}, hvhmodule.Revision3, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "openBTPNetwork",
+		scoreapi.FlagExternal, 3,
+		[]scoreapi.Parameter{
+			{"networkTypeName", scoreapi.String, nil, nil},
+			{"name", scoreapi.String, nil, nil},
+			{"owner", scoreapi.Address, nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.Integer,
+		},
+	}, hvhmodule.Revision3, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "closeBTPNetwork",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"id", scoreapi.Integer, nil, nil},
+		},
+		nil,
+	}, hvhmodule.Revision3, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "sendBTPMessage",
+		scoreapi.FlagExternal, 2,
+		[]scoreapi.Parameter{
+			{"networkId", scoreapi.Integer, nil, nil},
+			{"message", scoreapi.Bytes, nil, nil},
+		},
+		nil,
+	}, hvhmodule.Revision3, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "setBTPPublicKey",
+		scoreapi.FlagExternal, 2,
+		[]scoreapi.Parameter{
+			{"name", scoreapi.String, nil, nil},
+			{"pubKey", scoreapi.Bytes, nil, nil},
+		},
+		nil,
+	}, hvhmodule.Revision3, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {

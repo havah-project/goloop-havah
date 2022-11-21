@@ -22,13 +22,14 @@ const (
 	Revision0 = iota
 	Revision1
 	Revision2
+	Revision3
 	RevisionReserved
 )
 
 const (
 	DefaultRevision = Revision0
 	MaxRevision     = RevisionReserved - 1
-	LatestRevision  = Revision2
+	LatestRevision  = Revision3
 )
 
 const (
@@ -42,6 +43,8 @@ var revisionFlags = []module.Revision{
 	// Revision 1
 	module.ContractSetEvent,
 	// Revision 2
+	0,
+	// Revision 3
 	0,
 }
 
