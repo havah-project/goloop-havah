@@ -978,13 +978,117 @@ func TestExtensionStateImpl_ReportPlanetWork_BeforeStartRewardIssue(t *testing.T
 	assert.Error(t, err)
 }
 
-// StartRewardIssue
-// RegisterPlanet
-// ReportPlanetWork
-// UnregisterPlanet
-// Check if Lost exists
-// RegisterPlanet
-// Check if RewardInfo is reset
+func TestExtensionStateImpl_RegisterPlanet(t *testing.T) {
+	var err error
+	const planetCount = 10
+
+	id := int64(1)
+	termPeriod := int64(10)
+	issueReductionCycle := int64(10)
+	issueAmount := toHVH(100)
+	usdtPrice := toHVH(10) // 1 USDT == 1 HVH
+	owners := make([]module.Address, planetCount)
+
+	for i := 0; i < planetCount; i++ {
+		s := fmt.Sprintf("hx%x%x", i+1, i+1)
+		owners[i] = common.MustNewAddressFromString(s)
+	}
+
+	stateCfg := hvhstate.StateConfig{
+		TermPeriod:          &common.HexInt64{Value: termPeriod},
+		USDTPrice:           new(common.HexInt).SetValue(usdtPrice),
+		IssueAmount:         new(common.HexInt).SetValue(issueAmount),
+		IssueReductionCycle: &common.HexInt64{Value: issueReductionCycle},
+	}
+	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
+	mcc.height = 1
+	cc := NewCallContext(mcc, nil)
+
+	// StartRewardIssue: 10
+	issueStartBH := int64(10)
+	err = es.StartRewardIssue(cc, issueStartBH)
+	assert.NoError(t, err)
+
+	// Register planets
+	priceInUSDT := toUSDT(1_000)
+	priceInHVH := toHVH(10_000)
+	for i := 0; i < planetCount; i++ {
+		id = int64(i + 1)
+		isPrivate := i == 0
+		isCompany := i == 1
+		err = es.RegisterPlanet(
+			cc, id, isPrivate, isCompany, owners[i], priceInUSDT, priceInHVH)
+		assert.NoError(t, err)
+	}
+
+	// Move onto term 0
+	err = goToNextTerm(t, es, mcc, nil, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, issueStartBH, mcc.BlockHeight())
+
+	// GetRewardInfo()
+	jso, err := es.GetRewardInfo(cc)
+	assert.NoError(t, err)
+	expRewardPerActivePlanet := new(big.Int).Div(issueAmount, big.NewInt(planetCount))
+	rewardPerActivePlanet := jso["rewardPerActivePlanet"].(*big.Int)
+	assert.Zero(t, rewardPerActivePlanet.Cmp(expRewardPerActivePlanet))
+
+	// ReportPlanetWork success
+	for i := 0; i < planetCount; i++ {
+		id = int64(i + 1)
+		err = es.ReportPlanetWork(cc, id)
+		assert.NoError(t, err)
+	}
+
+	// Move onto term 1
+	totals := make([]*big.Int, planetCount)
+	remains := make([]*big.Int, planetCount)
+	claimables := make([]*big.Int, planetCount)
+	for i := 0; i < planetCount; i++ {
+		id = int64(i + 1)
+		jso, err = es.GetRewardInfoOf(cc, id)
+		assert.NoError(t, err)
+		totals[i] = jso["total"].(*big.Int)
+		remains[i] = jso["remain"].(*big.Int)
+		claimables[i] = jso["claimable"].(*big.Int)
+		assert.Zero(t, totals[i].Cmp(rewardPerActivePlanet))
+	}
+
+	goByCount(t, 1, es, mcc, nil)
+
+	for i := 0; i < planetCount; i++ {
+		id = int64(i + 1)
+		err = es.UnregisterPlanet(cc, id)
+		assert.NoError(t, err)
+
+		_, err = es.GetPlanetInfo(cc, id)
+		assert.Error(t, err)
+
+		_, err = es.GetRewardInfoOf(cc, id)
+		assert.Error(t, err)
+	}
+
+	// planetReward item is preserved under revision 2, even though the planet is removed
+	for i := 0; i < planetCount; i++ {
+		id = int64(i + 1)
+		isPrivate := i == 0
+		isCompany := i == 1
+		err = es.RegisterPlanet(
+			cc, id, isPrivate, isCompany, owners[i], priceInUSDT, priceInHVH)
+		assert.NoError(t, err)
+
+		jso, err = es.GetPlanetInfo(cc, id)
+		assert.NoError(t, err)
+		assert.Equal(t, cc.BlockHeight(), jso["height"].(int64))
+
+		jso, err = es.GetRewardInfoOf(cc, id)
+		assert.Equal(t, cc.BlockHeight(), jso["height"].(int64))
+		assert.Zero(t, jso["total"].(*big.Int).Cmp(totals[i]))
+		assert.Zero(t, jso["remain"].(*big.Int).Cmp(remains[i]))
+		assert.Zero(t, jso["claimable"].(*big.Int).Cmp(claimables[i]))
+	}
+}
+
 func TestExtensionStateImpl_UnregisterPlanetWithLost(t *testing.T) {
 	var err error
 	const planetCount = 10
@@ -1064,6 +1168,9 @@ func TestExtensionStateImpl_UnregisterPlanetWithLost(t *testing.T) {
 
 	err = goToNextTerm(t, es, mcc, nil, 0)
 	assert.NoError(t, err)
+
+	// Move onto Revision 2
+	mcc.SetRevision(hvhmodule.RevisionLostCoin)
 
 	// Unregister planets
 	for i := 0; i < planetCount; i++ {

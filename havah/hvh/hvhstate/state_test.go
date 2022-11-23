@@ -208,11 +208,12 @@ func TestState_RegisterPlanet(t *testing.T) {
 	price := new(big.Int).Mul(usdt, big.NewInt(10))
 	height := int64(200)
 	var planetCount int64
+	rev := hvhmodule.RevisionPlanetIDReuse
 
 	checkAllPlanet(t, state, 0)
 	expectedCount := int64(0)
 	for i := 0; i < 3; i++ {
-		err := state.RegisterPlanet(int64(i), isPrivate, isCompany, owner, usdt, price, height)
+		err := state.RegisterPlanet(rev, int64(i), isPrivate, isCompany, owner, usdt, price, height)
 		assert.NoError(t, err)
 
 		expectedCount++
@@ -221,7 +222,7 @@ func TestState_RegisterPlanet(t *testing.T) {
 	}
 
 	for i := 0; i < 2; i++ {
-		lostDelta, err := state.UnregisterPlanet(int64(i))
+		lostDelta, err := state.UnregisterPlanet(rev, int64(i))
 		assert.NoError(t, err)
 		assert.Zero(t, lostDelta.Sign())
 		expectedCount--
@@ -229,20 +230,21 @@ func TestState_RegisterPlanet(t *testing.T) {
 	}
 
 	planetCount = state.getVarDB(hvhmodule.VarAllPlanet).Int64()
-	lostDelta, err := state.UnregisterPlanet(int64(100))
+	lostDelta, err := state.UnregisterPlanet(rev, int64(100))
 	assert.Error(t, err)
 	assert.Nil(t, lostDelta)
 	checkAllPlanet(t, state, planetCount)
 }
 
 func TestState_UnregisterPlanet_InAbnormalCase(t *testing.T) {
+	rev := hvhmodule.RevisionPlanetIDReuse
 	state := newDummyState()
 	checkAllPlanet(t, state, int64(0))
-	lostDelta, err := state.UnregisterPlanet(int64(-1))
+	lostDelta, err := state.UnregisterPlanet(rev, int64(-1))
 	assert.Error(t, err)
 	assert.Nil(t, lostDelta)
 
-	lostDelta, err = state.UnregisterPlanet(int64(100))
+	lostDelta, err = state.UnregisterPlanet(rev, int64(100))
 	assert.Error(t, err)
 	assert.Nil(t, lostDelta)
 
@@ -560,6 +562,7 @@ func TestState_Lost(t *testing.T) {
 
 func TestState_UnregisterPlanet(t *testing.T) {
 	var err error
+	rev := hvhmodule.Revision2
 	usdt := big.NewInt(10)
 	price := big.NewInt(1)
 	expLost := new(big.Int)
@@ -586,6 +589,7 @@ func TestState_UnregisterPlanet(t *testing.T) {
 		id := int64(i + 1)
 		p := planets[i]
 		err = state.RegisterPlanet(
+			rev,
 			id, p.isPrivate, p.isCompany, p.owner, usdt, price, 5)
 		assert.NoError(t, err)
 
@@ -603,7 +607,7 @@ func TestState_UnregisterPlanet(t *testing.T) {
 
 	for i := 0; i < len(planets); i++ {
 		id := int64(i + 1)
-		lostDelta, err := state.UnregisterPlanet(id)
+		lostDelta, err := state.UnregisterPlanet(rev, id)
 		assert.NoError(t, err)
 		assert.Zero(t, lostDelta.Cmp(rewards[i]))
 

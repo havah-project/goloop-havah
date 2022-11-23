@@ -477,7 +477,8 @@ func (es *ExtensionStateImpl) onTermStart(cc hvhmodule.CallContext, termSeq int6
 	}
 
 	// Log TermStarted(int,int,int) event
-	if cc.Revision() >= hvhmodule.RevisionTermStartedEventLog {
+	rev := cc.Revision().Value()
+	if rev >= hvhmodule.RevisionTermStartedEvent {
 		planetCount, rewardPerActivePlanet := es.state.GetActivePlanetCountAndReward()
 		onTermStartedEvent(cc, termSeq, planetCount, rewardPerActivePlanet)
 	}

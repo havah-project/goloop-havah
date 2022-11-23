@@ -211,6 +211,7 @@ func (s *State) IsPlanetManager(address module.Address) (bool, error) {
 }
 
 func (s *State) RegisterPlanet(
+	rev int,
 	id int64, isPrivate, isCompany bool, owner module.Address, usdt, price *big.Int, height int64,
 ) error {
 	s.logger.Debugf(
@@ -248,7 +249,8 @@ func (s *State) RegisterPlanet(
 	return nil
 }
 
-func (s *State) UnregisterPlanet(id int64) (*big.Int, error) {
+func (s *State) UnregisterPlanet(rev int, id int64) (*big.Int, error) {
+	var err error
 	if id < 0 {
 		return nil, scoreresult.Errorf(
 			hvhmodule.StatusIllegalArgument, "Invalid id: %d", id)
@@ -268,25 +270,27 @@ func (s *State) UnregisterPlanet(id int64) (*big.Int, error) {
 			"Planet state mismatch: planetCount=%d", planetCount)
 	}
 
-	amount := hvhmodule.BigIntZero
-	if pr, err := s.GetPlanetReward(id); err != nil {
-		return nil, errors.InvalidStateError.Errorf("PlanetReward not found: id=%d", id)
-	} else {
-		amount = pr.Current()
-		if err = s.addLost(amount); err != nil {
-			return nil, err
-		}
+	if err = planetDictDB.Delete(id); err != nil {
+		return nil, err
+	}
+	if err = allPlanetVarDB.Set(planetCount - 1); err != nil {
+		return nil, err
 	}
 
-	if err := planetDictDB.Delete(id); err != nil {
-		return nil, err
-	}
-	if err := allPlanetVarDB.Set(planetCount - 1); err != nil {
-		return nil, err
-	}
-	planetRewardDictDB := s.getDictDB(hvhmodule.DictPlanetReward, 1)
-	if err := planetRewardDictDB.Delete(id); err != nil {
-		return nil, err
+	amount := hvhmodule.BigIntZero
+	if rev >= hvhmodule.RevisionPlanetIDReuse {
+		if pr, err := s.GetPlanetReward(id); err != nil {
+			return nil, errors.InvalidStateError.Errorf("PlanetReward not found: id=%d", id)
+		} else {
+			amount = pr.Current()
+			if err = s.addLost(amount); err != nil {
+				return nil, err
+			}
+		}
+		planetRewardDictDB := s.getDictDB(hvhmodule.DictPlanetReward, 1)
+		if err = planetRewardDictDB.Delete(id); err != nil {
+			return nil, err
+		}
 	}
 
 	return amount, nil
