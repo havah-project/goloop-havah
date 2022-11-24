@@ -1,19 +1,15 @@
 package foundation.icon.ee.test;
 
 import foundation.icon.ee.Agent;
-import foundation.icon.ee.types.Address;
-import foundation.icon.ee.types.Method;
-import foundation.icon.ee.types.Result;
-import foundation.icon.ee.util.MethodUnpacker;
 import foundation.icon.ee.ipc.Connection;
 import foundation.icon.ee.ipc.EEProxy;
 import foundation.icon.ee.ipc.Proxy;
 import foundation.icon.ee.ipc.TypedObj;
 import foundation.icon.ee.score.FileIO;
 import foundation.icon.ee.tooling.deploy.OptimizedJarBuilder;
-import foundation.icon.ee.types.Status;
-import foundation.icon.ee.types.StepCost;
+import foundation.icon.ee.types.*;
 import foundation.icon.ee.util.Crypto;
+import foundation.icon.ee.util.MethodUnpacker;
 import foundation.icon.ee.util.Strings;
 import org.aion.avm.core.IExternalState;
 import org.aion.avm.utilities.JarBuilder;
@@ -99,6 +95,14 @@ public class ServiceManager implements Agent {
                 .withRenamer().withLog(System.out).getOptimizedBytes();
     }
 
+    public static byte[] makeJar(String name, byte[] bc) {
+        byte[] preopt = JarBuilder.buildJarForExplicitClassNamesAndBytecode(
+                name, bc, Map.of());
+        return new OptimizedJarBuilder(true, preopt, true)
+                .withUnreachableMethodRemover()
+                .withRenamer().withLog(System.out).getOptimizedBytes();
+    }
+
     public Address newScoreAddress() {
         var addr = new Address(Arrays.copyOf(new byte[]{
                 1,
@@ -130,6 +134,11 @@ public class ServiceManager implements Agent {
     }
 
     public ContractAddress mustDeploy(byte[] jar, Object ... params) {
+        return doMustDeploy(jar, null, params);
+    }
+
+    public ContractAddress mustDeploy(String className, byte[] byteCode, Object ...params) {
+        byte[] jar = makeJar(className, byteCode);
         return doMustDeploy(jar, null, params);
     }
 

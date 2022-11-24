@@ -23,11 +23,7 @@ import i.AvmException;
 import i.IInstrumentation;
 import i.IInstrumentationFactory;
 import i.InstrumentationHelpers;
-import org.aion.avm.core.AvmConfiguration;
-import org.aion.avm.core.DAppCreator;
-import org.aion.avm.core.DAppExecutor;
-import org.aion.avm.core.IExternalState;
-import org.aion.avm.core.ReentrantDAppStack;
+import org.aion.avm.core.*;
 import org.aion.avm.core.persistence.LoadedDApp;
 import org.aion.parallel.TransactionTask;
 import org.slf4j.Logger;
@@ -69,10 +65,14 @@ public class AvmExecutor {
 
         task.startNewTransaction();
         task.attachInstrumentationForThread();
-        Result result = runCommon(task.getThisTransactionalKernel(),
-                transaction, eid, prevEID);
-        task.getReentrantDAppStack().unloadDApps(loader);
-        task.detachInstrumentationForThread();
+        Result result;
+        try {
+            result = runCommon(task.getThisTransactionalKernel(),
+                    transaction, eid, prevEID);
+        } finally {
+            task.getReentrantDAppStack().unloadDApps(loader);
+            task.detachInstrumentationForThread();
+        }
 
         logger.trace("{}", result);
         task = null;
