@@ -224,20 +224,27 @@ func (es *ExtensionStateImpl) RegisterPlanet(
 	usdt *big.Int, price *big.Int,
 ) error {
 	height := cc.BlockHeight()
-	return es.state.RegisterPlanet(id, isPrivate, isCompany, owner, usdt, price, height)
+	return es.state.RegisterPlanet(
+		cc.Revision().Value(),
+		id, isPrivate, isCompany, owner, usdt, price, height)
 }
 
 func (es *ExtensionStateImpl) UnregisterPlanet(cc hvhmodule.CallContext, id int64) error {
-	es.Logger().Debugf("UnregisterPlanet() start: height=%d id=%d", id, cc.BlockHeight())
+	height := cc.BlockHeight()
+	rev := cc.Revision().Value()
+	es.Logger().Debugf("UnregisterPlanet() start: id=%d height=%d rev=%d", id, height, rev)
 
-	lostDelta, err := es.state.UnregisterPlanet(id)
-	if err == nil && lostDelta != nil && lostDelta.Sign() > 0 {
-		lost, _ := es.state.GetLost()
-		reason := fmt.Sprintf("PlanetUnregistered(id=%d)", id)
-		onLostDepositedEvent(cc, lostDelta, lost, reason)
-		es.Logger().Debugf("LostDeposited(lostDelta=%d,lost=%d,reason=%s)", lostDelta, lost, reason)
+	lostDelta, err := es.state.UnregisterPlanet(rev, id)
+	if rev >= hvhmodule.RevisionLostCoin {
+		if err == nil && lostDelta != nil && lostDelta.Sign() > 0 {
+			lostTotal, _ := es.state.GetLost()
+			reason := fmt.Sprintf("PlanetUnregistered(id=%d)", id)
+			onLostDepositedEvent(cc, lostDelta, lostTotal, reason)
+			es.Logger().Debugf("LostDeposited(lostDelta=%d,lostTotal=%d,reason=%s)", lostDelta, lostTotal, reason)
+		}
 	}
-	es.Logger().Debugf("UnregisterPlanet() end: err=%#v", err)
+
+	es.Logger().Debugf("UnregisterPlanet() end: id=%d height=%d rev=%d err=%#v", id, height, rev, err)
 	return err
 }
 
@@ -300,7 +307,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 			"Duplicate reportPlanetWork: tn=%d id=%d", termNumber, id)
 	}
 
-	reward := es.state.GetRewardPerActivePlanet()
+	_, reward := es.state.GetActivePlanetCountAndReward()
 	rewardWithHoover := reward
 
 	if err = es.state.DecreaseRewardRemain(reward); err != nil {
@@ -474,7 +481,7 @@ func (es *ExtensionStateImpl) GetRewardInfo(cc hvhmodule.CallContext) (map[strin
 		return nil, scoreresult.Errorf(hvhmodule.StatusNotReady, "TermNotReady")
 	}
 
-	reward := es.state.GetRewardPerActivePlanet()
+	_, reward := es.state.GetActivePlanetCountAndReward()
 	termPeriod := es.state.GetTermPeriod()
 	termSequence := (height - issueStart) / termPeriod
 	es.Logger().Infof("GetRewardInfo: height=%d termPeriod=%d termSequence=%d reward=%d",

@@ -450,7 +450,8 @@ func (es *ExtensionStateImpl) refillHooverFund(cc hvhmodule.CallContext) error {
 
 func (es *ExtensionStateImpl) onTermStart(cc hvhmodule.CallContext, termSeq int64, baseTx *baseDataJSON) error {
 	var err error
-	es.Logger().Debugf("onTermStart() start: termSeq=%d", termSeq)
+	height := cc.BlockHeight()
+	es.Logger().Debugf("onTermStart() start: termSeq=%d height=%d", termSeq, height)
 
 	issueAmount, update := es.state.GetIssueAmountByTS(termSeq)
 	if update {
@@ -476,12 +477,13 @@ func (es *ExtensionStateImpl) onTermStart(cc hvhmodule.CallContext, termSeq int6
 	}
 
 	// Log TermStarted(int,int,int) event
-	if cc.Revision() >= hvhmodule.RevisionTermStartedEventLog {
+	rev := cc.Revision().Value()
+	if rev >= hvhmodule.RevisionTermStartedEvent {
 		planetCount, rewardPerActivePlanet := es.state.GetActivePlanetCountAndReward()
 		onTermStartedEvent(cc, termSeq, planetCount, rewardPerActivePlanet)
 	}
 
-	es.Logger().Debugf("onTermStart() end: termSeq=%d", termSeq)
+	es.Logger().Debugf("onTermStart() end: termSeq=%d height=%d", termSeq, height)
 	return nil
 }
 

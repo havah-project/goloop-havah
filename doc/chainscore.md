@@ -2065,6 +2065,7 @@ HAVAH records the following eventLogs:
 * Logged when [`unregisterPlanet`](#unregisterplanetid-int) is called
 * If all rewards for an unregistered planet have been already claimed, this event is not logged as there is no lost coin
 * ScoreAddress: `cx0000000000000000000000000000000000000000`
+* Since `revision 2`
 
 ```json
 {

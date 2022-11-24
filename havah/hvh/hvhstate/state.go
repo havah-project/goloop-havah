@@ -211,6 +211,7 @@ func (s *State) IsPlanetManager(address module.Address) (bool, error) {
 }
 
 func (s *State) RegisterPlanet(
+	rev int,
 	id int64, isPrivate, isCompany bool, owner module.Address, usdt, price *big.Int, height int64,
 ) error {
 	s.logger.Debugf(
@@ -248,7 +249,8 @@ func (s *State) RegisterPlanet(
 	return nil
 }
 
-func (s *State) UnregisterPlanet(id int64) (*big.Int, error) {
+func (s *State) UnregisterPlanet(rev int, id int64) (*big.Int, error) {
+	var err error
 	if id < 0 {
 		return nil, scoreresult.Errorf(
 			hvhmodule.StatusIllegalArgument, "Invalid id: %d", id)
@@ -268,25 +270,27 @@ func (s *State) UnregisterPlanet(id int64) (*big.Int, error) {
 			"Planet state mismatch: planetCount=%d", planetCount)
 	}
 
-	amount := hvhmodule.BigIntZero
-	if pr, err := s.GetPlanetReward(id); err != nil {
-		return nil, errors.InvalidStateError.Errorf("PlanetReward not found: id=%d", id)
-	} else {
-		amount = pr.Current()
-		if err = s.addLost(amount); err != nil {
-			return nil, err
-		}
+	if err = planetDictDB.Delete(id); err != nil {
+		return nil, err
+	}
+	if err = allPlanetVarDB.Set(planetCount - 1); err != nil {
+		return nil, err
 	}
 
-	if err := planetDictDB.Delete(id); err != nil {
-		return nil, err
-	}
-	if err := allPlanetVarDB.Set(planetCount - 1); err != nil {
-		return nil, err
-	}
-	planetRewardDictDB := s.getDictDB(hvhmodule.DictPlanetReward, 1)
-	if err := planetRewardDictDB.Delete(id); err != nil {
-		return nil, err
+	amount := hvhmodule.BigIntZero
+	if rev >= hvhmodule.RevisionPlanetIDReuse {
+		if pr, err := s.GetPlanetReward(id); err != nil {
+			return nil, errors.InvalidStateError.Errorf("PlanetReward not found: id=%d", id)
+		} else {
+			amount = pr.Current()
+			if err = s.addLost(amount); err != nil {
+				return nil, err
+			}
+		}
+		planetRewardDictDB := s.getDictDB(hvhmodule.DictPlanetReward, 1)
+		if err = planetRewardDictDB.Delete(id); err != nil {
+			return nil, err
+		}
 	}
 
 	return amount, nil
@@ -584,17 +588,18 @@ func (s *State) OnTermStart(issueAmount *big.Int) error {
 	if err := s.setBigInt(hvhmodule.VarActiveUSDTPrice, usdtPrice); err != nil {
 		return err
 	}
-	rewardRemain := new(big.Int).Add(s.getBigInt(hvhmodule.VarRewardRemain), issueAmount)
-	if err := s.setBigInt(hvhmodule.VarRewardRemain, rewardRemain); err != nil {
+	oldRewardRemain := s.getBigInt(hvhmodule.VarRewardRemain)
+	rewardTotal := new(big.Int).Add(oldRewardRemain, issueAmount)
+	if err := s.setBigInt(hvhmodule.VarRewardRemain, rewardTotal); err != nil {
 		return err
 	}
-	if err := s.setBigInt(hvhmodule.VarRewardTotal, rewardRemain); err != nil {
+	if err := s.setBigInt(hvhmodule.VarRewardTotal, rewardTotal); err != nil {
 		return err
 	}
 
 	s.logger.Debugf(
-		"OnTermStart() end: allPlanet=%d activeUSDT=%d rwdRemain=%d rwdTotal=%d",
-		allPlanet, usdtPrice, rewardRemain, rewardRemain,
+		"OnTermStart() end: allPlanet=%d activeUSDT=%d issued=%d oldRwdRemain=%d rwdTotal=%d",
+		allPlanet, usdtPrice, issueAmount, oldRewardRemain, rewardTotal,
 	)
 	return nil
 }
@@ -626,22 +631,13 @@ func (s *State) GetRewardInfoOf(height, id int64) (map[string]interface{}, error
 	}, nil
 }
 
-func (s *State) GetRewardPerActivePlanet() *big.Int {
-	if s.getBigInt(hvhmodule.VarActivePlanet).Sign() == 0 {
-		return hvhmodule.BigIntZero
-	}
-	return new(big.Int).Div(
-		s.getBigInt(hvhmodule.VarRewardTotal),
-		s.getBigInt(hvhmodule.VarActivePlanet),
-	)
-}
-
 func (s *State) GetActivePlanetCountAndReward() (*big.Int, *big.Int) {
 	activePlanets := s.getBigInt(hvhmodule.VarActivePlanet)
 	rewardPerActivePlanet := hvhmodule.BigIntZero
 
 	if activePlanets.Sign() > 0 {
-		rewardPerActivePlanet = new(big.Int).Div(s.getBigInt(hvhmodule.VarRewardTotal), activePlanets)
+		rewardPerActivePlanet = new(big.Int).Div(
+			s.getBigInt(hvhmodule.VarRewardTotal), activePlanets)
 	}
 
 	return activePlanets, rewardPerActivePlanet

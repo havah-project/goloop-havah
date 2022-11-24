@@ -33,7 +33,9 @@ const (
 )
 
 const (
-	RevisionTermStartedEventLog = Revision2
+	RevisionTermStartedEvent = Revision2
+	RevisionPlanetIDReuse    = Revision2
+	RevisionLostCoin         = Revision2
 )
 
 var revisionFlags = []module.Revision{
