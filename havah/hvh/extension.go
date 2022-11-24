@@ -307,7 +307,7 @@ func (es *ExtensionStateImpl) ReportPlanetWork(cc hvhmodule.CallContext, id int6
 			"Duplicate reportPlanetWork: tn=%d id=%d", termNumber, id)
 	}
 
-	reward := es.state.GetRewardPerActivePlanet()
+	_, reward := es.state.GetActivePlanetCountAndReward()
 	rewardWithHoover := reward
 
 	if err = es.state.DecreaseRewardRemain(reward); err != nil {
@@ -481,7 +481,7 @@ func (es *ExtensionStateImpl) GetRewardInfo(cc hvhmodule.CallContext) (map[strin
 		return nil, scoreresult.Errorf(hvhmodule.StatusNotReady, "TermNotReady")
 	}
 
-	reward := es.state.GetRewardPerActivePlanet()
+	_, reward := es.state.GetActivePlanetCountAndReward()
 	termPeriod := es.state.GetTermPeriod()
 	termSequence := (height - issueStart) / termPeriod
 	es.Logger().Infof("GetRewardInfo: height=%d termPeriod=%d termSequence=%d reward=%d",

@@ -631,22 +631,13 @@ func (s *State) GetRewardInfoOf(height, id int64) (map[string]interface{}, error
 	}, nil
 }
 
-func (s *State) GetRewardPerActivePlanet() *big.Int {
-	if s.getBigInt(hvhmodule.VarActivePlanet).Sign() == 0 {
-		return hvhmodule.BigIntZero
-	}
-	return new(big.Int).Div(
-		s.getBigInt(hvhmodule.VarRewardTotal),
-		s.getBigInt(hvhmodule.VarActivePlanet),
-	)
-}
-
 func (s *State) GetActivePlanetCountAndReward() (*big.Int, *big.Int) {
 	activePlanets := s.getBigInt(hvhmodule.VarActivePlanet)
 	rewardPerActivePlanet := hvhmodule.BigIntZero
 
 	if activePlanets.Sign() > 0 {
-		rewardPerActivePlanet = new(big.Int).Div(s.getBigInt(hvhmodule.VarRewardTotal), activePlanets)
+		rewardPerActivePlanet = new(big.Int).Div(
+			s.getBigInt(hvhmodule.VarRewardTotal), activePlanets)
 	}
 
 	return activePlanets, rewardPerActivePlanet
