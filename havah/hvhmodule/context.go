@@ -11,9 +11,7 @@ import (
 type WorldContext interface {
 	Revision() module.Revision
 	BlockHeight() int64
-	Origin() module.Address
 	Treasury() module.Address
-	TransactionID() []byte
 	ConsensusInfo() module.ConsensusInfo
 	GetBalance(address module.Address) *big.Int
 	Issue(address module.Address, amount *big.Int) (*big.Int, error)

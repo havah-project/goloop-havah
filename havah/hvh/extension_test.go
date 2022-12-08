@@ -7,10 +7,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/db"
 	"github.com/icon-project/goloop/common/errors"
+	"github.com/icon-project/goloop/common/intconv"
 	"github.com/icon-project/goloop/havah/hvh/hvhstate"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
@@ -85,12 +87,23 @@ func newMockAccount(id []byte) *mockAccount {
 type mockCallContext struct {
 	contract.CallContext
 	height   int64
+	txHash   []byte
 	accounts map[string]*mockAccount
 	revision module.Revision
 }
 
 func (cc *mockCallContext) BlockHeight() int64 {
 	return cc.height
+}
+
+func (cc *mockCallContext) setBlockHeight(height int64) {
+	cc.height = height
+	digest := sha3.Sum256(intconv.Int64ToBytes(height))
+	cc.txHash = digest[:]
+}
+
+func (cc *mockCallContext) TransactionID() []byte {
+	return cc.txHash
 }
 
 func (cc *mockCallContext) GetAccountState(id []byte) state.AccountState {
@@ -136,10 +149,12 @@ func (cc *mockCallContext) SetRevision(revision module.Revision) {
 }
 
 func newMockCallContext() *mockCallContext {
-	return &mockCallContext{
+	cc := &mockCallContext{
 		accounts: make(map[string]*mockAccount),
 		revision: hvhmodule.Revision0,
 	}
+	cc.setBlockHeight(0)
+	return cc
 }
 
 func newMockExtensionState(t *testing.T, cfg *PlatformConfig) *ExtensionStateImpl {

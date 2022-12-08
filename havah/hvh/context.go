@@ -38,8 +38,12 @@ type callContextImpl struct {
 	from module.Address
 }
 
-func (ctx *callContextImpl) Origin() module.Address {
-	return ctx.TransactionInfo().From
+func (ctx *callContextImpl) BlockHeight() int64 {
+	height := ctx.CallContext.BlockHeight()
+	if ctx.TransactionID() == nil {
+		height--
+	}
+	return height
 }
 
 func (ctx *callContextImpl) GetBalance(address module.Address) *big.Int {
