@@ -135,7 +135,7 @@ func (tx *baseV3) Execute(ctx contract.Context, _ state.WorldSnapshot, estimate 
 	cc := contract.NewCallContext(ctx, ctx.GetStepLimit(state.StepLimitTypeInvoke), false)
 	defer cc.Dispose()
 
-	icc := NewCallContext(cc, tx.From())
+	icc := NewCallContext(cc, tx.From(), false)
 	es := GetExtensionStateFromWorldContext(cc, cc.Logger())
 	if es == nil {
 		return nil, errors.InvalidStateError.New("ExtensionIsNotReady")

@@ -15,7 +15,7 @@ import (
 func newMockCallContextAndFrom() (hvhmodule.CallContext, module.Address) {
 	from := common.MustNewAddressFromString("hx1234")
 	mcc := newMockCallContext()
-	return NewCallContext(mcc, from), from
+	return NewCallContext(mcc, from, false), from
 }
 
 func TestCallContextImpl_Issue(t *testing.T) {

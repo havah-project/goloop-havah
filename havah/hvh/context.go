@@ -38,14 +38,6 @@ type callContextImpl struct {
 	from module.Address
 }
 
-func (ctx *callContextImpl) BlockHeight() int64 {
-	height := ctx.CallContext.BlockHeight()
-	if ctx.TransactionID() == nil {
-		height--
-	}
-	return height
-}
-
 func (ctx *callContextImpl) GetBalance(address module.Address) *big.Int {
 	account := ctx.GetAccountState(address.ID())
 	return account.GetBalance()
@@ -238,9 +230,19 @@ func (ctx *callContextImpl) onBalanceChange(opType module.OpType, from, to modul
 	}
 }
 
-func NewCallContext(cc contract.CallContext, from module.Address) hvhmodule.CallContext {
-	return &callContextImpl{
+func NewCallContext(cc contract.CallContext, from module.Address, isQuery bool) hvhmodule.CallContext {
+	ctx := &callContextImpl{
 		CallContext: cc,
 		from:        from,
 	}
+	if isQuery {
+		return &readonlyCallContext{
+			ctx,
+		}
+	}
+	return ctx
+}
+
+type readonlyCallContext struct {
+	hvhmodule.CallContext
 }

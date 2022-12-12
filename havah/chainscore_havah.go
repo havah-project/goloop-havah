@@ -17,6 +17,7 @@
 package havah
 
 import (
+	"encoding/json"
 	"math/big"
 
 	"github.com/icon-project/goloop/common"
@@ -44,11 +45,35 @@ func (s *chainScore) getExtensionState() (*hvh.ExtensionStateImpl, error) {
 	if es == nil {
 		return nil, errors.InvalidStateError.New("ExtensionState is nil")
 	}
+
 	return es, nil
 }
 
+func (s *chainScore) getExtensionStateAndContext() (*hvh.ExtensionStateImpl, hvhmodule.CallContext, error) {
+	es := hvh.GetExtensionStateFromWorldContext(s.cc, s.log)
+	if es == nil {
+		return nil, nil, errors.InvalidStateError.New("ExtensionState is nil")
+	}
+
+	ctx := s.newCallContext()
+	if s.cc.TransactionID() == nil && s.from == nil {
+		height := ctx.BlockHeight()
+		if baseData := es.NewBaseTransactionData(height); baseData != nil {
+			if bs, err := json.Marshal(baseData); err == nil {
+				if err = es.OnBaseTx(ctx, bs); err != nil {
+					return nil, nil, err
+				}
+			} else {
+				return nil, nil, err
+			}
+		}
+	}
+
+	return es, ctx, nil
+}
+
 func (s *chainScore) newCallContext() hvhmodule.CallContext {
-	return hvh.NewCallContext(s.cc, s.from)
+	return hvh.NewCallContext(s.cc, s.from, s.cc.TransactionID() == nil)
 }
 
 func (s *chainScore) Ex_getUSDTPrice() (*big.Int, error) {
@@ -234,11 +259,11 @@ func (s *chainScore) Ex_getRewardInfo() (map[string]interface{}, error) {
 	if err := s.tryChargeCall(); err != nil {
 		return nil, err
 	}
-	es, err := s.getExtensionState()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return nil, err
 	}
-	return es.GetRewardInfo(s.newCallContext())
+	return es.GetRewardInfo(ctx)
 }
 
 func (s *chainScore) Ex_fallback() error {
