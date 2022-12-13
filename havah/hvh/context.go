@@ -36,6 +36,8 @@ func setBalance(address module.Address, as state.AccountState, balance *big.Int)
 type callContextImpl struct {
 	contract.CallContext
 	from module.Address
+
+	proxies map[string]*accountStateProxy
 }
 
 func (ctx *callContextImpl) GetBalance(address module.Address) *big.Int {
@@ -230,19 +232,31 @@ func (ctx *callContextImpl) onBalanceChange(opType module.OpType, from, to modul
 	}
 }
 
+func (ctx *callContextImpl) GetAccountState(id []byte) state.AccountState {
+	if ctx.proxies == nil {
+		return ctx.CallContext.GetAccountState(id)
+	} else {
+		return ctx.getAccountStateProxy(id)
+	}
+}
+
+func (ctx *callContextImpl) getAccountStateProxy(id []byte) state.AccountState {
+	ids := string(id)
+	proxy := ctx.proxies[ids]
+	if proxy == nil {
+		proxy = newAccountStateProxy(id, ctx.CallContext.GetAccountState(id))
+		ctx.proxies[ids] = proxy
+	}
+	return proxy
+}
+
 func NewCallContext(cc contract.CallContext, from module.Address, isQuery bool) hvhmodule.CallContext {
 	ctx := &callContextImpl{
 		CallContext: cc,
 		from:        from,
 	}
 	if isQuery {
-		return &readonlyCallContext{
-			ctx,
-		}
+		ctx.proxies = make(map[string]*accountStateProxy)
 	}
 	return ctx
-}
-
-type readonlyCallContext struct {
-	hvhmodule.CallContext
 }

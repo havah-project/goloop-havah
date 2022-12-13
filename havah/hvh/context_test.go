@@ -12,14 +12,14 @@ import (
 	"github.com/icon-project/goloop/service/state"
 )
 
-func newMockCallContextAndFrom() (hvhmodule.CallContext, module.Address) {
+func newMockCallContextAndFrom(isQuery bool) (hvhmodule.CallContext, module.Address) {
 	from := common.MustNewAddressFromString("hx1234")
 	mcc := newMockCallContext()
-	return NewCallContext(mcc, from, false), from
+	return NewCallContext(mcc, from, isQuery), from
 }
 
 func TestCallContextImpl_Issue(t *testing.T) {
-	cc, from := newMockCallContextAndFrom()
+	cc, from := newMockCallContextAndFrom(false)
 	amount := big.NewInt(1000)
 
 	ots := cc.GetTotalSupply()
@@ -41,7 +41,7 @@ func TestCallContextImpl_Issue(t *testing.T) {
 }
 
 func TestCallContextImpl_Burn(t *testing.T) {
-	cc, _ := newMockCallContextAndFrom()
+	cc, _ := newMockCallContextAndFrom(false)
 	amount := big.NewInt(1000)
 
 	ts, err := cc.Issue(state.SystemAddress, amount)
@@ -58,7 +58,7 @@ func TestCallContextImpl_Burn(t *testing.T) {
 
 func TestCallContextImpl_Transfer(t *testing.T) {
 	to := common.MustNewAddressFromString("hx2222")
-	cc, from := newMockCallContextAndFrom()
+	cc, from := newMockCallContextAndFrom(false)
 	amount := big.NewInt(10_000)
 
 	_, err := cc.Issue(from, amount)
@@ -78,4 +78,49 @@ func TestCallContextImpl_Transfer(t *testing.T) {
 
 	balance = cc.GetBalance(to)
 	assert.Zero(t, balance.Cmp(amount))
+}
+
+func TestCallContextImpl_ActionOnQueryMode(t *testing.T) {
+	var err error
+	var balance *big.Int
+	to := common.MustNewAddressFromString("hx2345")
+	cc, from := newMockCallContextAndFrom(true)
+
+	balance = cc.GetBalance(from)
+	assert.Zero(t, balance.Sign())
+
+	balance = cc.GetBalance(to)
+	assert.Zero(t, balance.Sign())
+
+	totalSupply := cc.GetTotalSupply()
+	assert.Zero(t, totalSupply.Sign())
+
+	// Issue
+	amount := big.NewInt(10_000)
+	totalSupply, err = cc.Issue(from, amount)
+	assert.NoError(t, err)
+	assert.Zero(t, totalSupply.Cmp(amount))
+
+	fromBalance := cc.GetBalance(from)
+	assert.Zero(t, amount.Cmp(fromBalance))
+
+	// Transfer
+	amount = big.NewInt(1_000)
+	err = cc.Transfer(from, to, amount, module.Transfer)
+	assert.NoError(t, err)
+	toBalance := cc.GetBalance(to)
+	assert.Equal(t, amount.Int64(), toBalance.Int64())
+	fromBalance = cc.GetBalance(from)
+	assert.Equal(t, int64(9_000), fromBalance.Int64())
+
+	// Burn
+	amountToBurn := big.NewInt(5_000)
+	err = cc.Transfer(from, state.SystemAddress, amountToBurn, module.Transfer)
+	assert.NoError(t, err)
+
+	totalSupply, err = cc.Burn(amountToBurn)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(5_000), totalSupply.Int64())
+	assert.Equal(t, int64(4_000), cc.GetBalance(from).Int64())
+	assert.Equal(t, int64(1_000), cc.GetBalance(to).Int64())
 }

@@ -50,6 +50,8 @@ func (s *chainScore) getExtensionState() (*hvh.ExtensionStateImpl, error) {
 }
 
 func (s *chainScore) getExtensionStateAndContext() (*hvh.ExtensionStateImpl, hvhmodule.CallContext, error) {
+	s.log.Debug("getExtensionStateAndContext() start")
+
 	es := hvh.GetExtensionStateFromWorldContext(s.cc, s.log)
 	if es == nil {
 		return nil, nil, errors.InvalidStateError.New("ExtensionState is nil")
@@ -69,6 +71,7 @@ func (s *chainScore) getExtensionStateAndContext() (*hvh.ExtensionStateImpl, hvh
 		}
 	}
 
+	s.log.Debug("getExtensionStateAndContext() end")
 	return es, ctx, nil
 }
 
