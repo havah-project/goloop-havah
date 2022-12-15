@@ -15,7 +15,10 @@ import (
 func newMockCallContextAndFrom(isQuery bool) (hvhmodule.CallContext, module.Address) {
 	from := common.MustNewAddressFromString("hx1234")
 	mcc := newMockCallContext()
-	return NewCallContext(mcc, from, isQuery), from
+	if isQuery {
+		mcc.SetTransactionID(nil)
+	}
+	return NewCallContext(mcc, from), from
 }
 
 func TestCallContextImpl_Issue(t *testing.T) {

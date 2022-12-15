@@ -250,12 +250,12 @@ func (ctx *callContext) getAccountStateProxy(id []byte) state.AccountState {
 	return proxy
 }
 
-func NewCallContext(cc contract.CallContext, from module.Address, isQuery bool) hvhmodule.CallContext {
+func NewCallContext(cc contract.CallContext, from module.Address) hvhmodule.CallContext {
 	ctx := &callContext{
 		CallContext: cc,
 		from:        from,
 	}
-	if isQuery {
+	if cc.TransactionID() == nil {
 		ctx.proxies = make(map[string]*accountStateProxy)
 	}
 	return ctx

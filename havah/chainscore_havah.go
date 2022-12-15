@@ -76,7 +76,7 @@ func (s *chainScore) getExtensionStateAndContext() (*hvh.ExtensionStateImpl, hvh
 }
 
 func (s *chainScore) newCallContext() hvhmodule.CallContext {
-	return hvh.NewCallContext(s.cc, s.from, s.cc.TransactionID() == nil)
+	return hvh.NewCallContext(s.cc, s.from)
 }
 
 func (s *chainScore) Ex_getUSDTPrice() (*big.Int, error) {

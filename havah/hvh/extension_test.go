@@ -87,7 +87,7 @@ func newMockAccount(id []byte) *mockAccount {
 type mockCallContext struct {
 	contract.CallContext
 	height   int64
-	txHash   []byte
+	txId     []byte
 	accounts map[string]*mockAccount
 	revision module.Revision
 }
@@ -99,11 +99,15 @@ func (cc *mockCallContext) BlockHeight() int64 {
 func (cc *mockCallContext) setBlockHeight(height int64) {
 	cc.height = height
 	digest := sha3.Sum256(intconv.Int64ToBytes(height))
-	cc.txHash = digest[:]
+	cc.txId = digest[:]
 }
 
 func (cc *mockCallContext) TransactionID() []byte {
-	return cc.txHash
+	return cc.txId
+}
+
+func (cc *mockCallContext) SetTransactionID(id []byte) {
+	cc.txId = id
 }
 
 func (cc *mockCallContext) GetAccountState(id []byte) state.AccountState {
@@ -204,7 +208,7 @@ func goByHeight(
 
 func goByCount(t *testing.T, count int64,
 	es *ExtensionStateImpl, mcc *mockCallContext, from module.Address) {
-	cc := NewCallContext(mcc, from, false)
+	cc := NewCallContext(mcc, from)
 
 	for i := int64(0); i < count; i++ {
 		mcc.height++
@@ -268,7 +272,7 @@ func TestExtensionStateImpl_StartRewardIssueInvalid(t *testing.T) {
 	termPeriod := int64(hvhmodule.TermPeriod)
 	mcc, es := newMockContextAndExtensionState(t, newSimplePlatformConfig(termPeriod, 1))
 	mcc.height = 100
-	cc := NewCallContext(mcc, nil, false)
+	cc := NewCallContext(mcc, nil)
 	err := es.StartRewardIssue(cc, 100)
 	assert.Error(t, err)
 }
@@ -278,7 +282,7 @@ func TestExtensionStateImpl_StartRewardIssueValid(t *testing.T) {
 	termPeriod := int64(hvhmodule.TermPeriod)
 	mcc, es := newMockContextAndExtensionState(t, newSimplePlatformConfig(termPeriod, 1))
 	mcc.height = 10
-	cc := NewCallContext(mcc, nil, false)
+	cc := NewCallContext(mcc, nil)
 
 	err = es.StartRewardIssue(cc, 100)
 	assert.NoError(t, err)
@@ -303,7 +307,7 @@ func TestExtensionStateImpl_OnBaseTx(t *testing.T) {
 
 	mcc, es := newMockContextAndExtensionState(t, newSimplePlatformConfig(termPeriod, 1))
 	mcc.height = 1
-	cc := NewCallContext(mcc, from, false)
+	cc := NewCallContext(mcc, from)
 
 	balance = mcc.GetBalance(hvhmodule.HooverFund)
 	assert.Zero(t, balance.Sign())
@@ -327,7 +331,7 @@ func TestExtensionStateImpl_Reward0(t *testing.T) {
 
 	mcc, es := newMockContextAndExtensionState(t, newSimplePlatformConfig(termPeriod, 1))
 	mcc.height = 1
-	cc := NewCallContext(mcc, owner, false)
+	cc := NewCallContext(mcc, owner)
 
 	err := es.StartRewardIssue(cc, issueStart)
 	assert.NoError(t, err)
@@ -355,7 +359,7 @@ func TestExtensionStateImpl_Reward0(t *testing.T) {
 	goByHeight(t, issueStart, es, mcc, owner)
 
 	// ReportPlanetWork
-	cc = NewCallContext(mcc, pm, false)
+	cc = NewCallContext(mcc, pm)
 	assert.NoError(t, es.ReportPlanetWork(cc, id))
 
 	ri0, err := es.GetRewardInfoOf(cc, id)
@@ -367,7 +371,7 @@ func TestExtensionStateImpl_Reward0(t *testing.T) {
 
 	goByCount(t, 1, es, mcc, owner)
 
-	cc = NewCallContext(mcc, owner, false)
+	cc = NewCallContext(mcc, owner)
 	err = es.ClaimPlanetReward(cc, []int64{id})
 	assert.NoError(t, err)
 
@@ -407,7 +411,7 @@ func TestExtensionStateImpl_Reward1(t *testing.T) {
 	}
 	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
 	mcc.height = 1
-	cc := NewCallContext(mcc, owner, false)
+	cc := NewCallContext(mcc, owner)
 
 	err := es.StartRewardIssue(cc, issueStart)
 	assert.NoError(t, err)
@@ -436,7 +440,7 @@ func TestExtensionStateImpl_Reward1(t *testing.T) {
 	assert.Zero(t, balance.Cmp(issueAmount))
 
 	// ReportPlanetWork
-	cc = NewCallContext(mcc, pm, false)
+	cc = NewCallContext(mcc, pm)
 	assert.NoError(t, es.ReportPlanetWork(cc, id))
 
 	// Check if hooverFund is transferred to public treasury
@@ -453,7 +457,7 @@ func TestExtensionStateImpl_Reward1(t *testing.T) {
 	assert.Zero(t, cc.GetBalance(owner).Sign())
 
 	// Claim rewards
-	cc = NewCallContext(mcc, owner, false)
+	cc = NewCallContext(mcc, owner)
 	err = es.ClaimPlanetReward(cc, []int64{id})
 	assert.NoError(t, err)
 
@@ -487,7 +491,7 @@ func TestExtensionStateImpl_Reward2(t *testing.T) {
 	}
 	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
 	mcc.height = 5
-	cc := NewCallContext(mcc, pm, false)
+	cc := NewCallContext(mcc, pm)
 
 	err := es.StartRewardIssue(cc, issueStart)
 	assert.NoError(t, err)
@@ -552,7 +556,7 @@ func TestExtensionStateImpl_Reward3(t *testing.T) {
 	}
 	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
 	mcc.height = 1
-	cc := NewCallContext(mcc, owner, false)
+	cc := NewCallContext(mcc, owner)
 
 	err := es.StartRewardIssue(cc, issueStart)
 	assert.NoError(t, err)
@@ -619,7 +623,7 @@ func TestExtensionStateImpl_Reward_With_PrivateClaimableRate(t *testing.T) {
 	}
 	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
 	mcc.height = 1
-	cc := NewCallContext(mcc, owner, false)
+	cc := NewCallContext(mcc, owner)
 
 	err = es.StartRewardIssue(cc, issueStart)
 	assert.NoError(t, err)
@@ -707,7 +711,7 @@ func TestExtensionSnapshotImpl_Reward5_ReversedPrivateClaimableRate(t *testing.T
 	}
 	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
 	mcc.height = 1
-	cc := NewCallContext(mcc, owner, false)
+	cc := NewCallContext(mcc, owner)
 
 	err = es.StartRewardIssue(cc, issueStart)
 	assert.NoError(t, err)
@@ -781,7 +785,7 @@ func TestExtensionStateImpl_DistributeFee(t *testing.T) {
 	}
 	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
 	mcc.height = 1
-	cc := NewCallContext(mcc, owner, false)
+	cc := NewCallContext(mcc, owner)
 
 	err := es.StartRewardIssue(cc, issueStart)
 	assert.NoError(t, err)
@@ -833,7 +837,7 @@ func TestExtensionStateImpl_IssueReduction(t *testing.T) {
 	}
 	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
 	mcc.height = 1
-	cc := NewCallContext(mcc, owner, false)
+	cc := NewCallContext(mcc, owner)
 
 	err := es.StartRewardIssue(cc, issueStart)
 	assert.NoError(t, err)
@@ -903,7 +907,7 @@ func TestExtensionStateImpl_SetPlanetOwner(t *testing.T) {
 	}
 	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
 	mcc.height = 1
-	cc := NewCallContext(mcc, nil, false)
+	cc := NewCallContext(mcc, nil)
 
 	err := es.StartRewardIssue(cc, issueStart)
 	assert.NoError(t, err)
@@ -974,7 +978,7 @@ func TestExtensionStateImpl_ReportPlanetWork_BeforeStartRewardIssue(t *testing.T
 	}
 	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
 	mcc.height = 1
-	cc := NewCallContext(mcc, nil, false)
+	cc := NewCallContext(mcc, nil)
 
 	priceInUSDT := toUSDT(5_000)
 	priceInHVH := toHVH(50_000)
@@ -1011,7 +1015,7 @@ func TestExtensionStateImpl_RegisterPlanet(t *testing.T) {
 	}
 	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
 	mcc.height = 1
-	cc := NewCallContext(mcc, nil, false)
+	cc := NewCallContext(mcc, nil)
 
 	// StartRewardIssue: 10
 	issueStartBH := int64(10)
@@ -1122,7 +1126,7 @@ func TestExtensionStateImpl_UnregisterPlanetWithLost(t *testing.T) {
 	}
 	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
 	mcc.height = 1
-	cc := NewCallContext(mcc, nil, false)
+	cc := NewCallContext(mcc, nil)
 
 	// StartRewardIssue: 10
 	issueStartBH := int64(10)
@@ -1378,7 +1382,7 @@ func TestExtensionStateImpl_HooverFund(t *testing.T) {
 			}
 			mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
 			mcc.height = 1
-			cc := NewCallContext(mcc, nil, false)
+			cc := NewCallContext(mcc, nil)
 			mcc.SetBalance(hvhmodule.HooverFund, inp.hooverFund)
 
 			// StartRewardIssue: 10
@@ -1439,7 +1443,7 @@ func TestExtensionStateImpl_WithdrawLostTo(t *testing.T) {
 	}
 	mcc, es := newMockContextAndExtensionState(t, &PlatformConfig{StateConfig: stateCfg})
 	mcc.height = 1
-	cc := NewCallContext(mcc, nil, false)
+	cc := NewCallContext(mcc, nil)
 
 	lost, err := es.GetLost()
 	assert.NoError(t, err)
