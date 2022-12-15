@@ -37,7 +37,8 @@ type callContext struct {
 	contract.CallContext
 	from module.Address
 
-	proxies map[string]*accountStateProxy
+	// accounts is available only in query mode
+	accounts map[string]state.AccountState
 }
 
 func (ctx *callContext) GetBalance(address module.Address) *big.Int {
@@ -233,7 +234,7 @@ func (ctx *callContext) onBalanceChange(opType module.OpType, from, to module.Ad
 }
 
 func (ctx *callContext) GetAccountState(id []byte) state.AccountState {
-	if ctx.proxies == nil {
+	if !ctx.isQuery() {
 		return ctx.CallContext.GetAccountState(id)
 	} else {
 		return ctx.getAccountStateProxy(id)
@@ -242,12 +243,16 @@ func (ctx *callContext) GetAccountState(id []byte) state.AccountState {
 
 func (ctx *callContext) getAccountStateProxy(id []byte) state.AccountState {
 	ids := string(id)
-	proxy := ctx.proxies[ids]
+	proxy := ctx.accounts[ids]
 	if proxy == nil {
 		proxy = newAccountStateProxy(id, ctx.CallContext.GetAccountState(id))
-		ctx.proxies[ids] = proxy
+		ctx.accounts[ids] = proxy
 	}
 	return proxy
+}
+
+func (ctx *callContext) isQuery() bool {
+	return ctx.CallContext.TransactionID() == nil
 }
 
 func NewCallContext(cc contract.CallContext, from module.Address) hvhmodule.CallContext {
@@ -255,8 +260,8 @@ func NewCallContext(cc contract.CallContext, from module.Address) hvhmodule.Call
 		CallContext: cc,
 		from:        from,
 	}
-	if cc.TransactionID() == nil {
-		ctx.proxies = make(map[string]*accountStateProxy)
+	if ctx.isQuery() {
+		ctx.accounts = make(map[string]state.AccountState)
 	}
 	return ctx
 }
