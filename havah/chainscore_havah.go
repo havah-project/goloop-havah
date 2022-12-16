@@ -45,43 +45,48 @@ func (s *chainScore) getExtensionState() (*hvh.ExtensionStateImpl, error) {
 	if es == nil {
 		return nil, errors.InvalidStateError.New("ExtensionState is nil")
 	}
-
 	return es, nil
 }
 
-func (s *chainScore) getExtensionStateAndContextAfterBaseTx() (*hvh.ExtensionStateImpl, hvhmodule.CallContext, error) {
-	s.log.Debug("getExtensionStateAndContextAfterBaseTx() start")
+func (s *chainScore) getExtensionStateAndContext() (*hvh.ExtensionStateImpl, hvhmodule.CallContext, error) {
+	s.log.Debug("getExtensionStateAndContext() start")
 
-	es := hvh.GetExtensionStateFromWorldContext(s.cc, s.log)
-	if es == nil {
-		return nil, nil, errors.InvalidStateError.New("ExtensionState is nil")
+	es, err := s.getExtensionState()
+	if err != nil {
+		return nil, nil, err
 	}
 
-	ctx := s.newCallContext()
-	if !ctx.IsBaseTxInvoked() {
-		height := ctx.BlockHeight()
-		if baseData := es.NewBaseTransactionData(height); baseData != nil {
-			if bs, err := json.Marshal(baseData); err == nil {
-				if err = es.OnBaseTx(ctx, bs); err != nil {
-					return nil, nil, err
-				}
-			} else {
-				return nil, nil, err
-			}
-		}
-		ctx.SetBaseTxInvoked()
+	ctx := hvh.NewCallContext(s.cc, s.from)
+	if err = s.invokeBaseTxOnQueryMode(ctx, es); err != nil {
+		return nil, nil, err
 	}
 
-	s.log.Debug("getExtensionStateAndContextAfterBaseTx() end")
+	s.log.Debug("getExtensionStateAndContext() end")
 	return es, ctx, nil
 }
 
-func (s *chainScore) newCallContext() hvhmodule.CallContext {
-	return hvh.NewCallContext(s.cc, s.from)
+func (s *chainScore) invokeBaseTxOnQueryMode(ctx hvhmodule.CallContext, es *hvh.ExtensionStateImpl) error {
+	if ctx.IsBaseTxInvoked() {
+		return nil
+	}
+
+	height := ctx.BlockHeight()
+	if baseData := es.NewBaseTransactionData(height); baseData != nil {
+		if bs, err := json.Marshal(baseData); err == nil {
+			if err = es.OnBaseTx(ctx, bs); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	ctx.SetBaseTxInvoked()
+	return nil
 }
 
 func (s *chainScore) Ex_getUSDTPrice() (*big.Int, error) {
-	es, err := s.getExtensionState()
+	es, _, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +95,7 @@ func (s *chainScore) Ex_getUSDTPrice() (*big.Int, error) {
 
 func (s *chainScore) Ex_setUSDTPrice(price *common.HexInt) error {
 	// TODO: caller restriction
-	es, err := s.getExtensionState()
+	es, _, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
@@ -98,33 +103,33 @@ func (s *chainScore) Ex_setUSDTPrice(price *common.HexInt) error {
 }
 
 func (s *chainScore) Ex_getIssueInfo() (map[string]interface{}, error) {
-	es, err := s.getExtensionState()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return nil, err
 	}
-	return es.GetIssueInfo(s.newCallContext())
+	return es.GetIssueInfo(ctx)
 }
 
 func (s *chainScore) Ex_startRewardIssue(height *common.HexInt) error {
 	if err := s.checkGovernance(true); err != nil {
 		return err
 	}
-	es, err := s.getExtensionState()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
 	startBH := height.Int64()
-	if startBH <= s.cc.BlockHeight() {
+	if startBH <= ctx.BlockHeight() {
 		return scoreresult.RevertedError.New("Invalid height")
 	}
-	return es.StartRewardIssue(s.newCallContext(), startBH)
+	return es.StartRewardIssue(ctx, startBH)
 }
 
 func (s *chainScore) Ex_addPlanetManager(address module.Address) error {
 	if err := s.checkGovernance(true); err != nil {
 		return err
 	}
-	es, err := s.getExtensionState()
+	es, _, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
@@ -135,7 +140,7 @@ func (s *chainScore) Ex_removePlanetManager(address module.Address) error {
 	if err := s.checkGovernance(true); err != nil {
 		return err
 	}
-	es, err := s.getExtensionState()
+	es, _, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
@@ -143,7 +148,7 @@ func (s *chainScore) Ex_removePlanetManager(address module.Address) error {
 }
 
 func (s *chainScore) Ex_isPlanetManager(address module.Address) (bool, error) {
-	es, err := s.getExtensionState()
+	es, _, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return false, err
 	}
@@ -156,12 +161,12 @@ func (s *chainScore) Ex_registerPlanet(
 	if err := s.checkNFT(true); err != nil {
 		return err
 	}
-	es, err := s.getExtensionState()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
 	return es.RegisterPlanet(
-		s.newCallContext(), id.Int64(),
+		ctx, id.Int64(),
 		isPrivate, isCompany, owner, usdt.Value(), price.Value())
 }
 
@@ -169,40 +174,40 @@ func (s *chainScore) Ex_unregisterPlanet(id *common.HexInt) error {
 	if err := s.checkNFT(true); err != nil {
 		return err
 	}
-	es, err := s.getExtensionState()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
-	return es.UnregisterPlanet(s.newCallContext(), id.Int64())
+	return es.UnregisterPlanet(ctx, id.Int64())
 }
 
 func (s *chainScore) Ex_setPlanetOwner(id *common.HexInt, owner module.Address) error {
 	if err := s.checkNFT(true); err != nil {
 		return err
 	}
-	es, err := s.getExtensionState()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
-	return es.SetPlanetOwner(s.newCallContext(), id.Int64(), owner)
+	return es.SetPlanetOwner(ctx, id.Int64(), owner)
 }
 
 func (s *chainScore) Ex_getPlanetInfo(id *common.HexInt) (map[string]interface{}, error) {
 	if err := s.tryChargeCall(); err != nil {
 		return nil, err
 	}
-	es, err := s.getExtensionState()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return nil, err
 	}
-	return es.GetPlanetInfo(s.newCallContext(), id.Int64())
+	return es.GetPlanetInfo(ctx, id.Int64())
 }
 
 func (s *chainScore) Ex_reportPlanetWork(id *common.HexInt) error {
 	if err := s.tryChargeCall(); err != nil {
 		return err
 	}
-	es, err := s.getExtensionState()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
@@ -213,14 +218,14 @@ func (s *chainScore) Ex_reportPlanetWork(id *common.HexInt) error {
 	if !ok {
 		return scoreresult.AccessDeniedError.Errorf("NoPermission: %s", s.from)
 	}
-	return es.ReportPlanetWork(s.newCallContext(), id.Int64())
+	return es.ReportPlanetWork(ctx, id.Int64())
 }
 
 func (s *chainScore) Ex_claimPlanetReward(ids []interface{}) error {
 	if err := s.tryChargeCall(); err != nil {
 		return err
 	}
-	es, err := s.getExtensionState()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
@@ -230,25 +235,25 @@ func (s *chainScore) Ex_claimPlanetReward(ids []interface{}) error {
 		planetIds[i] = (ids[i].(*common.HexInt)).Int64()
 	}
 	// PlanetOwner is checked in ExtensionStateImpl.ClaimPlanetReward()
-	return es.ClaimPlanetReward(s.newCallContext(), planetIds)
+	return es.ClaimPlanetReward(ctx, planetIds)
 }
 
 func (s *chainScore) Ex_getRewardInfoOf(id *common.HexInt) (map[string]interface{}, error) {
 	if err := s.tryChargeCall(); err != nil {
 		return nil, err
 	}
-	es, err := s.getExtensionState()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return nil, err
 	}
-	return es.GetRewardInfoOf(s.newCallContext(), id.Int64())
+	return es.GetRewardInfoOf(ctx, id.Int64())
 }
 
 func (s *chainScore) Ex_getRewardInfosOf(ids []interface{}) (map[string]interface{}, error) {
 	if err := s.tryChargeCall(); err != nil {
 		return nil, err
 	}
-	es, err := s.getExtensionState()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return nil, err
 	}
@@ -256,14 +261,14 @@ func (s *chainScore) Ex_getRewardInfosOf(ids []interface{}) (map[string]interfac
 	for i := 0; i < len(ids); i++ {
 		planetIds[i] = (ids[i].(*common.HexInt)).Int64()
 	}
-	return es.GetRewardInfosOf(s.newCallContext(), planetIds)
+	return es.GetRewardInfosOf(ctx, planetIds)
 }
 
 func (s *chainScore) Ex_getRewardInfo() (map[string]interface{}, error) {
 	if err := s.tryChargeCall(); err != nil {
 		return nil, err
 	}
-	es, ctx, err := s.getExtensionStateAndContextAfterBaseTx()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return nil, err
 	}
@@ -274,11 +279,11 @@ func (s *chainScore) Ex_fallback() error {
 	if err := s.tryChargeCall(); err != nil {
 		return err
 	}
-	es, err := s.getExtensionState()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
-	return es.BurnCoin(s.newCallContext(), s.value)
+	return es.BurnCoin(ctx, s.value)
 }
 
 func (s *chainScore) Ex_setPrivateClaimableRate(
@@ -286,7 +291,7 @@ func (s *chainScore) Ex_setPrivateClaimableRate(
 	if err := s.checkGovernance(true); err != nil {
 		return err
 	}
-	es, err := s.getExtensionState()
+	es, _, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
@@ -297,7 +302,7 @@ func (s *chainScore) Ex_getPrivateClaimableRate() (map[string]interface{}, error
 	if err := s.tryChargeCall(); err != nil {
 		return nil, err
 	}
-	es, err := s.getExtensionState()
+	es, _, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return nil, err
 	}
@@ -308,18 +313,18 @@ func (s *chainScore) Ex_withdrawLostTo(to module.Address) error {
 	if err := s.checkGovernance(true); err != nil {
 		return err
 	}
-	es, err := s.getExtensionState()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
-	return es.WithdrawLostTo(s.newCallContext(), to)
+	return es.WithdrawLostTo(ctx, to)
 }
 
 func (s *chainScore) Ex_getLost() (*big.Int, error) {
 	if err := s.tryChargeCall(); err != nil {
 		return nil, err
 	}
-	es, err := s.getExtensionState()
+	es, _, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return nil, err
 	}
