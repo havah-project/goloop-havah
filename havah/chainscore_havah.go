@@ -66,6 +66,9 @@ func (s *chainScore) getExtensionStateAndContext() (*hvh.ExtensionStateImpl, hvh
 }
 
 func (s *chainScore) invokeBaseTxOnQueryMode(ctx hvhmodule.CallContext, es *hvh.ExtensionStateImpl) error {
+	if ctx.Revision().Value() < hvhmodule.RevisionInvokeBaseTxOnQueryMode {
+		return nil
+	}
 	if ctx.IsBaseTxInvoked() {
 		return nil
 	}
@@ -86,6 +89,11 @@ func (s *chainScore) invokeBaseTxOnQueryMode(ctx hvhmodule.CallContext, es *hvh.
 }
 
 func (s *chainScore) Ex_getUSDTPrice() (*big.Int, error) {
+	if s.cc.Revision().Value() >= hvhmodule.RevisionFixStepCharge {
+		if err := s.tryChargeCall(); err != nil {
+			return nil, err
+		}
+	}
 	es, _, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return nil, err
@@ -94,7 +102,11 @@ func (s *chainScore) Ex_getUSDTPrice() (*big.Int, error) {
 }
 
 func (s *chainScore) Ex_setUSDTPrice(price *common.HexInt) error {
-	// TODO: caller restriction
+	if s.cc.Revision().Value() >= hvhmodule.RevisionFixAccessControl {
+		if err := s.checkGovernance(true); err != nil {
+			return err
+		}
+	}
 	es, _, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
@@ -103,6 +115,11 @@ func (s *chainScore) Ex_setUSDTPrice(price *common.HexInt) error {
 }
 
 func (s *chainScore) Ex_getIssueInfo() (map[string]interface{}, error) {
+	if s.cc.Revision().Value() >= hvhmodule.RevisionFixStepCharge {
+		if err := s.tryChargeCall(); err != nil {
+			return nil, err
+		}
+	}
 	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return nil, err
@@ -148,6 +165,11 @@ func (s *chainScore) Ex_removePlanetManager(address module.Address) error {
 }
 
 func (s *chainScore) Ex_isPlanetManager(address module.Address) (bool, error) {
+	if s.cc.Revision().Value() >= hvhmodule.RevisionFixStepCharge {
+		if err := s.tryChargeCall(); err != nil {
+			return false, err
+		}
+	}
 	es, _, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return false, err

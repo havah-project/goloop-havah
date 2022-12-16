@@ -22,19 +22,24 @@ const (
 	Revision0 = iota
 	Revision1
 	Revision2
+	Revision3
 	RevisionReserved
 )
 
 const (
 	DefaultRevision = Revision0
 	MaxRevision     = RevisionReserved - 1
-	LatestRevision  = Revision2
+	LatestRevision  = Revision3
 )
 
 const (
 	RevisionTermStartedEvent = Revision2
 	RevisionPlanetIDReuse    = Revision2
 	RevisionLostCoin         = Revision2
+
+	RevisionFixStepCharge           = Revision3
+	RevisionFixAccessControl        = Revision3
+	RevisionInvokeBaseTxOnQueryMode = Revision3
 )
 
 var revisionFlags = []module.Revision{
