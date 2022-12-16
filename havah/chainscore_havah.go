@@ -49,8 +49,8 @@ func (s *chainScore) getExtensionState() (*hvh.ExtensionStateImpl, error) {
 	return es, nil
 }
 
-func (s *chainScore) getExtensionStateAndContext() (*hvh.ExtensionStateImpl, hvhmodule.CallContext, error) {
-	s.log.Debug("getExtensionStateAndContext() start")
+func (s *chainScore) getExtensionStateAndContextAfterBaseTx() (*hvh.ExtensionStateImpl, hvhmodule.CallContext, error) {
+	s.log.Debug("getExtensionStateAndContextAfterBaseTx() start")
 
 	es := hvh.GetExtensionStateFromWorldContext(s.cc, s.log)
 	if es == nil {
@@ -58,7 +58,7 @@ func (s *chainScore) getExtensionStateAndContext() (*hvh.ExtensionStateImpl, hvh
 	}
 
 	ctx := s.newCallContext()
-	if s.cc.TransactionID() == nil && s.from == nil {
+	if !ctx.IsBaseTxInvoked() {
 		height := ctx.BlockHeight()
 		if baseData := es.NewBaseTransactionData(height); baseData != nil {
 			if bs, err := json.Marshal(baseData); err == nil {
@@ -69,9 +69,10 @@ func (s *chainScore) getExtensionStateAndContext() (*hvh.ExtensionStateImpl, hvh
 				return nil, nil, err
 			}
 		}
+		ctx.SetBaseTxInvoked()
 	}
 
-	s.log.Debug("getExtensionStateAndContext() end")
+	s.log.Debug("getExtensionStateAndContextAfterBaseTx() end")
 	return es, ctx, nil
 }
 
@@ -262,7 +263,7 @@ func (s *chainScore) Ex_getRewardInfo() (map[string]interface{}, error) {
 	if err := s.tryChargeCall(); err != nil {
 		return nil, err
 	}
-	es, ctx, err := s.getExtensionStateAndContext()
+	es, ctx, err := s.getExtensionStateAndContextAfterBaseTx()
 	if err != nil {
 		return nil, err
 	}

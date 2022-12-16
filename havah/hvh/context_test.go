@@ -21,7 +21,7 @@ func newMockCallContextAndFrom(isQuery bool) (hvhmodule.CallContext, module.Addr
 	return NewCallContext(mcc, from), from
 }
 
-func TestCallContextImpl_Issue(t *testing.T) {
+func TestCallContext_Issue(t *testing.T) {
 	cc, from := newMockCallContextAndFrom(false)
 	amount := big.NewInt(1000)
 
@@ -43,7 +43,7 @@ func TestCallContextImpl_Issue(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestCallContextImpl_Burn(t *testing.T) {
+func TestCallContext_Burn(t *testing.T) {
 	cc, _ := newMockCallContextAndFrom(false)
 	amount := big.NewInt(1000)
 
@@ -59,7 +59,7 @@ func TestCallContextImpl_Burn(t *testing.T) {
 	assert.Zero(t, balance.Sign())
 }
 
-func TestCallContextImpl_Transfer(t *testing.T) {
+func TestCallContext_Transfer(t *testing.T) {
 	to := common.MustNewAddressFromString("hx2222")
 	cc, from := newMockCallContextAndFrom(false)
 	amount := big.NewInt(10_000)
@@ -83,7 +83,7 @@ func TestCallContextImpl_Transfer(t *testing.T) {
 	assert.Zero(t, balance.Cmp(amount))
 }
 
-func TestCallContextImpl_ActionOnQueryMode(t *testing.T) {
+func TestCallContext_ActionOnQueryMode(t *testing.T) {
 	var err error
 	var balance *big.Int
 	to := common.MustNewAddressFromString("hx2345")
@@ -126,4 +126,15 @@ func TestCallContextImpl_ActionOnQueryMode(t *testing.T) {
 	assert.Equal(t, int64(5_000), totalSupply.Int64())
 	assert.Equal(t, int64(4_000), cc.GetBalance(from).Int64())
 	assert.Equal(t, int64(1_000), cc.GetBalance(to).Int64())
+}
+
+func TestCallContext_IsBaseTxInvoke(t *testing.T) {
+	mcc, _ := newMockCallContextAndFrom(true)
+	assert.False(t, mcc.IsBaseTxInvoked())
+
+	mcc.SetBaseTxInvoked()
+	assert.True(t, mcc.IsBaseTxInvoked())
+
+	mcc, _ = newMockCallContextAndFrom(false)
+	assert.True(t, mcc.IsBaseTxInvoked())
 }

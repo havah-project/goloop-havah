@@ -32,4 +32,6 @@ type CallContext interface {
 	OnEvent(addr module.Address, indexed, data [][]byte)
 	Governance() module.Address
 	FrameLogger() *trace.Logger
+	IsBaseTxInvoked() bool
+	SetBaseTxInvoked()
 }
