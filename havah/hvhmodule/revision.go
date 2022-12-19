@@ -37,9 +37,8 @@ const (
 	RevisionPlanetIDReuse    = Revision2
 	RevisionLostCoin         = Revision2
 
-	RevisionFixStepCharge           = Revision3
-	RevisionFixAccessControl        = Revision3
-	RevisionInvokeBaseTxOnQueryMode = Revision3
+	RevisionFixStepCharge    = Revision3
+	RevisionFixAccessControl = Revision3
 )
 
 var revisionFlags = []module.Revision{
@@ -49,6 +48,8 @@ var revisionFlags = []module.Revision{
 	// Revision 1
 	module.ContractSetEvent,
 	// Revision 2
+	0,
+	// Revision 3
 	0,
 }
 

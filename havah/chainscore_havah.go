@@ -66,9 +66,6 @@ func (s *chainScore) getExtensionStateAndContext() (*hvh.ExtensionStateImpl, hvh
 }
 
 func (s *chainScore) invokeBaseTxOnQueryMode(ctx hvhmodule.CallContext, es *hvh.ExtensionStateImpl) error {
-	if ctx.Revision().Value() < hvhmodule.RevisionInvokeBaseTxOnQueryMode {
-		return nil
-	}
 	if ctx.IsBaseTxInvoked() {
 		return nil
 	}
