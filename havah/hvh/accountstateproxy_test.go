@@ -1,6 +1,7 @@
 package hvh
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -29,10 +30,87 @@ func TestAccountStateProxy_Balance(t *testing.T) {
 func TestAccountStateProxy_Value(t *testing.T) {
 	id := state.SystemID
 	as := newMockAccount(id)
-	aps := newAccountStateProxy(id, as)
+	asp := newAccountStateProxy(id, as)
 
-	db := scoredb.NewVarDB(aps, state.VarTotalSupply)
+	db := scoredb.NewVarDB(asp, state.VarTotalSupply)
 
 	assert.NoError(t, db.Set(100))
 	assert.Equal(t, int64(100), db.Int64())
+}
+
+func TestAccountStateProxy_DeleteValue(t *testing.T) {
+	id := state.SystemID
+	oldVs := [][]byte{nil, []byte("old")}
+
+	for i, oldV := range oldVs {
+		name := fmt.Sprintf("name-%d", i)
+		t.Run(name, func(t *testing.T) {
+			as := newMockAccount(id)
+			asp := newAccountStateProxy(id, as)
+
+			k := []byte("key")
+			v, err := as.SetValue(k, oldV)
+			assert.NoError(t, err)
+			assert.Nil(t, v)
+
+			v, err = as.GetValue(k)
+			assert.NoError(t, err)
+			assert.Equal(t, oldV, v)
+
+			v, err = asp.GetValue(k)
+			assert.NoError(t, err)
+			assert.Equal(t, oldV, v)
+
+			v, err = asp.DeleteValue(k)
+			assert.NoError(t, err)
+			assert.Equal(t, oldV, v)
+
+			v, err = asp.GetValue(k)
+			assert.NoError(t, err)
+			assert.Nil(t, v)
+
+			v, err = as.GetValue(k)
+			assert.NoError(t, err)
+			assert.Equal(t, oldV, v)
+		})
+	}
+}
+
+func TestAccountStateProxy_SetValue(t *testing.T) {
+	id := state.SystemID
+	oldVs := [][]byte{nil, []byte("old")}
+	newV := []byte("new")
+
+	for i, oldV := range oldVs {
+		name := fmt.Sprintf("name-%d", i)
+		t.Run(name, func(t *testing.T) {
+			as := newMockAccount(id)
+			asp := newAccountStateProxy(id, as)
+
+			k := []byte("key")
+			v, err := as.SetValue(k, oldV)
+			assert.NoError(t, err)
+			assert.Nil(t, v)
+
+			v, err = as.GetValue(k)
+			assert.NoError(t, err)
+			assert.Equal(t, oldV, v)
+
+			v, err = asp.GetValue(k)
+			assert.NoError(t, err)
+			assert.Equal(t, oldV, v)
+
+			v, err = asp.SetValue(k, newV)
+			assert.NoError(t, err)
+			assert.Equal(t, oldV, v)
+
+			v, err = asp.GetValue(k)
+			assert.NoError(t, err)
+			assert.Equal(t, newV, v)
+
+			v, err = as.GetValue(k)
+			assert.NoError(t, err)
+			assert.Equal(t, oldV, v)
+		})
+	}
 }

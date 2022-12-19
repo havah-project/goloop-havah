@@ -41,23 +41,35 @@ func (as *accountStateProxy) GetValue(k []byte) ([]byte, error) {
 }
 
 func (as *accountStateProxy) SetValue(k, v []byte) ([]byte, error) {
+	if len(v) == 0 {
+		return as.DeleteValue(k)
+	}
+
 	as.lazyInitStore()
 
 	var err error
 	ks := string(k)
 	old, ok := as.store[ks]
 	if !ok {
-		old, err = as.AccountState.GetValue(k)
+		if old, err = as.AccountState.GetValue(k); err != nil {
+			return nil, err
+		}
 	}
 	as.store[ks] = v
-	return old, err
+	return old, nil
 }
 
 func (as *accountStateProxy) DeleteValue(k []byte) ([]byte, error) {
 	as.lazyInitStore()
 
+	var err error
 	ks := string(k)
-	old := as.store[ks]
+	old, ok := as.store[ks]
+	if !ok {
+		if old, err = as.AccountState.GetValue(k); err != nil {
+			return nil, err
+		}
+	}
 	as.store[ks] = nil
 	return old, nil
 }
