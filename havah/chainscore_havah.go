@@ -88,6 +88,14 @@ func (s *chainScore) invokeBaseTxOnQueryMode(ctx hvhmodule.CallContext, es *hvh.
 	return nil
 }
 
+func (s *chainScore) checkIntercallOnQueryMode() error {
+	s.cc.Logger().Debugf("checkIntercallOnQueryMode(from=%s)", s.from)
+	if s.cc.TransactionID() == nil && s.from != nil && s.from.IsContract() {
+		return scoreresult.RevertedError.Errorf("IntercallNotAllowedOnQueryMode(from=%s)", s.from)
+	}
+	return nil
+}
+
 func (s *chainScore) Ex_getUSDTPrice() (*big.Int, error) {
 	if s.cc.Revision().Value() >= hvhmodule.RevisionFixStepCharge {
 		if err := s.tryChargeCall(); err != nil {
@@ -290,6 +298,10 @@ func (s *chainScore) Ex_getRewardInfo() (map[string]interface{}, error) {
 	if err := s.tryChargeCall(); err != nil {
 		return nil, err
 	}
+	if err := s.checkIntercallOnQueryMode(); err != nil {
+		return nil, err
+	}
+
 	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return nil, err
