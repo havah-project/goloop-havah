@@ -17,12 +17,16 @@
 package consensus_test
 
 import (
+	"bytes"
+	"encoding/hex"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/icon-project/goloop/btp/ntm"
+	"github.com/icon-project/goloop/common/codec"
 	"github.com/icon-project/goloop/common/log"
 	"github.com/icon-project/goloop/consensus"
 	"github.com/icon-project/goloop/consensus/fastsync"
@@ -255,7 +259,12 @@ func newBTPTest(t *testing.T) *btpTest {
 			"name":   dsa,
 			"pubKey": fmt.Sprintf("0x%x", v.Chain.WalletFor(dsa).PublicKey()),
 		})
-		t.Logf("register key index=%d %s=%x", i, dsa, v.Chain.WalletFor(dsa).PublicKey())
+		pk := v.Chain.WalletFor(dsa).PublicKey()
+		iconAddr, err := ntm.NewIconAddressFromPubKey(pk)
+		assert.NoError(err)
+		ethAddr, err := ntm.ForUID("eth").AddressFromPubKey(pk)
+		assert.NoError(err)
+		t.Logf("register key index=%d %s=%x icon=%x eth=%x", i, dsa, v.Chain.WalletFor(dsa).PublicKey(), iconAddr, ethAddr)
 	}
 	tx.Call("openBTPNetwork", map[string]string{
 		"networkTypeName": uid,
@@ -340,6 +349,24 @@ func TestConsensus_BTPBasic(t *testing.T) {
 	ntsd := pc.NewDecision(module.SourceNetworkUID(1), 1, 4, bbh.Round(), bd.NetworkTypeDigestFor(1).NetworkTypeSectionHash())
 	err = pc.Verify(ntsd.Hash(), pf)
 	assert.NoError(err)
+
+	// increase height so that early blocks are not in block cache
+	for i := 0; i < 10; i++ {
+		f.SendTXToAllAndWaitForResultBlock(f.NewTx())
+	}
+
+	blk, err = f.BM.GetBlockByHeight(2)
+	assert.NoError(err)
+	bb, _, err := f.CS.GetBTPBlockHeaderAndProof(blk, 1, module.FlagBTPBlockHeader)
+	assert.NoError(err)
+	assert.EqualValues(2, bb.MainHeight())
+
+	blk, err = f.BM.GetBlockByHeight(4)
+	assert.NoError(err)
+	bb, _, err = f.CS.GetBTPBlockHeaderAndProof(blk, 1, module.FlagBTPBlockHeader)
+	assert.NoError(err)
+	assert.EqualValues(4, bb.MainHeight())
+	assert.NotNil(bb.MessagesRoot())
 }
 
 func TestConsensus_BTPBlockBasic(t_ *testing.T) {
@@ -405,7 +432,6 @@ func TestConsensus_BTPBlockBasic(t_ *testing.T) {
 
 func TestConsensus_ChangeBTPKey(t_ *testing.T) {
 	const dsa = "ecdsa/secp256k1"
-	const uid = "eth"
 	tst := newBTPTest(t_)
 	defer tst.Close()
 	f := tst.Fixture
@@ -422,7 +448,7 @@ func TestConsensus_ChangeBTPKey(t_ *testing.T) {
 		"name":   dsa,
 		"pubKey": fmt.Sprintf("0x%x", wp.WalletFor(dsa).PublicKey()),
 	}).CallFrom(f.Nodes[1].CommonAddress(), "setBTPPublicKey", map[string]string{
-		"name":   uid,
+		"name":   dsa,
 		"pubKey": fmt.Sprintf("0x%x", wp2.WalletFor(dsa).PublicKey()),
 	}).SetTimestamp(blk.Timestamp())
 	blk = f.SendTXToAllAndWaitForBlock(tx)
@@ -434,6 +460,9 @@ func TestConsensus_ChangeBTPKey(t_ *testing.T) {
 	assert.NoError(err)
 	assert.EqualValues(1, len(bd.NetworkTypeDigests()))
 
+	f.Nodes[0].Chain.SetWalletFor(dsa, wp.WalletFor(dsa))
+	f.Nodes[1].Chain.SetWalletFor(dsa, wp2.WalletFor(dsa))
+
 	testMsg := ([]byte)("test message")
 	tx = test.NewTx().CallFrom(f.CommonAddress(), "sendBTPMessage", map[string]string{
 		"networkId": "0x1",
@@ -443,8 +472,6 @@ func TestConsensus_ChangeBTPKey(t_ *testing.T) {
 	_, err = blk.NormalTransactions().Get(0)
 	assert.NoError(err)
 
-	f.Nodes[0].Chain.SetWalletFor(dsa, wp.WalletFor(dsa))
-	f.Nodes[1].Chain.SetWalletFor(dsa, wp2.WalletFor(dsa))
 	_ = f.WaitForNextBlock()
 }
 
@@ -479,6 +506,9 @@ func TestConsensus_SetWrongBTPKey(t_ *testing.T) {
 	assert.NoError(err)
 	assert.EqualValues(1, len(bd.NetworkTypeDigests()))
 
+	f.Nodes[0].Chain.SetWalletFor(dsa, wp.WalletFor(dsa))
+	f.Nodes[1].Chain.SetWalletFor(dsa, wp2.WalletFor(dsa))
+
 	testMsg := ([]byte)("test message")
 	blk = f.SendTXToAllAndWaitForBlock(
 		f.NewTx().CallFrom(f.CommonAddress(), "sendBTPMessage", map[string]string{
@@ -489,8 +519,6 @@ func TestConsensus_SetWrongBTPKey(t_ *testing.T) {
 	_, err = blk.NormalTransactions().Get(0)
 	assert.NoError(err)
 
-	f.Nodes[0].Chain.SetWalletFor(dsa, wp.WalletFor(dsa))
-	f.Nodes[1].Chain.SetWalletFor(dsa, wp2.WalletFor(dsa))
 	f.WaitForNextBlock()
 
 	// set wrong pub key
@@ -622,6 +650,25 @@ func TestConsensus_OpenCloseRevokeValidatorOpen(t_ *testing.T) {
 	f.SendTXToAllAndWaitForResultBlock(f.NewTx())
 }
 
+func TestConsensus_GetBTPBlockHeaderAndProof_NotCached(t_ *testing.T) {
+	tst := newBTPTest(t_)
+	defer tst.Close()
+	f := tst.Fixture
+	assert := tst.Assertions
+	_ = f.WaitForBlock(2)
+
+	// increase height so that B(2) is not in block cache
+	for i := 0; i < 10; i++ {
+		f.SendTXToAllAndWaitForResultBlock(f.NewTx())
+	}
+
+	blk, err := f.BM.GetBlockByHeight(2)
+	assert.NoError(err)
+	bb, _, err := f.CS.GetBTPBlockHeaderAndProof(blk, 1, module.FlagBTPBlockHeader)
+	assert.NoError(err)
+	assert.EqualValues(2, bb.MainHeight())
+}
+
 func TestConsensus_OpenSetNilKey(t_ *testing.T) {
 	const dsa = "ecdsa/secp256k1"
 	tst := newBTPTest(t_)
@@ -732,4 +779,251 @@ func TestConsensus_Sync(t *testing.T) {
 	assert.NoError(err)
 	blk = nd.WaitForBlock(10)
 	assert.EqualValues(10, blk.Height())
+}
+
+func newSignedNilVote(w module.Wallet, vt consensus.VoteType, h int64, r int32, nid []byte, ts int64) *consensus.VoteMessage {
+	return consensus.NewVoteMessage(
+		w, vt, h, r, nid, nil, ts,
+		nil, nil, 0,
+	)
+}
+
+func testWALMessageList(t *testing.T, walID string) {
+	assert := assert.New(t)
+	f := test.NewFixture(t, test.AddDefaultNode(false), test.AddValidatorNodes(4))
+	defer f.Close()
+
+	v1 := newSignedNilVote(f.Nodes[0].Chain.Wallet(), consensus.VoteTypePrevote, 1, 3, codec.MustMarshalToBytes(f.Chain.NID()), 10)
+	v2 := newSignedNilVote(f.Nodes[1].Chain.Wallet(), consensus.VoteTypePrevote, 1, 3, codec.MustMarshalToBytes(f.Chain.NID()), 10)
+	v3 := newSignedNilVote(f.Nodes[2].Chain.Wallet(), consensus.VoteTypePrevote, 1, 3, codec.MustMarshalToBytes(f.Chain.NID()), 10)
+
+	vl := consensus.NewVoteList()
+	vl.AddVote(v1)
+	vl.AddVote(v2)
+	vl.AddVote(v3)
+	vlm := &consensus.VoteListMessage{
+		VoteList: vl,
+	}
+
+	wal := consensus.NewTestWAL()
+	ww, err := wal.OpenForWrite(walID, &consensus.WALConfig{})
+	assert.NoError(err)
+	mww := consensus.WalMessageWriter{WALWriter: ww}
+	err = mww.WriteMessage(vlm)
+	assert.NoError(err)
+	err = mww.Close()
+	assert.NoError(err)
+
+	nd := f.AddNode(test.UseGenesis(string(f.Chain.Genesis())), test.UseWAL(wal))
+
+	err = nd.CS.Start()
+	assert.NoError(err)
+	status := nd.CS.GetStatus()
+	assert.EqualValues(3, status.Round)
+}
+
+func TestConsensus_WALMessageList(t *testing.T) {
+	testWALMessageList(t, "round")
+	testWALMessageList(t, "lock")
+	testWALMessageList(t, "commit")
+}
+
+func TestConsensus_RoundWALMyVote(t *testing.T) {
+	assert := assert.New(t)
+	f := test.NewFixture(t, test.AddDefaultNode(false), test.AddValidatorNodes(4))
+	defer f.Close()
+
+	v1 := newSignedNilVote(f.Nodes[0].Chain.Wallet(), consensus.VoteTypePrevote, 1, 3, codec.MustMarshalToBytes(f.Chain.NID()), 10)
+	wal := consensus.NewTestWAL()
+	ww, err := wal.OpenForWrite("round", &consensus.WALConfig{})
+	assert.NoError(err)
+	mww := consensus.WalMessageWriter{WALWriter: ww}
+	err = mww.WriteMessage(v1)
+	assert.NoError(err)
+	err = mww.Close()
+	assert.NoError(err)
+
+	nd := f.AddNode(test.UseGenesis(string(f.Chain.Genesis())), test.UseWAL(wal), test.UseWallet(f.Nodes[0].Chain.Wallet()))
+
+	err = nd.CS.Start()
+	assert.NoError(err)
+	status := nd.CS.GetStatus()
+	assert.EqualValues(3, status.Round)
+}
+
+type ConsensusInternal interface {
+	module.Consensus
+	OnReceive(sp module.ProtocolInfo, bs []byte, id module.PeerID) (bool, error)
+	ReceiveBlockResult(br fastsync.BlockResult)
+}
+
+type peerID []byte
+
+func (p peerID) Bytes() []byte {
+	return p
+}
+
+func (p peerID) Equal(id module.PeerID) bool {
+	return bytes.Equal(p.Bytes(), id.Bytes())
+}
+
+func (p peerID) String() string {
+	return hex.EncodeToString(p)
+}
+
+type blockResult struct {
+	blk      module.BlockData
+	votes    []byte
+	consume  func()
+	reject   func()
+	consumed bool
+}
+
+func (br *blockResult) Block() module.BlockData {
+	return br.blk
+}
+
+func (br *blockResult) Votes() []byte {
+	return br.votes
+}
+
+func (br *blockResult) Consume() {
+	if br.consume != nil {
+		br.consume()
+	}
+	br.consumed = true
+}
+
+func (br *blockResult) Reject() {
+	if br.reject != nil {
+		br.reject()
+	}
+}
+
+func TestConsensus_BlockCandidateDisposal(t *testing.T) {
+	// ImportBlock -> enterPrecommit -> ReceiveBlockResult -> ReceiveBlockResult
+
+	assert := assert.New(t)
+	f := test.NewFixture(
+		t, test.AddDefaultNode(false), test.AddValidatorNodes(4),
+	)
+	defer f.Close()
+
+	f.Nodes[1].ProposeFinalizeBlock(consensus.NewEmptyCommitVoteList())
+	blk, err := f.Nodes[1].BM.GetBlockByHeight(1)
+	assert.NoError(err)
+
+	msgBS, bpmBS, bps := f.Nodes[1].ProposalBytesFor(blk)
+
+	peer := peerID(make([]byte, 4))
+	cs, ok := f.CS.(ConsensusInternal)
+	assert.True(ok)
+	assert.NoError(cs.Start())
+
+	// runs ImportBlock
+	_, _ = cs.OnReceive(consensus.ProtoProposal, msgBS, peer)
+	_, _ = cs.OnReceive(consensus.ProtoBlockPart, bpmBS, peer)
+	// TODO: wait for import
+	time.Sleep(time.Second)
+
+	// enterPrecommit
+	pv1 := f.Nodes[1].VoteFor(consensus.VoteTypePrevote, blk, bps.ID())
+	_, _ = cs.OnReceive(consensus.ProtoVote, codec.MustMarshalToBytes(pv1), peer)
+	pv2 := f.Nodes[2].VoteFor(consensus.VoteTypePrevote, blk, bps.ID())
+	_, _ = cs.OnReceive(consensus.ProtoVote, codec.MustMarshalToBytes(pv2), peer)
+	pv3 := f.Nodes[3].VoteFor(consensus.VoteTypePrevote, blk, bps.ID())
+	_, _ = cs.OnReceive(consensus.ProtoVote, codec.MustMarshalToBytes(pv3), peer)
+
+	vl := consensus.NewCommitVoteList(
+		nil,
+		f.Nodes[1].VoteFor(consensus.VoteTypePrecommit, blk, bps.ID()),
+		f.Nodes[2].VoteFor(consensus.VoteTypePrecommit, blk, bps.ID()),
+		f.Nodes[3].VoteFor(consensus.VoteTypePrecommit, blk, bps.ID()),
+	)
+	br := blockResult{
+		blk:   blk,
+		votes: vl.Bytes(),
+		reject: func() {
+			assert.Fail("shall not reject")
+		},
+	}
+
+	// finalize, move to next height
+	cs.ReceiveBlockResult(&br)
+	assert.True(br.consumed)
+
+	// just skip commit wait time
+	cs.Term()
+	assert.NoError(cs.Start())
+
+	buf := bytes.NewBuffer(nil)
+	assert.NoError(blk.Marshal(buf))
+	f.Nodes[2].ImportFinalizeBlockByReader(buf)
+	f.Nodes[2].ProposeFinalizeBlock(vl)
+	blk, err = f.Nodes[2].BM.GetBlockByHeight(2)
+	assert.NoError(err)
+	_, _, bps = f.Nodes[2].ProposalBytesFor(blk)
+
+	vl = consensus.NewCommitVoteList(
+		nil,
+		f.Nodes[1].VoteFor(consensus.VoteTypePrecommit, blk, bps.ID()),
+		f.Nodes[2].VoteFor(consensus.VoteTypePrecommit, blk, bps.ID()),
+		f.Nodes[3].VoteFor(consensus.VoteTypePrecommit, blk, bps.ID()),
+	)
+	br = blockResult{
+		blk:   blk,
+		votes: vl.Bytes(),
+		reject: func() {
+			assert.Fail("shall not reject")
+		},
+	}
+
+	// finalize another block
+	cs.ReceiveBlockResult(&br)
+	assert.True(br.consumed)
+}
+
+func TestConsensus_BlockCandidateDisposal2(t *testing.T) {
+	// ImportBlock -> ReceiveBlockResult
+
+	assert := assert.New(t)
+	f := test.NewFixture(
+		t, test.AddDefaultNode(false), test.AddValidatorNodes(4),
+	)
+	defer f.Close()
+
+	f.Nodes[1].ProposeFinalizeBlock(consensus.NewEmptyCommitVoteList())
+	blk, err := f.Nodes[1].BM.GetBlockByHeight(1)
+	assert.NoError(err)
+
+	msgBS, bpmBS, bps := f.Nodes[1].ProposalBytesFor(blk)
+
+	peer := peerID(make([]byte, 4))
+	cs, ok := f.CS.(ConsensusInternal)
+	assert.True(ok)
+	assert.NoError(cs.Start())
+
+	// runs ImportBlock
+	_, _ = cs.OnReceive(consensus.ProtoProposal, msgBS, peer)
+	_, _ = cs.OnReceive(consensus.ProtoBlockPart, bpmBS, peer)
+	// TODO: wait for import
+	time.Sleep(time.Second)
+
+	vl := consensus.NewCommitVoteList(
+		nil,
+		f.Nodes[1].VoteFor(consensus.VoteTypePrecommit, blk, bps.ID()),
+		f.Nodes[2].VoteFor(consensus.VoteTypePrecommit, blk, bps.ID()),
+		f.Nodes[3].VoteFor(consensus.VoteTypePrecommit, blk, bps.ID()),
+	)
+	br := blockResult{
+		blk:   blk,
+		votes: vl.Bytes(),
+		reject: func() {
+			assert.Fail("shall not reject")
+		},
+	}
+
+	// finalize, move to next height
+	cs.ReceiveBlockResult(&br)
+	assert.True(br.consumed)
 }

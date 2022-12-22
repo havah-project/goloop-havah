@@ -148,6 +148,9 @@ func (sm *ServiceManager) CreateSyncTransition(transition module.Transition, res
 }
 
 func (sm *ServiceManager) Finalize(transition module.Transition, opt int) error {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+
 	res := service.FinalizeTransition(transition, opt, false)
 	bk, err := sm.dbase.GetBucket(db.TransactionLocatorByHash)
 	if err != nil {
@@ -364,7 +367,7 @@ func (sm *ServiceManager) ExportResult(result []byte, vh []byte, dst db.Database
 	if err != nil {
 		return err
 	}
-	e := merkle.NewCopyContext(sm.dbase, dst)
+	e := merkle.PrepareCopyContext(sm.dbase, dst)
 	txresult.NewReceiptListWithBuilder(e.Builder(), r.NormalReceiptHash)
 	txresult.NewReceiptListWithBuilder(e.Builder(), r.PatchReceiptHash)
 	ess := sm.plt.NewExtensionWithBuilder(e.Builder(), r.ExtensionData)

@@ -70,6 +70,7 @@ func UnsafeFinalize(
 	c module.Chain,
 	blk module.BlockData,
 	cancelCh <-chan struct{},
+	progressCB module.ProgressCallback,
 ) error {
 	initTr, err := sm.CreateInitialTransition(nil, nil)
 	if err != nil {
@@ -82,6 +83,19 @@ func UnsafeFinalize(
 	}
 	tr = sm.PatchTransition(tr, blk.PatchTransactions(), blk)
 	syncTr := sm.CreateSyncTransition(tr, blk.Result(), blk.NextValidatorsHash(), true)
+
+	// Assume that the transition supports SetProgressCallback method
+	// to monitoring progress.
+	// This monitoring feature is not essential
+	type setProgressCallbacker interface {
+		SetProgressCallback(cb module.ProgressCallback)
+	}
+	if setter, ok := syncTr.(setProgressCallbacker); ok {
+		setter.SetProgressCallback(progressCB)
+	} else {
+		log.Warnln("transition doesn't support SetProgressCallback()")
+	}
+
 	r := &finalizeRequest{
 		sm:     sm,
 		syncTr: syncTr,
