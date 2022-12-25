@@ -11,9 +11,7 @@ import (
 type WorldContext interface {
 	Revision() module.Revision
 	BlockHeight() int64
-	Origin() module.Address
 	Treasury() module.Address
-	TransactionID() []byte
 	ConsensusInfo() module.ConsensusInfo
 	GetBalance(address module.Address) *big.Int
 	Issue(address module.Address, amount *big.Int) (*big.Int, error)
@@ -34,4 +32,6 @@ type CallContext interface {
 	OnEvent(addr module.Address, indexed, data [][]byte)
 	Governance() module.Address
 	FrameLogger() *trace.Logger
+	IsBaseTxInvoked() bool
+	SetBaseTxInvoked()
 }

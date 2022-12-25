@@ -130,7 +130,7 @@ func (s *State) GetIssueReductionRate() *big.Rat {
 
 func (s *State) GetIssueAmount(height, is int64) *big.Int {
 	if !IsIssueStarted(height, is) {
-		panic("CalcIssueAmount must be called after issue has started")
+		return hvhmodule.BigIntZero
 	}
 	baseCount := height - is
 	termPeriod := s.GetTermPeriod()

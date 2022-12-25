@@ -153,10 +153,15 @@ func (es *ExtensionStateImpl) GetTermPeriod() int64 {
 }
 
 // NewBaseTransactionData creates data part of a baseTransaction
-func (es *ExtensionStateImpl) NewBaseTransactionData(height, issueStart int64) map[string]interface{} {
+func (es *ExtensionStateImpl) NewBaseTransactionData(height int64) map[string]interface{} {
+	issueStart := es.GetIssueStart()
 	es.Logger().Debugf("NewBaseTransactionData() start: height=%d istart=%d", height, issueStart)
 
 	issueAmount := es.state.GetIssueAmount(height, issueStart)
+	if issueAmount == nil || issueAmount.Sign() <= 0 {
+		return nil
+	}
+
 	jso := map[string]interface{}{
 		"issueAmount": new(common.HexInt).SetValue(issueAmount),
 	}

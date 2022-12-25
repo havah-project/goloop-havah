@@ -36,6 +36,9 @@ const (
 	RevisionTermStartedEvent = Revision2
 	RevisionPlanetIDReuse    = Revision2
 	RevisionLostCoin         = Revision2
+
+	RevisionFixStepCharge    = Revision3
+	RevisionFixAccessControl = Revision3
 )
 
 var revisionFlags = []module.Revision{

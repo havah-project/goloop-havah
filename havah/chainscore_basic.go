@@ -18,6 +18,7 @@ package havah
 
 import (
 	"github.com/icon-project/goloop/common/errors"
+	"github.com/icon-project/goloop/havah/hvh"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 
 	"github.com/icon-project/goloop/common"
@@ -207,14 +208,14 @@ func (s *chainScore) Ex_getScoreOwner(score module.Address) (module.Address, err
 	if err := s.tryChargeCall(); err != nil {
 		return nil, err
 	}
-	return s.newCallContext().GetScoreOwner(score)
+	return hvh.NewCallContext(s.cc, s.from).GetScoreOwner(score)
 }
 
 func (s *chainScore) Ex_setScoreOwner(score module.Address, owner module.Address) error {
 	if err := s.tryChargeCall(); err != nil {
 		return err
 	}
-	return s.newCallContext().SetScoreOwner(s.from, score, owner)
+	return hvh.NewCallContext(s.cc, s.from).SetScoreOwner(s.from, score, owner)
 }
 
 func (s *chainScore) Ex_getRoundLimitFactor() (int64, error) {

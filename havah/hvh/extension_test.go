@@ -7,10 +7,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/db"
 	"github.com/icon-project/goloop/common/errors"
+	"github.com/icon-project/goloop/common/intconv"
 	"github.com/icon-project/goloop/havah/hvh/hvhstate"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
@@ -85,12 +87,27 @@ func newMockAccount(id []byte) *mockAccount {
 type mockCallContext struct {
 	contract.CallContext
 	height   int64
+	txId     []byte
 	accounts map[string]*mockAccount
 	revision module.Revision
 }
 
 func (cc *mockCallContext) BlockHeight() int64 {
 	return cc.height
+}
+
+func (cc *mockCallContext) setBlockHeight(height int64) {
+	cc.height = height
+	digest := sha3.Sum256(intconv.Int64ToBytes(height))
+	cc.txId = digest[:]
+}
+
+func (cc *mockCallContext) TransactionID() []byte {
+	return cc.txId
+}
+
+func (cc *mockCallContext) SetTransactionID(id []byte) {
+	cc.txId = id
 }
 
 func (cc *mockCallContext) GetAccountState(id []byte) state.AccountState {
@@ -136,10 +153,12 @@ func (cc *mockCallContext) SetRevision(revision module.Revision) {
 }
 
 func newMockCallContext() *mockCallContext {
-	return &mockCallContext{
+	cc := &mockCallContext{
 		accounts: make(map[string]*mockAccount),
 		revision: hvhmodule.Revision0,
 	}
+	cc.setBlockHeight(0)
+	return cc
 }
 
 func newMockExtensionState(t *testing.T, cfg *PlatformConfig) *ExtensionStateImpl {
@@ -190,22 +209,16 @@ func goByHeight(
 func goByCount(t *testing.T, count int64,
 	es *ExtensionStateImpl, mcc *mockCallContext, from module.Address) {
 	cc := NewCallContext(mcc, from)
-	is := es.GetIssueStart()
-	termPeriod := es.GetTermPeriod()
 
 	for i := int64(0); i < count; i++ {
 		mcc.height++
-		if hvhstate.IsIssueStarted(mcc.height, is) {
-			_, blockIndex := hvhstate.GetTermSequenceAndBlockIndex(mcc.height, is, termPeriod)
-			if blockIndex == 0 {
-				// A baseTx is created only at the beginning of each term
-				data := es.NewBaseTransactionData(mcc.height, is)
-				bs, err := json.Marshal(data)
-				assert.NoError(t, err)
+		// A baseTx is created only at the beginning of each term
+		if data := es.NewBaseTransactionData(mcc.height); data != nil {
+			bs, err := json.Marshal(data)
+			assert.NoError(t, err)
 
-				err = es.OnBaseTx(cc, bs)
-				assert.NoError(t, err)
-			}
+			err = es.OnBaseTx(cc, bs)
+			assert.NoError(t, err)
 		}
 	}
 }

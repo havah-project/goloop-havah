@@ -56,15 +56,8 @@ func (p *platform) NewBaseTransaction(wc state.WorldContext) (module.Transaction
 		return nil, nil
 	}
 
-	// The block height when coin issuing is started
-	issueStart := es.GetIssueStart()
-	if !hvhstate.IsIssueStarted(height, issueStart) {
-		return nil, nil
-	}
-
-	termPeriod := es.GetTermPeriod()
-	_, blockIndex := hvhstate.GetTermSequenceAndBlockIndex(height, issueStart, termPeriod)
-	if blockIndex != 0 {
+	baseData := es.NewBaseTransactionData(height)
+	if baseData == nil {
 		return nil, nil
 	}
 
@@ -74,7 +67,7 @@ func (p *platform) NewBaseTransaction(wc state.WorldContext) (module.Transaction
 		"timestamp": t,
 		"version":   v,
 		"dataType":  "base",
-		"data":      es.NewBaseTransactionData(height, issueStart),
+		"data":      baseData,
 	}
 	bs, err := json.Marshal(mtx)
 	if err != nil {

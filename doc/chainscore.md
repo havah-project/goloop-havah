@@ -1442,6 +1442,7 @@ HAVAH-specific JSON-RPC APIs
 
 * Returns the overall reward information
 * This call returns an error response before the start of the first term
+* It is not allowed to call this function via intercall on query mode
 
 > Request
 
@@ -1589,6 +1590,7 @@ None
 
 * Set 1 USDT price in HVH
 * Temporary API
+* Called by Governance SCORE after `revision 3`
 
 > Request
 

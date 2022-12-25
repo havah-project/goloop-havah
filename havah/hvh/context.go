@@ -33,21 +33,21 @@ func setBalance(address module.Address, as state.AccountState, balance *big.Int)
 	return nil
 }
 
-type callContextImpl struct {
+type callContext struct {
 	contract.CallContext
 	from module.Address
+
+	// accounts is available only in query mode
+	accounts        map[string]state.AccountState
+	isBaseTxInvoked bool
 }
 
-func (ctx *callContextImpl) Origin() module.Address {
-	return ctx.TransactionInfo().From
-}
-
-func (ctx *callContextImpl) GetBalance(address module.Address) *big.Int {
+func (ctx *callContext) GetBalance(address module.Address) *big.Int {
 	account := ctx.GetAccountState(address.ID())
 	return account.GetBalance()
 }
 
-func (ctx *callContextImpl) deposit(address module.Address, amount *big.Int) error {
+func (ctx *callContext) deposit(address module.Address, amount *big.Int) error {
 	if err := validateAmount(amount); err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func (ctx *callContextImpl) deposit(address module.Address, amount *big.Int) err
 	return ctx.addBalance(address, amount)
 }
 
-func (ctx *callContextImpl) withdraw(address module.Address, amount *big.Int) error {
+func (ctx *callContext) withdraw(address module.Address, amount *big.Int) error {
 	if err := validateAmount(amount); err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (ctx *callContextImpl) withdraw(address module.Address, amount *big.Int) er
 	return ctx.addBalance(address, new(big.Int).Neg(amount))
 }
 
-func (ctx *callContextImpl) Issue(address module.Address, amount *big.Int) (*big.Int, error) {
+func (ctx *callContext) Issue(address module.Address, amount *big.Int) (*big.Int, error) {
 	if address == nil {
 		return nil, errors.IllegalArgumentError.New("Invalid address")
 	}
@@ -92,7 +92,7 @@ func (ctx *callContextImpl) Issue(address module.Address, amount *big.Int) (*big
 	return totalSupply, nil
 }
 
-func (ctx *callContextImpl) Burn(amount *big.Int) (*big.Int, error) {
+func (ctx *callContext) Burn(amount *big.Int) (*big.Int, error) {
 	if amount == nil || amount.Sign() < 0 {
 		return nil, errors.IllegalArgumentError.Errorf("Invalid issueAmount: %v", amount)
 	}
@@ -114,7 +114,7 @@ func (ctx *callContextImpl) Burn(amount *big.Int) (*big.Int, error) {
 	return totalSupply, nil
 }
 
-func (ctx *callContextImpl) Transfer(
+func (ctx *callContext) Transfer(
 	from module.Address, to module.Address, amount *big.Int, opType module.OpType) (err error) {
 	if err = validateAmount(amount); err != nil {
 		return
@@ -143,13 +143,13 @@ func (ctx *callContextImpl) Transfer(
 	return
 }
 
-func (ctx *callContextImpl) addBalance(address module.Address, amount *big.Int) error {
+func (ctx *callContext) addBalance(address module.Address, amount *big.Int) error {
 	as := ctx.GetAccountState(address.ID())
 	ob := as.GetBalance()
 	return setBalance(address, as, new(big.Int).Add(ob, amount))
 }
 
-func (ctx *callContextImpl) GetTotalSupply() *big.Int {
+func (ctx *callContext) GetTotalSupply() *big.Int {
 	as := ctx.GetAccountState(state.SystemID)
 	tsVar := scoredb.NewVarDB(as, state.VarTotalSupply)
 	if ts := tsVar.BigInt(); ts != nil {
@@ -158,7 +158,7 @@ func (ctx *callContextImpl) GetTotalSupply() *big.Int {
 	return hvhmodule.BigIntZero
 }
 
-func (ctx *callContextImpl) addTotalSupply(amount *big.Int) (*big.Int, error) {
+func (ctx *callContext) addTotalSupply(amount *big.Int) (*big.Int, error) {
 	as := ctx.GetAccountState(state.SystemID)
 	varDB := scoredb.NewVarDB(as, state.VarTotalSupply)
 	ts := varDB.BigInt()
@@ -173,11 +173,11 @@ func (ctx *callContextImpl) addTotalSupply(amount *big.Int) (*big.Int, error) {
 	return ts, varDB.Set(ts)
 }
 
-func (ctx *callContextImpl) SetValidators(validators []module.Validator) error {
+func (ctx *callContext) SetValidators(validators []module.Validator) error {
 	return ctx.GetValidatorState().Set(validators)
 }
 
-func (ctx *callContextImpl) GetScoreOwner(score module.Address) (module.Address, error) {
+func (ctx *callContext) GetScoreOwner(score module.Address) (module.Address, error) {
 	if score == nil || !score.IsContract() {
 		return nil, scoreresult.InvalidParameterError.Errorf("Invalid score address")
 	}
@@ -188,7 +188,7 @@ func (ctx *callContextImpl) GetScoreOwner(score module.Address) (module.Address,
 	return as.ContractOwner(), nil
 }
 
-func (ctx *callContextImpl) SetScoreOwner(from module.Address, score module.Address, newOwner module.Address) error {
+func (ctx *callContext) SetScoreOwner(from module.Address, score module.Address, newOwner module.Address) error {
 	// Parameter sanity check
 	if from == nil {
 		return scoreresult.InvalidParameterError.Errorf("Invalid sender")
@@ -224,19 +224,53 @@ func (ctx *callContextImpl) SetScoreOwner(from module.Address, score module.Addr
 	return as.SetContractOwner(newOwner)
 }
 
-func (ctx *callContextImpl) From() module.Address {
+func (ctx *callContext) From() module.Address {
 	return ctx.from
 }
 
-func (ctx *callContextImpl) onBalanceChange(opType module.OpType, from, to module.Address, amount *big.Int) {
+func (ctx *callContext) onBalanceChange(opType module.OpType, from, to module.Address, amount *big.Int) {
 	if tlog := ctx.FrameLogger(); tlog != nil {
 		tlog.OnBalanceChange(opType, from, to, amount)
 	}
 }
 
+func (ctx *callContext) GetAccountState(id []byte) state.AccountState {
+	if !ctx.isQueryMode() {
+		return ctx.CallContext.GetAccountState(id)
+	} else {
+		return ctx.getAccountStateProxy(id)
+	}
+}
+
+func (ctx *callContext) getAccountStateProxy(id []byte) state.AccountState {
+	ids := string(id)
+	proxy := ctx.accounts[ids]
+	if proxy == nil {
+		proxy = newAccountStateProxy(id, ctx.CallContext.GetAccountState(id))
+		ctx.accounts[ids] = proxy
+	}
+	return proxy
+}
+
+func (ctx *callContext) isQueryMode() bool {
+	return ctx.CallContext.TransactionID() == nil
+}
+
+func (ctx *callContext) IsBaseTxInvoked() bool {
+	return !ctx.isQueryMode() || ctx.isBaseTxInvoked
+}
+
+func (ctx *callContext) SetBaseTxInvoked() {
+	ctx.isBaseTxInvoked = true
+}
+
 func NewCallContext(cc contract.CallContext, from module.Address) hvhmodule.CallContext {
-	return &callContextImpl{
+	ctx := &callContext{
 		CallContext: cc,
 		from:        from,
 	}
+	if ctx.isQueryMode() {
+		ctx.accounts = make(map[string]state.AccountState)
+	}
+	return ctx
 }

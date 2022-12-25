@@ -379,18 +379,24 @@ func (es *ExtensionStateImpl) TransferMissedReward(cc hvhmodule.CallContext) err
 	if err != nil {
 		return err
 	}
+	es.logger.Info("ClaimMissedReward() return missed=%d", missed)
+
 	balance := cc.GetBalance(hvhmodule.PublicTreasury)
 	if balance.Cmp(missed) < 0 {
 		return scoreresult.Errorf(hvhmodule.StatusCriticalError,
 			"Invalid PublicTreasury balance=%d missed=%d",
 			balance, missed)
 	}
+
+	es.logger.Infof("goldworm-1: cc=%#v from=%v", cc, cc.From())
 	if err = cc.Transfer(hvhmodule.PublicTreasury, hvhmodule.SustainableFund, missed, module.Transfer); err != nil {
 		return err
 	}
+	es.logger.Info("goldworm-2")
 	if err = increaseVarDBInSustainableFund(cc, hvhmodule.VarMissingReward, missed); err != nil {
 		return err
 	}
+	es.logger.Info("goldworm-3")
 
 	es.Logger().Debugf(
 		"TransferMissedReward() end: missed=%d publicTreasury=%d",
