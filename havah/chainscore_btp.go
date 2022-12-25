@@ -114,6 +114,9 @@ func (s *chainScore) Ex_sendBTPMessage(networkId *common.HexInt, message []byte)
 }
 
 func (s *chainScore) Ex_setBTPPublicKey(name string, pubKey []byte) error {
+	if err := s.tryChargeCall(); err != nil {
+		return err
+	}
 	if s.from.IsContract() {
 		return scoreresult.New(module.StatusAccessDenied, "NoPermission")
 	}
