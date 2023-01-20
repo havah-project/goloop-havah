@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 ICON Foundation
+ * Copyright 2022 ICON Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,14 +26,13 @@ public class BTPNotification {
         this.properties = properties;
     }
 
-    public Bytes getHeader() {
+    public Base64 getHeader() {
         RpcItem item = properties.getItem("header");
-        return item != null ? item.asBytes() : null;
+        return item != null ? new Base64(item.asString()) : null;
     }
 
-    public Bytes getProof() {
+    public Base64 getProof() {
         RpcItem item = properties.getItem("proof");
-        return item != null ? item.asBytes() : null;
+        return item != null ? new Base64(item.asString()) : null;
     }
-
 }

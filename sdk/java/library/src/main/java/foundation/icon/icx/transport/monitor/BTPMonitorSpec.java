@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 ICON Foundation
+ * Copyright 2022 ICON Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,9 +24,10 @@ import java.math.BigInteger;
 public class BTPMonitorSpec extends MonitorSpec {
     private final BigInteger height;
     private final BigInteger networkId;
-    private final BigInteger proofFlag;
+    private final boolean proofFlag;
 
-    public BTPMonitorSpec(BigInteger height, BigInteger networkId, BigInteger proofFlag) {
+    public BTPMonitorSpec(BigInteger height, BigInteger networkId, boolean proofFlag) {
+        this.path = "btp";
         this.height = height;
         this.networkId = networkId;
         this.proofFlag = proofFlag;

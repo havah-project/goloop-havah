@@ -12,7 +12,8 @@ import pi.ObjectReaderImpl;
 import pi.ObjectWriterImpl;
 import testutils.TestInstrumentation;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ObjectIOForRLPTest {
     static byte[] bytes(String s) {
@@ -61,8 +62,8 @@ public class ObjectIOForRLPTest {
     }
 
     static void testObject(IObject data, byte[] enc) {
-        var w = new ObjectWriterImpl(new RLPDataWriter());
-        var r = new ObjectReaderImpl(new RLPDataReader(enc));
+        var w = new ObjectWriterImpl(new RLPNDataWriter());
+        var r = new ObjectReaderImpl(new RLPNDataReader(enc));
         w.avm_write(data);
         IObject adata = r._read(data.getClass());
         var aenc = w.toByteArray();
@@ -76,8 +77,8 @@ public class ObjectIOForRLPTest {
     }
 
     static void testList(IObject[] data, byte[] enc) {
-        var w = new ObjectWriterImpl(new RLPDataWriter());
-        var r = new ObjectReaderImpl(new RLPDataReader(enc));
+        var w = new ObjectWriterImpl(new RLPNDataWriter());
+        var r = new ObjectReaderImpl(new RLPNDataReader(enc));
         w.avm_beginList(data.length);
         for (IObject e : data)
             w.avm_write(e);

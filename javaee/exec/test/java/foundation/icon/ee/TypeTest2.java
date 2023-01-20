@@ -17,7 +17,7 @@
 package foundation.icon.ee;
 
 import foundation.icon.ee.test.ContractAddress;
-import foundation.icon.ee.test.SimpleTest;
+import foundation.icon.ee.test.NoDebugTest;
 import foundation.icon.ee.util.Strings;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -27,14 +27,10 @@ import score.annotation.External;
 import score.annotation.Optional;
 
 import java.math.BigInteger;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 
-public class TypeTest2 extends SimpleTest {
+public class TypeTest2 extends NoDebugTest {
     public static class Person {
         private String name;
         private int age;
