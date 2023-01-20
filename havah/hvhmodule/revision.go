@@ -23,13 +23,14 @@ const (
 	Revision1
 	Revision2
 	Revision3
+	Revision4
 	RevisionReserved
 )
 
 const (
 	DefaultRevision = Revision0
 	MaxRevision     = RevisionReserved - 1
-	LatestRevision  = Revision3
+	LatestRevision  = MaxRevision
 )
 
 const (
@@ -39,6 +40,8 @@ const (
 
 	RevisionFixStepCharge    = Revision3
 	RevisionFixAccessControl = Revision3
+
+	RevisionBTP2 = Revision4
 )
 
 var revisionFlags = []module.Revision{
@@ -51,6 +54,8 @@ var revisionFlags = []module.Revision{
 	0,
 	// Revision 3
 	0,
+	// Revision 4
+	module.MultipleFeePayers,
 }
 
 func init() {

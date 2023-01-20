@@ -429,7 +429,7 @@ var chainMethods = []*chainMethod{
 		[]scoreapi.DataType{
 			scoreapi.Integer,
 		},
-	}, hvhmodule.Revision3, 0},
+	}, hvhmodule.RevisionBTP2, 0},
 	{scoreapi.Method{
 		scoreapi.Function, "getBTPPublicKey",
 		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 2,
@@ -440,7 +440,7 @@ var chainMethods = []*chainMethod{
 		[]scoreapi.DataType{
 			scoreapi.Bytes,
 		},
-	}, hvhmodule.Revision3, 0},
+	}, hvhmodule.RevisionBTP2, 0},
 	{scoreapi.Method{
 		scoreapi.Function, "openBTPNetwork",
 		scoreapi.FlagExternal, 3,
@@ -452,7 +452,7 @@ var chainMethods = []*chainMethod{
 		[]scoreapi.DataType{
 			scoreapi.Integer,
 		},
-	}, hvhmodule.Revision3, 0},
+	}, hvhmodule.RevisionBTP2, 0},
 	{scoreapi.Method{
 		scoreapi.Function, "closeBTPNetwork",
 		scoreapi.FlagExternal, 1,
@@ -460,7 +460,7 @@ var chainMethods = []*chainMethod{
 			{"id", scoreapi.Integer, nil, nil},
 		},
 		nil,
-	}, hvhmodule.Revision3, 0},
+	}, hvhmodule.RevisionBTP2, 0},
 	{scoreapi.Method{
 		scoreapi.Function, "sendBTPMessage",
 		scoreapi.FlagExternal, 2,
@@ -469,7 +469,7 @@ var chainMethods = []*chainMethod{
 			{"message", scoreapi.Bytes, nil, nil},
 		},
 		nil,
-	}, hvhmodule.Revision3, 0},
+	}, hvhmodule.RevisionBTP2, 0},
 	{scoreapi.Method{
 		scoreapi.Function, "setBTPPublicKey",
 		scoreapi.FlagExternal, 2,
@@ -478,7 +478,7 @@ var chainMethods = []*chainMethod{
 			{"pubKey", scoreapi.Bytes, nil, nil},
 		},
 		nil,
-	}, hvhmodule.Revision3, 0},
+	}, hvhmodule.RevisionBTP2, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {
