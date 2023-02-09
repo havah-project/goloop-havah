@@ -571,6 +571,11 @@ func (es *ExtensionStateImpl) GetBlockVoteCheckParameters(cc hvhmodule.CallConte
 	}, nil
 }
 
+func (es *ExtensionStateImpl) RegisterValidator(
+	owner module.Address, grade int, name string, nodePublicKey []byte) error {
+	return es.state.RegisterValidator(owner, grade, name, nodePublicKey)
+}
+
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {
 	es := wc.GetExtensionState()
 	if es == nil {

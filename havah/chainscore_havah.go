@@ -383,3 +383,15 @@ func (s *chainScore) Ex_getBlockVoteCheckParameters() (map[string]interface{}, e
 	}
 	return es.GetBlockVoteCheckParameters(ctx)
 }
+
+func (s *chainScore) Ex_registerValidator(
+	owner module.Address, grade *common.HexInt, name string, nodePublicKey []byte) error {
+	if err := s.checkGovernance(true); err != nil {
+		return err
+	}
+	es, _, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return err
+	}
+	return es.RegisterValidator(owner, int(grade.Int64()), name, nodePublicKey)
+}

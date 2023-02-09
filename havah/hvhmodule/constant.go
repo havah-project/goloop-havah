@@ -97,6 +97,12 @@ const (
 	VarLost                 = "lost"
 	VarBlockVoteCheckPeriod = "block_vote_check_period" // unit: block
 	VarNonVoteAllowance     = "non_vote_allowance"      // unit: count
+	VarValidatorCount       = "validator_count"
+	DictValidatorInfo       = "validator_info"
+	DictValidatorStatus     = "validator_status"
+	DictValidatorToOwner    = "validator_to_owner"
+	ArrayValidatorList      = "validator_list"
+	VarValidatorCandidates  = "validator_candidates"
 )
 
 // VarDBs in SustainableFund Score
@@ -114,12 +120,14 @@ const (
 	StatusCriticalError
 	StatusRewardError
 	StatusNotReady
+	StatusDuplicate
 )
 
 // Decentralization
 const (
 	BlockVoteCheckPeriod int64 = 1
 	NonVoteAllowance           = 600
+	MaxValidatorNameLen        = 50
 )
 
 // The following variables are read-only
