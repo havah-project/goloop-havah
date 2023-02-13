@@ -24,6 +24,7 @@ const (
 	Revision2
 	Revision3
 	Revision4
+	Revision5
 	RevisionReserved
 )
 
@@ -41,7 +42,9 @@ const (
 	RevisionFixStepCharge    = Revision3
 	RevisionFixAccessControl = Revision3
 
-	RevisionBTP2 = Revision4
+	RevisionDecentralization = Revision4
+
+	RevisionBTP2 = Revision5
 )
 
 var revisionFlags = []module.Revision{
@@ -56,6 +59,8 @@ var revisionFlags = []module.Revision{
 	0,
 	// Revision 4
 	module.MultipleFeePayers,
+	// Revision 5
+	0,
 }
 
 func init() {

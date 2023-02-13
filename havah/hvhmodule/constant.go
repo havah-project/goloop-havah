@@ -95,6 +95,8 @@ const (
 	VarEcoReward            = "eco_reward"    // unit: hvh
 	VarPrivateClaimableRate = "private_claimable_rate"
 	VarLost                 = "lost"
+	VarBlockVoteCheckPeriod = "block_vote_check_period" // unit: block
+	VarNonVoteAllowance     = "non_vote_allowance"      // unit: count
 )
 
 // VarDBs in SustainableFund Score
@@ -112,6 +114,12 @@ const (
 	StatusCriticalError
 	StatusRewardError
 	StatusNotReady
+)
+
+// Decentralization
+const (
+	BlockVoteCheckPeriod int64 = 1
+	NonVoteAllowance           = 600
 )
 
 // The following variables are read-only

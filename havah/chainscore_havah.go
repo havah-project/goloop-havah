@@ -361,3 +361,25 @@ func (s *chainScore) Ex_getLost() (*big.Int, error) {
 	}
 	return es.GetLost()
 }
+
+func (s *chainScore) Ex_setBlockVoteCheckParameters(period, allowance *common.HexInt) error {
+	if err := s.checkGovernance(true); err != nil {
+		return err
+	}
+	es, _, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return err
+	}
+	return es.SetBlockVoteCheckParameters(period.Int64(), allowance.Int64())
+}
+
+func (s *chainScore) Ex_getBlockVoteCheckParameters() (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetBlockVoteCheckParameters(ctx)
+}

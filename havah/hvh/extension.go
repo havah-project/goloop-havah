@@ -559,6 +559,18 @@ func (es *ExtensionStateImpl) GetLost() (*big.Int, error) {
 	return es.state.GetLost()
 }
 
+func (es *ExtensionStateImpl) SetBlockVoteCheckParameters(period, allowance int64) error {
+	return es.state.SetBlockVoteCheckParameters(period, allowance)
+}
+
+func (es *ExtensionStateImpl) GetBlockVoteCheckParameters(cc hvhmodule.CallContext) (map[string]interface{}, error) {
+	return map[string]interface{}{
+		"height":    cc.BlockHeight(),
+		"period":    es.state.GetBlockVoteCheckPeriod(),
+		"allowance": es.state.GetNonVoteAllowance(),
+	}, nil
+}
+
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {
 	es := wc.GetExtensionState()
 	if es == nil {

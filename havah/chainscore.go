@@ -479,6 +479,23 @@ var chainMethods = []*chainMethod{
 		},
 		nil,
 	}, hvhmodule.RevisionBTP2, 0},
+	{scoreapi.Method{scoreapi.Function, "setBlockVoteCheckParameters",
+		scoreapi.FlagExternal, 2,
+		[]scoreapi.Parameter{
+			{"period", scoreapi.Integer, nil, nil},
+			{"allowance", scoreapi.Integer, nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.Dict,
+		},
+	}, hvhmodule.RevisionDecentralization, 0},
+	{scoreapi.Method{scoreapi.Function, "getBlockVoteCheckParameters",
+		scoreapi.FlagReadOnly, 0,
+		nil,
+		[]scoreapi.DataType{
+			scoreapi.Dict,
+		},
+	}, hvhmodule.RevisionDecentralization, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {

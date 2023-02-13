@@ -762,6 +762,38 @@ func (s *State) addLost(amount *big.Int) error {
 	return db.Set(new(big.Int).Add(lost, amount))
 }
 
+func (s *State) SetBlockVoteCheckParameters(period, allowance int64) error {
+	if period < 0 {
+		return scoreresult.InvalidParameterError.Errorf("Invalid BlockVoteCheckPeriod: %d", period)
+	}
+	if allowance < 0 {
+		return scoreresult.InvalidParameterError.Errorf("Invalid NonVoteAllowance: %d", allowance)
+	}
+
+	db := s.getVarDB(hvhmodule.VarBlockVoteCheckPeriod)
+	if err := db.Set(period); err != nil {
+		return err
+	}
+	db = s.getVarDB(hvhmodule.VarNonVoteAllowance)
+	return db.Set(allowance)
+}
+
+func (s *State) GetBlockVoteCheckPeriod() int64 {
+	db := s.getVarDB(hvhmodule.VarBlockVoteCheckPeriod)
+	if period := db.BigInt(); period != nil {
+		return period.Int64()
+	}
+	return hvhmodule.BlockVoteCheckPeriod
+}
+
+func (s *State) GetNonVoteAllowance() int64 {
+	db := s.getVarDB(hvhmodule.VarNonVoteAllowance)
+	if allowance := db.BigInt(); allowance != nil {
+		return allowance.Int64()
+	}
+	return hvhmodule.NonVoteAllowance
+}
+
 func validatePrivateClaimableRate(num, denom int64) bool {
 	if denom <= 0 || denom > 10000 {
 		return false
