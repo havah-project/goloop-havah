@@ -576,6 +576,10 @@ func (es *ExtensionStateImpl) RegisterValidator(
 	return es.state.RegisterValidator(owner, grade, name, nodePublicKey)
 }
 
+func (es *ExtensionStateImpl) UnregisterValidator(owner module.Address) error {
+	return es.state.UnregisterValidator(owner)
+}
+
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {
 	es := wc.GetExtensionState()
 	if es == nil {

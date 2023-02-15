@@ -795,17 +795,22 @@ func (s *State) GetNonVoteAllowance() int64 {
 }
 
 func (s *State) RegisterValidator(owner module.Address, grade int, name string, nodePublicKey []byte) error {
-	if err := s.registerValidatorInfo(owner, grade, name, nodePublicKey); err != nil {
-		return err
-	}
-	return s.registerValidatorStatus(owner)
-}
-
-func (s *State) registerValidatorInfo(owner module.Address, grade int, name string, nodePublicKey []byte) error {
 	s.logger.Debugf(
 		"RegisterValidator() start: owner=%s grade=%d name=%s nodePublicKey=%x",
 		owner, grade, name, nodePublicKey)
 
+	if err := s.registerValidatorInfo(owner, grade, name, nodePublicKey); err != nil {
+		return err
+	}
+	if err := s.registerValidatorStatus(owner); err != nil {
+		return err
+	}
+
+	s.logger.Debugf("RegisterValidator() end: owner=%s", owner)
+	return nil
+}
+
+func (s *State) registerValidatorInfo(owner module.Address, grade int, name string, nodePublicKey []byte) error {
 	if owner == nil {
 		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid owner: %v", owner)
 	}
@@ -837,6 +842,37 @@ func (s *State) registerValidatorStatus(owner module.Address) error {
 	}
 	vs := NewValidatorStatus()
 	return db.Set(ToKey(owner), vs.Bytes())
+}
+
+func (s *State) UnregisterValidator(owner module.Address) error {
+	s.logger.Debugf("UnregisterValidator() start: owner=%s", owner)
+	defer s.logger.Debugf("UnregisterValidator() end: owner=%s", owner)
+
+	if owner == nil {
+		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid owner: %v", owner)
+	}
+
+	key := ToKey(owner)
+	db := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
+	v := db.Get(key)
+	if v != nil {
+		return scoreresult.Errorf(
+			hvhmodule.StatusNotFound, "ValidatorStatus not found: %s", owner)
+	}
+	bs := v.Bytes()
+	if bs == nil {
+		return scoreresult.Errorf(
+			hvhmodule.StatusNotFound, "ValidatorStatus not found: %s", owner)
+	}
+
+	vs, err := NewValidatorStatusFromBytes(bs)
+	if err != nil {
+		return errors.InvalidStateError.Wrapf(
+			err, "Failed to create a ValidatorStatus from bytes: %s", owner)
+	}
+
+	vs.SetUnregistered()
+	return db.Set(key, vs.Bytes())
 }
 
 func validatePrivateClaimableRate(num, denom int64) bool {

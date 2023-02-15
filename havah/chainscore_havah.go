@@ -395,3 +395,14 @@ func (s *chainScore) Ex_registerValidator(
 	}
 	return es.RegisterValidator(owner, int(grade.Int64()), name, nodePublicKey)
 }
+
+func (s *chainScore) Ex_unregisterValidator(owner module.Address) error {
+	if err := s.checkGovernance(true); err != nil {
+		return err
+	}
+	es, _, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return err
+	}
+	return es.UnregisterValidator(owner)
+}

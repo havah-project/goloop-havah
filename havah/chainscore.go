@@ -504,6 +504,13 @@ var chainMethods = []*chainMethod{
 		},
 		nil,
 	}, hvhmodule.RevisionDecentralization, 0},
+	{scoreapi.Method{scoreapi.Function, "unregisterValidator",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"owner", scoreapi.Address, nil, nil},
+		},
+		nil,
+	}, hvhmodule.RevisionDecentralization, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {
