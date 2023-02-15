@@ -799,10 +799,14 @@ func (s *State) RegisterValidator(owner module.Address, grade int, name string, 
 		"RegisterValidator() start: owner=%s grade=%d name=%s nodePublicKey=%x",
 		owner, grade, name, nodePublicKey)
 
-	if err := s.registerValidatorInfo(owner, grade, name, nodePublicKey); err != nil {
+	vi, err := s.registerValidatorInfo(owner, grade, name, nodePublicKey)
+	if err != nil {
 		return err
 	}
-	if err := s.registerValidatorStatus(owner); err != nil {
+	if err = s.registerValidatorStatus(owner); err != nil {
+		return err
+	}
+	if err = s.registerNodeAddress(vi.Address(), owner); err != nil {
 		return err
 	}
 
@@ -810,28 +814,29 @@ func (s *State) RegisterValidator(owner module.Address, grade int, name string, 
 	return nil
 }
 
-func (s *State) registerValidatorInfo(owner module.Address, grade int, name string, nodePublicKey []byte) error {
+func (s *State) registerValidatorInfo(
+	owner module.Address, grade int, name string, nodePublicKey []byte) (*ValidatorInfo, error) {
 	if owner == nil {
-		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid owner: %v", owner)
+		return nil, scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid owner: %v", owner)
 	}
 	if !isGradeValid(grade) {
-		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid grade: %d", grade)
+		return nil, scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid grade: %d", grade)
 	}
 	if len(name) > hvhmodule.MaxValidatorNameLen {
-		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Too long name: %s", name)
+		return nil, scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Too long name: %s", name)
 	}
 
 	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
 	if v := db.Get(ToKey(owner)); v != nil {
-		return scoreresult.Errorf(
+		return nil, scoreresult.Errorf(
 			hvhmodule.StatusDuplicate, "ValidatorInfo already registered: %s", owner)
 	}
 
 	vi, err := NewValidatorInfo(owner, grade, name, nodePublicKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return db.Set(ToKey(owner), vi.Bytes())
+	return vi, db.Set(ToKey(owner), vi.Bytes())
 }
 
 func (s *State) registerValidatorStatus(owner module.Address) error {
@@ -842,6 +847,18 @@ func (s *State) registerValidatorStatus(owner module.Address) error {
 	}
 	vs := NewValidatorStatus()
 	return db.Set(ToKey(owner), vs.Bytes())
+}
+
+func (s *State) registerNodeAddress(node, owner module.Address) error {
+	key := ToKey(node)
+	db := s.getDictDB(hvhmodule.DictNodeToOwner, 1)
+
+	if v := db.Get(key); v != nil {
+		return scoreresult.Errorf(
+			hvhmodule.StatusDuplicate,
+			"NodeAddress already registered: owner=%s node=%s", owner, node)
+	}
+	return db.Set(key, owner.Bytes())
 }
 
 func (s *State) UnregisterValidator(owner module.Address) error {

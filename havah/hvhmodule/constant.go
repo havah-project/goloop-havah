@@ -100,7 +100,7 @@ const (
 	VarValidatorCount       = "validator_count"
 	DictValidatorInfo       = "validator_info"
 	DictValidatorStatus     = "validator_status"
-	DictValidatorToOwner    = "validator_to_owner"
+	DictNodeToOwner         = "node_to_owner"
 	ArrayValidatorList      = "validator_list"
 	VarValidatorCandidates  = "validator_candidates"
 )
