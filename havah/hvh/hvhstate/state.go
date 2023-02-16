@@ -892,6 +892,20 @@ func (s *State) UnregisterValidator(owner module.Address) error {
 	return db.Set(key, vs.Bytes())
 }
 
+func (s *State) GetNetworkStatus(height int64) (map[string]interface{}, error) {
+	var ns *NetworkStatus
+	var err error
+	db := s.getVarDB(hvhmodule.VarNetworkStatus)
+	if bs := db.Bytes(); bs != nil {
+		if ns, err = NewNetworkStatusFromBytes(bs); err != nil {
+			return nil, err
+		}
+	} else {
+		ns = NewNetworkStatus()
+	}
+	return ns.ToJSON(height), nil
+}
+
 func validatePrivateClaimableRate(num, denom int64) bool {
 	if denom <= 0 || denom > 10000 {
 		return false

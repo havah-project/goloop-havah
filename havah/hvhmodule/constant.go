@@ -103,6 +103,7 @@ const (
 	DictNodeToOwner         = "node_to_owner"
 	ArrayValidatorList      = "validator_list"
 	VarValidatorCandidates  = "validator_candidates"
+	VarNetworkStatus        = "network_status"
 )
 
 // VarDBs in SustainableFund Score

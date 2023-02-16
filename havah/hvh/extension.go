@@ -580,6 +580,10 @@ func (es *ExtensionStateImpl) UnregisterValidator(owner module.Address) error {
 	return es.state.UnregisterValidator(owner)
 }
 
+func (es *ExtensionStateImpl) GetNetworkStatus(cc hvhmodule.CallContext) (map[string]interface{}, error) {
+	return es.state.GetNetworkStatus(cc.BlockHeight())
+}
+
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {
 	es := wc.GetExtensionState()
 	if es == nil {

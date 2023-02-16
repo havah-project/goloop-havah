@@ -406,3 +406,14 @@ func (s *chainScore) Ex_unregisterValidator(owner module.Address) error {
 	}
 	return es.UnregisterValidator(owner)
 }
+
+func (s *chainScore) Ex_getNetworkStatus() (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetNetworkStatus(ctx)
+}
