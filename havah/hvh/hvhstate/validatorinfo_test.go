@@ -9,6 +9,7 @@ import (
 
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/crypto"
+	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
 )
 
@@ -28,7 +29,7 @@ func newDummyValidatorInfo(id, grade int) *ValidatorInfo {
 	owner := newDummyAddress(id, false)
 	name := fmt.Sprintf("name-%02d", id)
 	_, pubKey := crypto.GenerateKeyPair()
-	vi, _ := NewValidatorInfo(owner, grade, name, pubKey.SerializeUncompressed())
+	vi, _ := NewValidatorInfo(owner, pubKey.SerializeUncompressed(), grade, name)
 	return vi
 }
 
@@ -46,7 +47,7 @@ func TestNewValidatorInfo(t *testing.T) {
 	name := "name01"
 	address := common.NewAccountAddressFromPublicKey(pubKey)
 
-	vi0, err := NewValidatorInfo(owner, GradeMain, name, pubKey.SerializeCompressed())
+	vi0, err := NewValidatorInfo(owner, pubKey.SerializeCompressed(), GradeMain, name)
 	assert.NoError(t, err)
 	assert.NotNil(t, vi0)
 
@@ -58,7 +59,7 @@ func TestNewValidatorInfo(t *testing.T) {
 	assert.True(t, address.Equal(vi0.Address()))
 	assert.False(t, address.Equal(owner))
 
-	vi1, err := NewValidatorInfo(owner, GradeMain, name, pubKey.SerializeUncompressed())
+	vi1, err := NewValidatorInfo(owner, pubKey.SerializeUncompressed(), GradeMain, name)
 	assert.NoError(t, err)
 	assert.True(t, vi0.Equal(vi1))
 
@@ -78,4 +79,49 @@ func TestValidatorInfo_SetPublicKey(t *testing.T) {
 	assert.True(t, vi0.Equal(vi1))
 	assert.True(t, vi0.Address().Equal(vi1.Address()))
 	assert.Zero(t, bytes.Compare(vi0.Bytes(), vi1.Bytes()))
+}
+
+func TestValidatorInfo_SetName(t *testing.T) {
+	vi := newDummyValidatorInfo(1, GradeNormal)
+	assert.Equal(t, "name-01", vi.Name())
+
+	err := vi.SetName("hello")
+	assert.NoError(t, err)
+	assert.Equal(t, "hello", vi.Name())
+
+	var buf bytes.Buffer
+	for i := 0; i < hvhmodule.MaxValidatorNameLen; i++ {
+		buf.WriteString("a")
+	}
+	name := buf.String()
+	err = vi.SetName(name)
+	assert.NoError(t, err)
+	assert.Equal(t, name, vi.Name())
+
+	tooLongName := name + "a"
+	err = vi.SetName(tooLongName)
+	assert.Error(t, err)
+	assert.Equal(t, name, vi.Name())
+}
+
+func TestValidatorInfo_SetUrl(t *testing.T) {
+	vi := newDummyValidatorInfo(1, GradeNormal)
+	assert.Equal(t, "", vi.Url())
+
+	url := "https://www.example.com/info"
+	err := vi.SetUrl(url)
+	assert.NoError(t, err)
+	assert.Equal(t, url, vi.Url())
+
+	for ; len(url) < hvhmodule.MaxValidatorUrlLen; {
+		url += "a"
+	}
+	err = vi.SetUrl(url)
+	assert.NoError(t, err)
+	assert.Equal(t, url, vi.Url())
+
+	tooLongUrl := url + "a"
+	err = vi.SetName(tooLongUrl)
+	assert.Error(t, err)
+	assert.Equal(t, url, vi.Url())
 }

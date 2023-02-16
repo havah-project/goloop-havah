@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/icon-project/goloop/common"
+	"github.com/icon-project/goloop/common/crypto"
 	"github.com/icon-project/goloop/common/db"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/havah/hvhutils"
@@ -621,4 +622,17 @@ func TestState_UnregisterPlanet(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, lost.Sign() > 0)
 	assert.Zero(t, expLost.Cmp(lost))
+}
+
+func TestState_RegisterValidator(t *testing.T) {
+	owner := newDummyAddress(1, false)
+	name := "name-01"
+	_, pubKey := crypto.GenerateKeyPair()
+	state := newDummyState()
+
+	err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeNormal, name)
+	assert.NoError(t, err)
+
+	err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeNormal, name)
+	assert.Error(t, err)
 }

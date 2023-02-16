@@ -4,6 +4,8 @@ import (
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/codec"
 	"github.com/icon-project/goloop/common/crypto"
+	"github.com/icon-project/goloop/common/errors"
+	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
 )
 
@@ -21,9 +23,10 @@ func isGradeValid(grade int) bool {
 type ValidatorInfo struct {
 	version   int
 	owner     module.Address
+	publicKey *crypto.PublicKey
 	grade     int
 	name      string
-	publicKey *crypto.PublicKey
+	url       string
 
 	// Node address is derived from publicKey
 	node module.Address
@@ -51,8 +54,28 @@ func (vi *ValidatorInfo) Name() string {
 	return vi.name
 }
 
+func (vi *ValidatorInfo) SetName(name string) error {
+	if len(name) > hvhmodule.MaxValidatorNameLen {
+		return errors.IllegalArgumentError.Errorf("Too long name: %s", name)
+	}
+	vi.name = name
+	return nil
+}
+
 func (vi *ValidatorInfo) Grade() int {
 	return vi.grade
+}
+
+func (vi *ValidatorInfo) Url() string {
+	return vi.url
+}
+
+func (vi *ValidatorInfo) SetUrl(url string) error {
+	if len(url) > hvhmodule.MaxValidatorUrlLen {
+		return errors.IllegalArgumentError.Errorf("Too long url: %s", url)
+	}
+	vi.url = url
+	return nil
 }
 
 func (vi *ValidatorInfo) Address() module.Address {
@@ -70,7 +93,8 @@ func (vi *ValidatorInfo) RLPDecodeSelf(d codec.Decoder) error {
 	var owner *common.Address
 	var pubKey []byte
 
-	err := d.DecodeListOf(&vi.version, &owner, &vi.grade, &vi.name, &pubKey)
+	err := d.DecodeListOf(
+		&vi.version, &owner, &pubKey, &vi.grade, &vi.name, &vi.url)
 	if err != nil {
 		return err
 	}
@@ -86,9 +110,10 @@ func (vi *ValidatorInfo) RLPEncodeSelf(e codec.Encoder) error {
 	return e.EncodeListOf(
 		vi.version,
 		vi.owner.(*common.Address),
+		vi.publicKey.SerializeCompressed(),
 		vi.grade,
 		vi.name,
-		vi.publicKey.SerializeCompressed())
+		vi.url)
 }
 
 func (vi *ValidatorInfo) Bytes() []byte {
@@ -98,12 +123,14 @@ func (vi *ValidatorInfo) Bytes() []byte {
 func (vi *ValidatorInfo) Equal(other *ValidatorInfo) bool {
 	return vi.version == other.version &&
 		vi.owner.Equal(other.owner) &&
+		vi.publicKey.Equal(other.publicKey) &&
 		vi.grade == other.grade &&
 		vi.name == other.name &&
-		vi.publicKey.Equal(other.publicKey)
+		vi.url == other.url
 }
 
-func NewValidatorInfo(owner module.Address, grade int, name string, pubKey []byte) (*ValidatorInfo, error) {
+func NewValidatorInfo(
+	owner module.Address, pubKey []byte, grade int, name string) (*ValidatorInfo, error) {
 	vi := &ValidatorInfo{
 		owner: owner,
 		grade: grade,

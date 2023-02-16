@@ -794,12 +794,12 @@ func (s *State) GetNonVoteAllowance() int64 {
 	return hvhmodule.NonVoteAllowance
 }
 
-func (s *State) RegisterValidator(owner module.Address, grade int, name string, nodePublicKey []byte) error {
+func (s *State) RegisterValidator(owner module.Address, nodePublicKey []byte, grade int, name string) error {
 	s.logger.Debugf(
 		"RegisterValidator() start: owner=%s grade=%d name=%s nodePublicKey=%x",
 		owner, grade, name, nodePublicKey)
 
-	vi, err := s.registerValidatorInfo(owner, grade, name, nodePublicKey)
+	vi, err := s.registerValidatorInfo(owner, nodePublicKey, grade, name)
 	if err != nil {
 		return err
 	}
@@ -815,7 +815,7 @@ func (s *State) RegisterValidator(owner module.Address, grade int, name string, 
 }
 
 func (s *State) registerValidatorInfo(
-	owner module.Address, grade int, name string, nodePublicKey []byte) (*ValidatorInfo, error) {
+	owner module.Address, nodePublicKey []byte, grade int, name string) (*ValidatorInfo, error) {
 	if owner == nil {
 		return nil, scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid owner: %v", owner)
 	}
@@ -832,7 +832,7 @@ func (s *State) registerValidatorInfo(
 			hvhmodule.StatusDuplicate, "ValidatorInfo already registered: %s", owner)
 	}
 
-	vi, err := NewValidatorInfo(owner, grade, name, nodePublicKey)
+	vi, err := NewValidatorInfo(owner, nodePublicKey, grade, name)
 	if err != nil {
 		return nil, err
 	}
@@ -904,6 +904,30 @@ func (s *State) GetNetworkStatus(height int64) (map[string]interface{}, error) {
 		ns = NewNetworkStatus()
 	}
 	return ns.ToJSON(height), nil
+}
+
+func (s *State) SetValidatorInfo(owner module.Address, name, url string) error {
+	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
+	vi, err := s.getValidatorInfo(db, owner)
+	if err != nil {
+		return err
+	}
+	if err = vi.SetName(name); err != nil {
+		return err
+	}
+	if err = vi.SetUrl(url); err != nil {
+		return err
+	}
+	return db.Set(ToKey(owner), vi.Bytes())
+}
+
+func (s *State) getValidatorInfo(db *containerdb.DictDB, owner module.Address) (*ValidatorInfo, error) {
+	v := db.Get(ToKey(owner))
+	if v == nil {
+		return nil, scoreresult.Errorf(
+			hvhmodule.StatusNotFound, "ValidatorInfo not found: %s", owner)
+	}
+	return NewValidatorInfoFromBytes(v.Bytes())
 }
 
 func validatePrivateClaimableRate(num, denom int64) bool {

@@ -572,8 +572,8 @@ func (es *ExtensionStateImpl) GetBlockVoteCheckParameters(cc hvhmodule.CallConte
 }
 
 func (es *ExtensionStateImpl) RegisterValidator(
-	owner module.Address, grade int, name string, nodePublicKey []byte) error {
-	return es.state.RegisterValidator(owner, grade, name, nodePublicKey)
+	owner module.Address, nodePublicKey []byte, grade int, name string) error {
+	return es.state.RegisterValidator(owner, nodePublicKey, grade, name)
 }
 
 func (es *ExtensionStateImpl) UnregisterValidator(owner module.Address) error {
@@ -582,6 +582,10 @@ func (es *ExtensionStateImpl) UnregisterValidator(owner module.Address) error {
 
 func (es *ExtensionStateImpl) GetNetworkStatus(cc hvhmodule.CallContext) (map[string]interface{}, error) {
 	return es.state.GetNetworkStatus(cc.BlockHeight())
+}
+
+func (es *ExtensionStateImpl) SetValidatorInfo(cc hvhmodule.CallContext, name, url string) error {
+	return es.state.SetValidatorInfo(cc.From(), name, url)
 }
 
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {

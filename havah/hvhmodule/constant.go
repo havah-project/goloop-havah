@@ -129,6 +129,7 @@ const (
 	BlockVoteCheckPeriod int64 = 1
 	NonVoteAllowance           = 600
 	MaxValidatorNameLen        = 50
+	MaxValidatorUrlLen         = 100
 )
 
 // The following variables are read-only
