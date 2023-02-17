@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/icon-project/goloop/havah/hvhmodule"
 )
 
 func TestNewValidatorStatus(t *testing.T) {
@@ -47,9 +49,37 @@ func TestValidatorStatus_Disabled(t *testing.T) {
 	assert.True(t, vs.Disabled())
 	assert.False(t, vs.Unregistered())
 
-	vs.Enable()
+	err := vs.Enable(false)
+	assert.NoError(t, err)
 	assert.False(t, vs.Disabled())
 	assert.False(t, vs.Unregistered())
+}
+
+func TestValidatorStatus_Enable(t *testing.T) {
+	vs := NewValidatorStatus()
+	assert.False(t, vs.Disabled())
+
+	for i := 0; i < hvhmodule.MaxEnableCount; i++ {
+		vs.SetDisabled()
+		assert.True(t, vs.Disabled())
+
+		err := vs.Enable(false)
+		assert.NoError(t, err)
+		assert.False(t, vs.Disabled())
+	}
+
+	vs.SetDisabled()
+	assert.True(t, vs.Disabled())
+
+	err := vs.Enable(false)
+	assert.Error(t, err)
+	assert.True(t, vs.Disabled())
+	assert.Equal(t, hvhmodule.MaxEnableCount, vs.EnableCount())
+
+	err = vs.Enable(true)
+	assert.NoError(t, err)
+	assert.False(t, vs.Disabled())
+	assert.Zero(t, vs.EnableCount())
 }
 
 func TestValidatorStatus_Unregistered(t *testing.T) {

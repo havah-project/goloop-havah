@@ -130,6 +130,7 @@ const (
 	NonVoteAllowance           = 600
 	MaxValidatorNameLen        = 50
 	MaxValidatorUrlLen         = 100
+	MaxEnableCount             = 10
 )
 
 // The following variables are read-only

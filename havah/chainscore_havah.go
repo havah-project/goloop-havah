@@ -428,3 +428,14 @@ func (s *chainScore) Ex_setValidatorInfo(name, url string) error {
 	}
 	return es.SetValidatorInfo(ctx, name, url)
 }
+
+func (s *chainScore) Ex_enableValidator(owner module.Address) error {
+	if err := s.tryChargeCall(); err != nil {
+		return err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return err
+	}
+	return es.EnableValidator(ctx, owner)
+}

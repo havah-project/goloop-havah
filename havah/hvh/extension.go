@@ -588,6 +588,21 @@ func (es *ExtensionStateImpl) SetValidatorInfo(cc hvhmodule.CallContext, name, u
 	return es.state.SetValidatorInfo(cc.From(), name, url)
 }
 
+func (es *ExtensionStateImpl) EnableValidator(cc hvhmodule.CallContext, owner module.Address) error {
+	from := cc.From()
+	if from == nil {
+		return scoreresult.InvalidParameterError.Errorf("Invalid argument: from=%s", from)
+	}
+	if owner == nil || owner.IsContract() {
+		return scoreresult.InvalidParameterError.Errorf("Invalid argument: owner=%s", owner)
+	}
+	isCallerGov := from.Equal(cc.Governance())
+	if !isCallerGov && !from.Equal(owner) {
+		return scoreresult.AccessDeniedError.Errorf("No permission: from=%s owner=%s", from, owner)
+	}
+	return es.state.EnableValidator(owner, isCallerGov)
+}
+
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {
 	es := wc.GetExtensionState()
 	if es == nil {

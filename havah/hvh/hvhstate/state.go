@@ -930,6 +930,28 @@ func (s *State) getValidatorInfo(db *containerdb.DictDB, owner module.Address) (
 	return NewValidatorInfoFromBytes(v.Bytes())
 }
 
+func (s *State) EnableValidator(owner module.Address, calledByGov bool) error {
+	key := ToKey(owner)
+	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
+	v := db.Get(key)
+	if v == nil {
+		return scoreresult.Errorf(
+			hvhmodule.StatusNotFound, "ValidatorStatus not found: owner=%s", owner)
+	}
+	bs := v.Bytes()
+	if bs == nil || len(bs) == 0 {
+		return errors.InvalidStateError.Errorf("ValidatorStatus is broken: owner=%s", owner)
+	}
+	vs, err := NewValidatorStatusFromBytes(bs)
+	if err != nil {
+		return errors.InvalidStateError.Wrapf(err, "ValidatorStatus is broken: owner=%s", owner)
+	}
+	if err = vs.Enable(calledByGov); err != nil {
+		return err
+	}
+	return db.Set(key, vs.Bytes())
+}
+
 func validatePrivateClaimableRate(num, denom int64) bool {
 	if denom <= 0 || denom > 10000 {
 		return false

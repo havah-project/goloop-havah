@@ -2,6 +2,8 @@ package hvhstate
 
 import (
 	"github.com/icon-project/goloop/common/codec"
+	"github.com/icon-project/goloop/havah/hvhmodule"
+	"github.com/icon-project/goloop/service/scoreresult"
 )
 
 const (
@@ -10,9 +12,10 @@ const (
 )
 
 type ValidatorStatus struct {
-	version  int
-	flags    int
-	nonVotes int
+	version     int
+	flags       int
+	nonVotes    int
+	enableCount int
 }
 
 func (vs *ValidatorStatus) Version() int {
@@ -21,6 +24,10 @@ func (vs *ValidatorStatus) Version() int {
 
 func (vs *ValidatorStatus) NonVotes() int {
 	return vs.nonVotes
+}
+
+func (vs *ValidatorStatus) EnableCount() int {
+	return vs.enableCount
 }
 
 func (vs *ValidatorStatus) IncrementNonVotes() int {
@@ -32,8 +39,34 @@ func (vs *ValidatorStatus) ResetNonVotes() {
 	vs.nonVotes = 0
 }
 
-func (vs *ValidatorStatus) Enable() {
-	vs.setFlags(FlagDisabled, false)
+func (vs *ValidatorStatus) Enable(calledByGov bool) error {
+	if calledByGov {
+		return vs.enableByGov()
+	} else {
+		return vs.enableByOwner()
+	}
+}
+
+func (vs *ValidatorStatus) enableByGov() error {
+	err := vs.enable()
+	vs.enableCount = 0
+	return err
+}
+
+func (vs *ValidatorStatus) enableByOwner() error {
+	if vs.enableCount >= hvhmodule.MaxEnableCount {
+		return scoreresult.AccessDeniedError.Errorf(
+			"MaxEnableCount exceeded: %d", vs.enableCount)
+	}
+	return vs.enable()
+}
+
+func (vs *ValidatorStatus) enable() error {
+	if vs.Disabled() {
+		vs.enableCount++
+		vs.setFlags(FlagDisabled, false)
+	}
+	return nil
 }
 
 func (vs *ValidatorStatus) SetDisabled() {
@@ -65,17 +98,18 @@ func (vs *ValidatorStatus) all(flags int) bool {
 }
 
 func (vs *ValidatorStatus) RLPDecodeSelf(d codec.Decoder) error {
-	return d.DecodeListOf(&vs.version, &vs.flags, &vs.nonVotes)
+	return d.DecodeListOf(&vs.version, &vs.flags, &vs.nonVotes, &vs.enableCount)
 }
 
 func (vs *ValidatorStatus) RLPEncodeSelf(e codec.Encoder) error {
-	return e.EncodeListOf(vs.version, vs.flags, vs.nonVotes)
+	return e.EncodeListOf(vs.version, vs.flags, vs.nonVotes, vs.enableCount)
 }
 
 func (vs *ValidatorStatus) Equal(other *ValidatorStatus) bool {
 	return vs.version == other.version &&
 		vs.flags == other.flags &&
-		vs.nonVotes == other.nonVotes
+		vs.nonVotes == other.nonVotes &&
+		vs.enableCount == other.enableCount
 }
 
 func (vs *ValidatorStatus) Bytes() []byte {
