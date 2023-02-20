@@ -461,3 +461,14 @@ func (s *chainScore) Ex_getValidatorStatus(owner module.Address) (map[string]int
 	}
 	return es.GetValidatorStatus(ctx, owner)
 }
+
+func (s *chainScore) Ex_setNodePublicKey(publicKey []byte) error {
+	if err := s.tryChargeCall(); err != nil {
+		return err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return err
+	}
+	return es.SetNodePublicKey(ctx, publicKey)
+}

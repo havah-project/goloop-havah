@@ -607,7 +607,7 @@ func (es *ExtensionStateImpl) GetValidatorInfo(
 	cc hvhmodule.CallContext, owner module.Address) (map[string]interface{}, error) {
 	height := cc.BlockHeight()
 	es.Logger().Debugf("GetValidatorInfo() start: height=%d owner=%s", height, owner)
-	jso, err := es.state.GetValidatorInfo(height, owner)
+	jso, err := es.state.GetValidatorInfoInJSON(height, owner)
 	es.Logger().Debugf("GetValidatorInfo() end: owner=%s err=%v", owner, err)
 	return jso, err
 }
@@ -616,9 +616,18 @@ func (es *ExtensionStateImpl) GetValidatorStatus(
 	cc hvhmodule.CallContext, owner module.Address) (map[string]interface{}, error) {
 	height := cc.BlockHeight()
 	es.Logger().Debugf("GetValidatorStatus() start: height=%d owner=%s", height, owner)
-	jso, err := es.state.GetValidatorStatus(height, owner)
+	jso, err := es.state.GetValidatorStatusInJSON(height, owner)
 	es.Logger().Debugf("GetValidatorStatus() end: owner=%s err=%v", owner, err)
 	return jso, err
+}
+
+func (es *ExtensionStateImpl) SetNodePublicKey(cc hvhmodule.CallContext, publicKey []byte) error {
+	from := cc.From()
+	height := cc.BlockHeight()
+	es.Logger().Debugf("SetNodePublicKey() start: height=%d from=%s publicKey=%x", height, from, publicKey)
+	err := es.state.SetNodePublicKey(from, publicKey)
+	es.Logger().Debugf("SetNodePublicKey() end: height=%d from=%s err=%v", height, from, err)
+	return err
 }
 
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {
