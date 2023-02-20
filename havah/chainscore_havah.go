@@ -439,3 +439,25 @@ func (s *chainScore) Ex_enableValidator(owner module.Address) error {
 	}
 	return es.EnableValidator(ctx, owner)
 }
+
+func (s *chainScore) Ex_getValidatorInfo(owner module.Address) (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetValidatorInfo(ctx, owner)
+}
+
+func (s *chainScore) Ex_getValidatorStatus(owner module.Address) (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetValidatorStatus(ctx, owner)
+}

@@ -603,6 +603,24 @@ func (es *ExtensionStateImpl) EnableValidator(cc hvhmodule.CallContext, owner mo
 	return es.state.EnableValidator(owner, isCallerGov)
 }
 
+func (es *ExtensionStateImpl) GetValidatorInfo(
+	cc hvhmodule.CallContext, owner module.Address) (map[string]interface{}, error) {
+	height := cc.BlockHeight()
+	es.Logger().Debugf("GetValidatorInfo() start: height=%d owner=%s", height, owner)
+	jso, err := es.state.GetValidatorInfo(height, owner)
+	es.Logger().Debugf("GetValidatorInfo() end: owner=%s err=%v", owner, err)
+	return jso, err
+}
+
+func (es *ExtensionStateImpl) GetValidatorStatus(
+	cc hvhmodule.CallContext, owner module.Address) (map[string]interface{}, error) {
+	height := cc.BlockHeight()
+	es.Logger().Debugf("GetValidatorStatus() start: height=%d owner=%s", height, owner)
+	jso, err := es.state.GetValidatorStatus(height, owner)
+	es.Logger().Debugf("GetValidatorStatus() end: owner=%s err=%v", owner, err)
+	return jso, err
+}
+
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {
 	es := wc.GetExtensionState()
 	if es == nil {

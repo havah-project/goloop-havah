@@ -930,6 +930,15 @@ func (s *State) getValidatorInfo(db *containerdb.DictDB, owner module.Address) (
 	return NewValidatorInfoFromBytes(v.Bytes())
 }
 
+func (s *State) getValidatorStatus(db *containerdb.DictDB, owner module.Address) (*ValidatorStatus, error) {
+	v := db.Get(ToKey(owner))
+	if v == nil {
+		return nil, scoreresult.Errorf(
+			hvhmodule.StatusNotFound, "ValidatorStatus not found: %s", owner)
+	}
+	return NewValidatorStatusFromBytes(v.Bytes())
+}
+
 func (s *State) EnableValidator(owner module.Address, calledByGov bool) error {
 	key := ToKey(owner)
 	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
@@ -950,6 +959,24 @@ func (s *State) EnableValidator(owner module.Address, calledByGov bool) error {
 		return err
 	}
 	return db.Set(key, vs.Bytes())
+}
+
+func (s *State) GetValidatorInfo(height int64, owner module.Address) (map[string]interface{}, error) {
+	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
+	vi, err := s.getValidatorInfo(db, owner)
+	if err != nil {
+		return nil, err
+	}
+	return vi.ToJSON(height), err
+}
+
+func (s *State) GetValidatorStatus(height int64, owner module.Address) (map[string]interface{}, error) {
+	db := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
+	vs, err := s.getValidatorStatus(db, owner)
+	if err != nil {
+		return nil, err
+	}
+	return vs.ToJSON(height, owner), err
 }
 
 func validatePrivateClaimableRate(num, denom int64) bool {

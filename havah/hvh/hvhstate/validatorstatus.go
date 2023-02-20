@@ -3,6 +3,7 @@ package hvhstate
 import (
 	"github.com/icon-project/goloop/common/codec"
 	"github.com/icon-project/goloop/havah/hvhmodule"
+	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/scoreresult"
 )
 
@@ -114,6 +115,15 @@ func (vs *ValidatorStatus) Equal(other *ValidatorStatus) bool {
 
 func (vs *ValidatorStatus) Bytes() []byte {
 	return codec.BC.MustMarshalToBytes(vs)
+}
+
+func (vs *ValidatorStatus) ToJSON(height int64, owner module.Address) map[string]interface{} {
+	return map[string]interface{}{
+		"height":   height,
+		"owner":    owner,
+		"flags":    vs.flags,
+		"nonVotes": vs.nonVotes,
+	}
 }
 
 func NewValidatorStatus() *ValidatorStatus {

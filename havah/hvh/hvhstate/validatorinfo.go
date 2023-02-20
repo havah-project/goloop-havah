@@ -129,6 +129,18 @@ func (vi *ValidatorInfo) Equal(other *ValidatorInfo) bool {
 		vi.url == other.url
 }
 
+func (vi *ValidatorInfo) ToJSON(height int64) map[string]interface{} {
+	return map[string]interface{}{
+		"height":        height,
+		"owner":         vi.owner,
+		"nodePublicKey": vi.publicKey,
+		"node":          vi.Address(),
+		"grade":         vi.grade,
+		"name":          vi.name,
+		"url":           vi.url,
+	}
+}
+
 func NewValidatorInfo(
 	owner module.Address, pubKey []byte, grade int, name string) (*ValidatorInfo, error) {
 	vi := &ValidatorInfo{
