@@ -630,9 +630,9 @@ func TestState_RegisterValidator(t *testing.T) {
 	_, pubKey := crypto.GenerateKeyPair()
 	state := newDummyState()
 
-	err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeNormal, name)
+	err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
 	assert.NoError(t, err)
 
-	err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeNormal, name)
+	err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
 	assert.Error(t, err)
 }

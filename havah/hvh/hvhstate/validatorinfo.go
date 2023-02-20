@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	GradeNormal = iota
+	GradeSub = iota
 	GradeMain
 
 	GradeReserved

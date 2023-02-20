@@ -68,8 +68,8 @@ func TestNewValidatorInfo(t *testing.T) {
 }
 
 func TestValidatorInfo_SetPublicKey(t *testing.T) {
-	vi0 := newDummyValidatorInfo(1, GradeNormal)
-	vi1 := newDummyValidatorInfo(1, GradeNormal)
+	vi0 := newDummyValidatorInfo(1, GradeSub)
+	vi1 := newDummyValidatorInfo(1, GradeSub)
 	assert.False(t, vi0.Equal(vi1))
 	assert.False(t, vi0.Address().Equal(vi1.Address()))
 	assert.NotZero(t, bytes.Compare(vi0.Bytes(), vi1.Bytes()))
@@ -82,7 +82,7 @@ func TestValidatorInfo_SetPublicKey(t *testing.T) {
 }
 
 func TestValidatorInfo_SetName(t *testing.T) {
-	vi := newDummyValidatorInfo(1, GradeNormal)
+	vi := newDummyValidatorInfo(1, GradeSub)
 	assert.Equal(t, "name-01", vi.Name())
 
 	err := vi.SetName("hello")
@@ -105,7 +105,7 @@ func TestValidatorInfo_SetName(t *testing.T) {
 }
 
 func TestValidatorInfo_SetUrl(t *testing.T) {
-	vi := newDummyValidatorInfo(1, GradeNormal)
+	vi := newDummyValidatorInfo(1, GradeSub)
 	assert.Equal(t, "", vi.Url())
 
 	url := "https://www.example.com/info"
