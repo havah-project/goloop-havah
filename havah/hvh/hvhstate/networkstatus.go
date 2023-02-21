@@ -64,15 +64,15 @@ func (ns *NetworkStatus) Equal(other *NetworkStatus) bool {
 		ns.nonVoteAllowance == other.nonVoteAllowance
 }
 
-func (ns *NetworkStatus) ToJSON(height int64) map[string]interface{} {
+func (ns *NetworkStatus) ToJSON() map[string]interface{} {
 	return map[string]interface{}{
-		"height":               height,
 		"version":              ns.version,
 		"mode":                 ns.mode,
 		"blockVoteCheckPeriod": ns.blockVoteCheckPeriod,
 		"nonVoteAllowance":     ns.nonVoteAllowance,
 	}
 }
+
 func (ns *NetworkStatus) RLPDecodeSelf(d codec.Decoder) error {
 	return d.DecodeListOf(
 		&ns.version, &ns.mode, &ns.blockVoteCheckPeriod, &ns.nonVoteAllowance)

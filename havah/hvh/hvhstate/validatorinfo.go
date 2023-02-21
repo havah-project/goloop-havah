@@ -129,11 +129,11 @@ func (vi *ValidatorInfo) Equal(other *ValidatorInfo) bool {
 		vi.url == other.url
 }
 
-func (vi *ValidatorInfo) ToJSON(height int64) map[string]interface{} {
+func (vi *ValidatorInfo) ToJSON() map[string]interface{} {
 	return map[string]interface{}{
-		"height":        height,
+		"version":       vi.version,
 		"owner":         vi.owner,
-		"nodePublicKey": vi.publicKey,
+		"nodePublicKey": vi.publicKey.SerializeCompressed(),
 		"node":          vi.Address(),
 		"grade":         vi.grade,
 		"name":          vi.name,
