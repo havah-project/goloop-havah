@@ -922,6 +922,11 @@ func (s *State) SetValidatorInfo(owner module.Address, name, url string) error {
 	return db.Set(ToKey(owner), vi.Bytes())
 }
 
+func (s *State) GetValidatorInfo(owner module.Address) (*ValidatorInfo, error) {
+	vi, _, err := s.getValidatorInfo(owner)
+	return vi, err
+}
+
 func (s *State) getValidatorInfo(owner module.Address) (*ValidatorInfo, *containerdb.DictDB, error) {
 	key := ToKey(owner)
 	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)

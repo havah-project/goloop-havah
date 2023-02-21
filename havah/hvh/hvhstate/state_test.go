@@ -636,3 +636,118 @@ func TestState_RegisterValidator(t *testing.T) {
 	err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
 	assert.Error(t, err)
 }
+
+func TestState_UnregisterValidator(t *testing.T) {
+	owner := newDummyAddress(1, false)
+	name := "name-01"
+	_, pubKey := crypto.GenerateKeyPair()
+	state := newDummyState()
+
+	err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	assert.NoError(t, err)
+
+	vi, err := state.GetValidatorInfo(owner)
+	assert.NoError(t, err)
+	assert.True(t, vi.Owner().Equal(owner))
+
+	vs, err := state.GetValidatorStatus(owner)
+	assert.NoError(t, err)
+	assert.False(t, vs.Disabled())
+	assert.False(t, vs.Unregistered())
+
+	invalidOwner := newDummyAddress(2, false)
+	err = state.UnregisterValidator(invalidOwner)
+	assert.Error(t, err)
+
+	err = state.UnregisterValidator(owner)
+	assert.NoError(t, err)
+
+	vs, err = state.GetValidatorStatus(owner)
+	assert.True(t, vs.Unregistered())
+}
+
+func TestState_SetValidatorInfo(t *testing.T) {
+	owner := newDummyAddress(1, false)
+	name := "name-01"
+	_, pubKey := crypto.GenerateKeyPair()
+	state := newDummyState()
+
+	err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	assert.NoError(t, err)
+
+	newName := "Name-01"
+	url := "http://www.example.com"
+	err = state.SetValidatorInfo(owner, newName, url)
+	assert.NoError(t, err)
+
+	vi, err := state.GetValidatorInfo(owner)
+	assert.NoError(t, err)
+	assert.Equal(t, newName, vi.Name())
+	assert.Equal(t, url, vi.Url())
+}
+
+func TestState_SetNodePublicKey(t *testing.T) {
+	owner := newDummyAddress(1, false)
+	name := "name-01"
+	_, pubKey := crypto.GenerateKeyPair()
+	state := newDummyState()
+
+	err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	assert.NoError(t, err)
+
+	err = state.SetNodePublicKey(owner, pubKey.SerializeUncompressed())
+	assert.Error(t, err)
+
+	_, pubKey2 := crypto.GenerateKeyPair()
+	assert.False(t, pubKey2.Equal(pubKey))
+
+	// Failure: same public key
+	// NodePublicKey: pubKey
+	ss := state.GetSnapshot()
+	err = state.SetNodePublicKey(owner, pubKey.SerializeUncompressed())
+	assert.Error(t, err)
+	state.Reset(ss)
+	vi, err := state.GetValidatorInfo(owner)
+	assert.True(t, vi.PublicKey().Equal(pubKey))
+
+	// Success: Change nodePublicKey from pubKey to pubKey2
+	// NodePublicKey: pubKey2
+	err = state.SetNodePublicKey(owner, pubKey2.SerializeUncompressed())
+	assert.NoError(t, err)
+	vi, err = state.GetValidatorInfo(owner)
+	assert.NoError(t, err)
+	assert.True(t, vi.PublicKey().Equal(pubKey2))
+
+	// Failure: Change nodePublicKey with once used pubKey, even though the key has already been replaced
+	// NodePublicKey: pubKey2
+	ss = state.GetSnapshot()
+	err = state.SetNodePublicKey(owner, pubKey.SerializeCompressed())
+	assert.Error(t, err)
+	state.Reset(ss)
+
+	vi, err = state.GetValidatorInfo(owner)
+	assert.NoError(t, err)
+	assert.True(t, vi.PublicKey().Equal(pubKey2))
+}
+
+func TestState_EnableValidator(t *testing.T) {
+	owner := newDummyAddress(1, false)
+	name := "name-01"
+	_, pubKey := crypto.GenerateKeyPair()
+	state := newDummyState()
+
+	err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	assert.NoError(t, err)
+
+	vs, err := state.GetValidatorStatus(owner)
+	assert.NoError(t, err)
+	assert.Zero(t, vs.EnableCount())
+
+	err = state.EnableValidator(owner, false)
+	assert.NoError(t, err)
+	assert.Zero(t, vs.EnableCount())
+
+	NoOwner := newDummyAddress(2, false)
+	err = state.EnableValidator(NoOwner, false)
+	assert.Error(t, err)
+}
