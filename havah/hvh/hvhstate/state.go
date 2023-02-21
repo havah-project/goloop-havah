@@ -809,6 +809,9 @@ func (s *State) RegisterValidator(owner module.Address, nodePublicKey []byte, gr
 	if err = s.registerNodeAddress(vi.Address(), owner); err != nil {
 		return err
 	}
+	if err = s.addValidatorList(owner); err != nil {
+		return err
+	}
 
 	s.logger.Debugf("RegisterValidator() end: owner=%s", owner)
 	return nil
@@ -859,6 +862,11 @@ func (s *State) registerNodeAddress(node, owner module.Address) error {
 			"NodeAddress already exists: owner=%s node=%s", owner, node)
 	}
 	return db.Set(key, owner)
+}
+
+func (s *State) addValidatorList(owner module.Address) error {
+	db := s.getArrayDB(hvhmodule.ArrayValidatorList)
+	return db.Put(owner)
 }
 
 func (s *State) UnregisterValidator(owner module.Address) error {
@@ -1026,6 +1034,26 @@ func (s *State) setNodePublicKey(owner module.Address, publicKey []byte) (module
 		return nil, err
 	}
 	return vi.Address(), nil
+}
+
+func (s *State) GetValidators() ([]module.Address, error) {
+	vlDB := s.getArrayDB(hvhmodule.ArrayValidatorList)
+	vsDB := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
+	size := vlDB.Size()
+	validators := make([]module.Address, 0, size)
+
+	for i := 0; i < size; i++ {
+		owner := vlDB.Get(i).Address()
+		vs, err := s.getValidatorStatus(vsDB, owner)
+		if err != nil {
+			return nil, errors.InvalidStateError.Errorf("Mismatch between validatorList and validatorStatus")
+		}
+		if vs.Enabled() {
+			validators = append(validators, owner)
+		}
+	}
+
+	return validators, nil
 }
 
 func validatePrivateClaimableRate(num, denom int64) bool {

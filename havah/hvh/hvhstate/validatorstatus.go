@@ -77,6 +77,10 @@ func (vs *ValidatorStatus) Disabled() bool {
 	return vs.all(FlagDisabled)
 }
 
+func (vs *ValidatorStatus) Enabled() bool {
+	return vs.flags == 0
+}
+
 func (vs *ValidatorStatus) setFlags(flags int, on bool) {
 	if on {
 		vs.flags |= flags
