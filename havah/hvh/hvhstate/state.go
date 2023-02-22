@@ -1056,6 +1056,23 @@ func (s *State) GetValidators() ([]module.Address, error) {
 	return validators, nil
 }
 
+func (s *State) SetValidatorCount(count int) error {
+	if count < 1 {
+		scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid validator count: %d", count)
+	}
+	db := s.getVarDB(hvhmodule.VarValidatorCount)
+	return db.Set(count)
+}
+
+func (s *State) GetValidatorCount() int {
+	db := s.getVarDB(hvhmodule.VarValidatorCount)
+	count := int(db.Int64())
+	if count > 0 {
+		return count
+	}
+	return hvhmodule.ValidatorCount
+}
+
 func validatePrivateClaimableRate(num, denom int64) bool {
 	if denom <= 0 || denom > 10000 {
 		return false

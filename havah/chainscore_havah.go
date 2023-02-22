@@ -472,3 +472,25 @@ func (s *chainScore) Ex_setNodePublicKey(publicKey []byte) error {
 	}
 	return es.SetNodePublicKey(ctx, publicKey)
 }
+
+func (s *chainScore) Ex_setValidatorCount(count int) error {
+	if err := s.checkGovernance(true); err != nil {
+		return err
+	}
+	es, _, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return err
+	}
+	return es.SetValidatorCount(count)
+}
+
+func (s *chainScore) Ex_getValidatorCount() (int, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return 0, err
+	}
+	es, _, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return 0, err
+	}
+	return es.GetValidatorCount()
+}

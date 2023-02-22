@@ -630,6 +630,17 @@ func (es *ExtensionStateImpl) SetNodePublicKey(cc hvhmodule.CallContext, publicK
 	return err
 }
 
+func (es *ExtensionStateImpl) SetValidatorCount(count int) error {
+	es.Logger().Debugf("SetValidatorCount() start: count=%d", count)
+	err := es.state.SetValidatorCount(count)
+	es.Logger().Debugf("SetValidatorCount() end: count=%d err=%v", count, err)
+	return err
+}
+
+func (es *ExtensionStateImpl) GetValidatorCount() (int, error) {
+	return es.state.GetValidatorCount(), nil
+}
+
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {
 	es := wc.GetExtensionState()
 	if es == nil {

@@ -558,6 +558,20 @@ var chainMethods = []*chainMethod{
 		},
 		nil,
 	}, hvhmodule.RevisionDecentralization, 0},
+	{scoreapi.Method{scoreapi.Function, "setValidatorCount",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"count", scoreapi.Integer, nil, nil},
+		},
+		nil,
+	}, hvhmodule.RevisionDecentralization, 0},
+	{scoreapi.Method{scoreapi.Function, "getValidatorCount",
+		scoreapi.FlagReadOnly, 0,
+		nil,
+		[]scoreapi.DataType{
+			scoreapi.Integer,
+		},
+	}, hvhmodule.RevisionDecentralization, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {

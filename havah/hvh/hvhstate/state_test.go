@@ -751,3 +751,15 @@ func TestState_EnableValidator(t *testing.T) {
 	err = state.EnableValidator(NoOwner, false)
 	assert.Error(t, err)
 }
+
+func TestState_SetValidatorCount(t *testing.T) {
+	state := newDummyState()
+	count := state.GetValidatorCount()
+	assert.Equal(t, hvhmodule.ValidatorCount, count)
+
+	newCount := hvhmodule.ValidatorCount + 3
+	err := state.SetValidatorCount(newCount)
+	assert.NoError(t, err)
+	count = state.GetValidatorCount()
+	assert.Equal(t, newCount, count)
+}
