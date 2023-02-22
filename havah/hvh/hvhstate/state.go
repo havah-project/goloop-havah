@@ -896,7 +896,7 @@ func (s *State) UnregisterValidator(owner module.Address) error {
 			err, "Failed to create a ValidatorStatus from bytes: %s", owner)
 	}
 
-	vs.SetUnregistered()
+	vs.SetDisqualified()
 	return db.Set(key, vs.Bytes())
 }
 

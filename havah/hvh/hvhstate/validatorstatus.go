@@ -8,7 +8,7 @@ import (
 
 const (
 	FlagDisabled = 1 << iota
-	FlagUnregistered
+	FlagDisqualified
 )
 
 type ValidatorStatus struct {
@@ -89,12 +89,12 @@ func (vs *ValidatorStatus) setFlags(flags int, on bool) {
 	}
 }
 
-func (vs *ValidatorStatus) SetUnregistered() {
-	vs.setFlags(FlagUnregistered, true)
+func (vs *ValidatorStatus) SetDisqualified() {
+	vs.setFlags(FlagDisqualified, true)
 }
 
-func (vs *ValidatorStatus) Unregistered() bool {
-	return vs.all(FlagUnregistered)
+func (vs *ValidatorStatus) Disqualified() bool {
+	return vs.all(FlagDisqualified)
 }
 
 func (vs *ValidatorStatus) all(flags int) bool {

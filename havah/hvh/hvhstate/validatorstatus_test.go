@@ -13,14 +13,14 @@ func TestNewValidatorStatus(t *testing.T) {
 	assert.Zero(t, vs0.Version())
 	assert.Zero(t, vs0.NonVotes())
 	assert.False(t, vs0.Disabled())
-	assert.False(t, vs0.Unregistered())
+	assert.False(t, vs0.Disqualified())
 
 	vs1, err := NewValidatorStatusFromBytes(vs0.Bytes())
 	assert.NoError(t, err)
 	assert.True(t, vs1.Equal(vs0))
 
 	vs0.SetDisabled()
-	vs0.SetUnregistered()
+	vs0.SetDisqualified()
 	assert.False(t, vs0.Equal(vs1))
 
 	vs2, err := NewValidatorStatusFromBytes(vs0.Bytes())
@@ -47,12 +47,12 @@ func TestValidatorStatus_Disabled(t *testing.T) {
 
 	vs.SetDisabled()
 	assert.True(t, vs.Disabled())
-	assert.False(t, vs.Unregistered())
+	assert.False(t, vs.Disqualified())
 
 	err := vs.Enable(false)
 	assert.NoError(t, err)
 	assert.False(t, vs.Disabled())
-	assert.False(t, vs.Unregistered())
+	assert.False(t, vs.Disqualified())
 }
 
 func TestValidatorStatus_Enable(t *testing.T) {
@@ -82,12 +82,12 @@ func TestValidatorStatus_Enable(t *testing.T) {
 	assert.Zero(t, vs.EnableCount())
 }
 
-func TestValidatorStatus_Unregistered(t *testing.T) {
+func TestValidatorStatus_Disqualified(t *testing.T) {
 	vs := NewValidatorStatus()
-	assert.False(t, vs.Unregistered())
+	assert.False(t, vs.Disqualified())
 	assert.False(t, vs.Disabled())
 
-	vs.SetUnregistered()
-	assert.True(t, vs.Unregistered())
+	vs.SetDisqualified()
+	assert.True(t, vs.Disqualified())
 	assert.False(t, vs.Disabled())
 }
