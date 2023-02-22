@@ -1,6 +1,7 @@
 package hvhstate
 
 import (
+	"fmt"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -762,4 +763,46 @@ func TestState_SetValidatorCount(t *testing.T) {
 	assert.NoError(t, err)
 	count = state.GetValidatorCount()
 	assert.Equal(t, newCount, count)
+}
+
+func TestState_GetValidators(t *testing.T) {
+	state := newDummyState()
+	size := 10
+	owners := make([]module.Address, size)
+
+	for i := 0; i < 10; i++ {
+		owner := newDummyAddress(i+1, false)
+		name := fmt.Sprintf("name-%d", i)
+		_, pubKey := crypto.GenerateKeyPair()
+		err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), i%2, name)
+		assert.NoError(t, err)
+		owners[i] = owner
+	}
+
+	validators, err := state.GetValidators()
+	assert.NoError(t, err)
+	assert.Equal(t, size, len(validators))
+	for i, v := range validators {
+		assert.True(t, v.Equal(owners[i]))
+	}
+
+	err = state.UnregisterValidator(owners[0])
+	assert.NoError(t, err)
+
+	validators, err = state.GetValidators()
+	assert.NoError(t, err)
+	assert.Equal(t, size-1, len(validators))
+	for i, v := range validators {
+		assert.True(t, v.Equal(owners[i+1]))
+	}
+
+	err = state.DisableValidator(owners[1])
+	assert.NoError(t, err)
+
+	validators, err = state.GetValidators()
+	assert.NoError(t, err)
+	assert.Equal(t, size-2, len(validators))
+	for i, v := range validators {
+		assert.True(t, v.Equal(owners[i+2]))
+	}
 }

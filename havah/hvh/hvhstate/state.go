@@ -983,6 +983,20 @@ func (s *State) EnableValidator(owner module.Address, calledByGov bool) error {
 	return db.Set(key, vs.Bytes())
 }
 
+// DisableValidator is called on imposing nonVotePenalty
+func (s *State) DisableValidator(owner module.Address) error {
+	db := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
+	vs, err := s.getValidatorStatus(db, owner)
+	if err != nil {
+		return err
+	}
+	if vs.Disabled() {
+		return nil
+	}
+	vs.SetDisabled()
+	return db.Set(ToKey(owner), vs.Bytes())
+}
+
 func (s *State) GetValidatorInfoInJSON(height int64, owner module.Address) (map[string]interface{}, error) {
 	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
 	vi, err := s.getValidatorInfo(db, owner)

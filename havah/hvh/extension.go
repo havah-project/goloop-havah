@@ -641,6 +641,18 @@ func (es *ExtensionStateImpl) GetValidatorCount() (int, error) {
 	return es.state.GetValidatorCount(), nil
 }
 
+func (es *ExtensionStateImpl) GetRegisteredValidators(cc hvhmodule.CallContext) (map[string]interface{}, error) {
+	height := cc.BlockHeight()
+	if validators, err := es.state.GetValidators(); err == nil {
+		return map[string]interface{}{
+			"height":     height,
+			"validators": validators,
+		}, nil
+	} else {
+		return nil, err
+	}
+}
+
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {
 	es := wc.GetExtensionState()
 	if es == nil {

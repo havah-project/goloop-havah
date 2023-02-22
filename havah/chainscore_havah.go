@@ -494,3 +494,14 @@ func (s *chainScore) Ex_getValidatorCount() (int, error) {
 	}
 	return es.GetValidatorCount()
 }
+
+func (s *chainScore) Ex_getRegisteredValidators() (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetRegisteredValidators(ctx)
+}
