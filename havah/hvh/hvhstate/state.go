@@ -900,20 +900,17 @@ func (s *State) UnregisterValidator(owner module.Address) error {
 	return db.Set(key, vs.Bytes())
 }
 
-func (s *State) GetNetworkStatus(height int64) (map[string]interface{}, error) {
-	var ns *NetworkStatus
+func (s *State) GetNetworkStatus() (*NetworkStatus, error) {
 	var err error
+	var ns *NetworkStatus
 	db := s.getVarDB(hvhmodule.VarNetworkStatus)
+
 	if bs := db.Bytes(); bs != nil {
-		if ns, err = NewNetworkStatusFromBytes(bs); err != nil {
-			return nil, err
-		}
+		ns, err = NewNetworkStatusFromBytes(bs)
 	} else {
 		ns = NewNetworkStatus()
 	}
-	jso := ns.ToJSON()
-	jso["height"] = height
-	return jso, nil
+	return ns, err
 }
 
 func (s *State) SetValidatorInfo(owner module.Address, name, url string) error {
@@ -995,29 +992,6 @@ func (s *State) DisableValidator(owner module.Address) error {
 	}
 	vs.SetDisabled()
 	return db.Set(ToKey(owner), vs.Bytes())
-}
-
-func (s *State) GetValidatorInfoInJSON(height int64, owner module.Address) (map[string]interface{}, error) {
-	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
-	vi, err := s.getValidatorInfo(db, owner)
-	if err != nil {
-		return nil, err
-	}
-	jso := vi.ToJSON()
-	jso["height"] = height
-	return jso, nil
-}
-
-func (s *State) GetValidatorStatusInJSON(height int64, owner module.Address) (map[string]interface{}, error) {
-	db := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
-	vs, err := s.getValidatorStatus(db, owner)
-	if err != nil {
-		return nil, err
-	}
-	jso := vs.ToJSON()
-	jso["height"] = height
-	jso["owner"] = owner
-	return jso, nil
 }
 
 func (s *State) SetNodePublicKey(owner module.Address, publicKey []byte) error {

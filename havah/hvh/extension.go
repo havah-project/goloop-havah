@@ -581,7 +581,14 @@ func (es *ExtensionStateImpl) UnregisterValidator(owner module.Address) error {
 }
 
 func (es *ExtensionStateImpl) GetNetworkStatus(cc hvhmodule.CallContext) (map[string]interface{}, error) {
-	return es.state.GetNetworkStatus(cc.BlockHeight())
+	var jso map[string]interface{}
+	height := cc.BlockHeight()
+	ns, err := es.state.GetNetworkStatus()
+	if err == nil {
+		jso = ns.ToJSON()
+		jso["height"] = height
+	}
+	return jso, err
 }
 
 func (es *ExtensionStateImpl) SetValidatorInfo(cc hvhmodule.CallContext, name, url string) error {
@@ -607,7 +614,14 @@ func (es *ExtensionStateImpl) GetValidatorInfo(
 	cc hvhmodule.CallContext, owner module.Address) (map[string]interface{}, error) {
 	height := cc.BlockHeight()
 	es.Logger().Debugf("GetValidatorInfo() start: height=%d owner=%s", height, owner)
-	jso, err := es.state.GetValidatorInfoInJSON(height, owner)
+
+	var jso map[string]interface{}
+	vi, err := es.state.GetValidatorInfo(owner)
+	if err == nil {
+		jso = vi.ToJSON()
+		jso["height"] = height
+	}
+
 	es.Logger().Debugf("GetValidatorInfo() end: owner=%s err=%v", owner, err)
 	return jso, err
 }
@@ -616,7 +630,14 @@ func (es *ExtensionStateImpl) GetValidatorStatus(
 	cc hvhmodule.CallContext, owner module.Address) (map[string]interface{}, error) {
 	height := cc.BlockHeight()
 	es.Logger().Debugf("GetValidatorStatus() start: height=%d owner=%s", height, owner)
-	jso, err := es.state.GetValidatorStatusInJSON(height, owner)
+
+	var jso map[string]interface{}
+	vs, err := es.state.GetValidatorStatus(owner)
+	if err == nil {
+		jso = vs.ToJSON()
+		jso["height"] = height
+	}
+
 	es.Logger().Debugf("GetValidatorStatus() end: owner=%s err=%v", owner, err)
 	return jso, err
 }
