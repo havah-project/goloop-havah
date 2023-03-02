@@ -6,3 +6,11 @@ __pycache__
 doc.tmp/
 build/
 bin/
+run/
+
+*.tar.gz
+*.sh
+*.json
+*.bak
+*.log
+*.out
