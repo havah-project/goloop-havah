@@ -87,6 +87,10 @@ func (ns *NetworkStatus) Bytes() []byte {
 	return codec.BC.MustMarshalToBytes(ns)
 }
 
+func (ns *NetworkStatus) IsDecentralized() bool {
+	return ns.mode == NetModeDecentralized
+}
+
 func NewNetworkStatus() *NetworkStatus {
 	return &NetworkStatus{}
 }
