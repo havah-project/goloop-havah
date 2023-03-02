@@ -101,8 +101,8 @@ const (
 	DictValidatorInfo       = "validator_info"
 	DictValidatorStatus     = "validator_status"
 	DictNodeToOwner         = "node_to_owner"
-	ArrayValidatorList      = "validator_list"
-	VarValidatorCandidates  = "validator_candidates"
+	ArrayValidators         = "validators" // all registered validators
+	VarStandbyValidators    = "standby_validators"
 	VarNetworkStatus        = "network_status"
 )
 
@@ -118,7 +118,7 @@ const (
 const (
 	StatusIllegalArgument = module.StatusReverted + iota
 	StatusNotFound
-	StatusCriticalError
+	StatusInvalidState
 	StatusRewardError
 	StatusNotReady
 	StatusDuplicate

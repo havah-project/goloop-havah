@@ -460,7 +460,7 @@ func (s *State) ClaimEcoSystemReward() (*big.Int, error) {
 	reward := s.getBigInt(hvhmodule.VarEcoReward)
 	if reward == nil || reward.Sign() < 0 {
 		return nil, scoreresult.Errorf(
-			hvhmodule.StatusCriticalError, "Invalid EcoSystem reward: %d", reward)
+			hvhmodule.StatusInvalidState, "Invalid EcoSystem reward: %d", reward)
 	}
 
 	if reward.Sign() > 0 {
@@ -865,7 +865,7 @@ func (s *State) registerNodeAddress(node, owner module.Address) error {
 }
 
 func (s *State) addValidatorList(owner module.Address) error {
-	db := s.getArrayDB(hvhmodule.ArrayValidatorList)
+	db := s.getArrayDB(hvhmodule.ArrayValidators)
 	return db.Put(owner)
 }
 
@@ -1025,7 +1025,7 @@ func (s *State) setNodePublicKey(owner module.Address, publicKey []byte) (module
 }
 
 func (s *State) GetValidators() ([]module.Address, error) {
-	vlDB := s.getArrayDB(hvhmodule.ArrayValidatorList)
+	vlDB := s.getArrayDB(hvhmodule.ArrayValidators)
 	vsDB := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
 	size := vlDB.Size()
 	validators := make([]module.Address, 0, size)

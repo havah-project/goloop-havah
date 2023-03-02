@@ -383,7 +383,7 @@ func (es *ExtensionStateImpl) TransferMissedReward(cc hvhmodule.CallContext) err
 
 	balance := cc.GetBalance(hvhmodule.PublicTreasury)
 	if balance.Cmp(missed) < 0 {
-		return scoreresult.Errorf(hvhmodule.StatusCriticalError,
+		return scoreresult.Errorf(hvhmodule.StatusInvalidState,
 			"Invalid PublicTreasury balance=%d missed=%d",
 			balance, missed)
 	}
