@@ -765,7 +765,7 @@ func TestState_SetValidatorCount(t *testing.T) {
 	assert.Equal(t, newCount, count)
 }
 
-func TestState_GetValidators(t *testing.T) {
+func TestState_GetAvailableValidators(t *testing.T) {
 	state := newDummyState()
 	size := 10
 	owners := make([]module.Address, size)
@@ -805,4 +805,38 @@ func TestState_GetValidators(t *testing.T) {
 	for i, v := range validators {
 		assert.True(t, v.Equal(owners[i+2]))
 	}
+}
+
+func TestState_IsDecentralizationPossible(t *testing.T) {
+	var err error
+	state := newDummyState()
+
+	// Decentralization is not possible if revision is less than hvhmodule.RevisionDecentralization
+	for rev := 0; rev < hvhmodule.RevisionDecentralization; rev++ {
+		assert.False(t, state.IsDecentralizationPossible(rev))
+	}
+
+	rev := hvhmodule.RevisionDecentralization
+
+	validatorCount := state.GetValidatorCount()
+	assert.Zero(t, validatorCount)
+
+	validators, err := state.GetAvailableValidators()
+	assert.NoError(t, err)
+	assert.Zero(t, len(validators))
+
+	validatorCount = 7
+	err = state.SetValidatorCount(validatorCount)
+	assert.NoError(t, err)
+	assert.False(t, state.IsDecentralizationPossible(rev))
+
+	for i := 0; i < validatorCount; i++ {
+		name := fmt.Sprintf("name-%02d", i)
+		owner := newDummyAddress(i+1, false)
+		_, pubKey := crypto.GenerateKeyPair()
+		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+		assert.NoError(t, err)
+	}
+
+	assert.True(t, state.IsDecentralizationPossible(rev))
 }

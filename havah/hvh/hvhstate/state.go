@@ -1175,7 +1175,7 @@ func (s *State) IsDecentralizationPossible(rev int) bool {
 	if len(validators) < validatorCount {
 		return false
 	}
-	return false
+	return true
 }
 
 func validatePrivateClaimableRate(num, denom int64) bool {
