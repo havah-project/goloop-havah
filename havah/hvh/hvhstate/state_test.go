@@ -756,9 +756,9 @@ func TestState_EnableValidator(t *testing.T) {
 func TestState_SetValidatorCount(t *testing.T) {
 	state := newDummyState()
 	count := state.GetValidatorCount()
-	assert.Equal(t, hvhmodule.ValidatorCount, count)
+	assert.Zero(t, count)
 
-	newCount := hvhmodule.ValidatorCount + 3
+	newCount := 10
 	err := state.SetValidatorCount(newCount)
 	assert.NoError(t, err)
 	count = state.GetValidatorCount()
@@ -779,7 +779,7 @@ func TestState_GetValidators(t *testing.T) {
 		owners[i] = owner
 	}
 
-	validators, err := state.GetValidators()
+	validators, err := state.GetAvailableValidators()
 	assert.NoError(t, err)
 	assert.Equal(t, size, len(validators))
 	for i, v := range validators {
@@ -789,7 +789,7 @@ func TestState_GetValidators(t *testing.T) {
 	err = state.UnregisterValidator(owners[0])
 	assert.NoError(t, err)
 
-	validators, err = state.GetValidators()
+	validators, err = state.GetAvailableValidators()
 	assert.NoError(t, err)
 	assert.Equal(t, size-1, len(validators))
 	for i, v := range validators {
@@ -799,7 +799,7 @@ func TestState_GetValidators(t *testing.T) {
 	err = state.DisableValidator(owners[1])
 	assert.NoError(t, err)
 
-	validators, err = state.GetValidators()
+	validators, err = state.GetAvailableValidators()
 	assert.NoError(t, err)
 	assert.Equal(t, size-2, len(validators))
 	for i, v := range validators {

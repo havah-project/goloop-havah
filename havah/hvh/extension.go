@@ -664,7 +664,7 @@ func (es *ExtensionStateImpl) GetValidatorCount() (int, error) {
 
 func (es *ExtensionStateImpl) GetRegisteredValidators(cc hvhmodule.CallContext) (map[string]interface{}, error) {
 	height := cc.BlockHeight()
-	if validators, err := es.state.GetValidators(); err == nil {
+	if validators, err := es.state.GetAvailableValidators(); err == nil {
 		return map[string]interface{}{
 			"height":     height,
 			"validators": validators,

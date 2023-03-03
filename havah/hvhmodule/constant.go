@@ -131,7 +131,6 @@ const (
 	MaxValidatorNameLen        = 50
 	MaxValidatorUrlLen         = 100
 	MaxEnableCount             = 10
-	ValidatorCount             = 10
 )
 
 // The following variables are read-only

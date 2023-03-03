@@ -91,6 +91,10 @@ func (ns *NetworkStatus) IsDecentralized() bool {
 	return ns.mode == NetModeDecentralized
 }
 
+func (ns *NetworkStatus) SetDecentralized() {
+	ns.mode = NetModeDecentralized
+}
+
 func NewNetworkStatus() *NetworkStatus {
 	return &NetworkStatus{}
 }

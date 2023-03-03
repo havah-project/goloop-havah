@@ -309,23 +309,46 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 		"height=%d istart=%d tperiod=%d blockIndex=%d tseq=%d issue=%v",
 		height, issueStart, termPeriod, blockIndexInTerm, termSeq, baseData.IssueAmount.Value())
 
-	if blockIndexInTerm != 0 {
-		return errors.InvalidStateError.Errorf("InvalidBaseTx")
+	termStart := blockIndexInTerm == 0
+	ns, err := es.state.GetNetworkStatus()
+	if err != nil {
+		return err
 	}
 
-	// The code below should be executed only at the first block of each term
-	issueLimit := es.state.GetIssueLimit()
-	if termSeq > 0 && (issueLimit == 0 || termSeq <= issueLimit) {
-		if err = es.onTermEnd(cc); err != nil {
-			return err
+	if termStart {
+		// The code below should be executed only at the first block of each term
+		issueLimit := es.state.GetIssueLimit()
+		if termSeq > 0 && (issueLimit == 0 || termSeq <= issueLimit) {
+			if err = es.onTermEnd(cc); err != nil {
+				return err
+			}
+		}
+		if issueLimit == 0 || termSeq < issueLimit {
+			if err = es.onTermStart(cc, termSeq, baseData); err != nil {
+				return err
+			}
+		}
+
+		// Check if decentralization condition is met
+		if !ns.IsDecentralized() {
+			if es.state.IsDecentralizationPossible(cc.Revision().Value()) {
+				ns.SetDecentralized()
+				if err = es.state.SetNetworkStatus(ns); err != nil {
+					return err
+				}
+			}
+		}
+
+		// Initialize ValidatorSet at the beginning of each term
+		// ValidatorSet = Active validatorSet + Standby validatorSet
+		if ns.IsDecentralized() {
+			if err = es.initValidatorSet(cc); err != nil {
+				return err
+			}
 		}
 	}
-	if issueLimit == 0 || termSeq < issueLimit {
-		if err = es.onTermStart(cc, termSeq, baseData); err != nil {
-			return err
-		}
-	}
-	es.Logger().Debugf("OnBaseTx() end: height=%d", height)
+
+	es.Logger().Debugf("OnBaseTx() end: height=%d termStart=%t termSeq=%e", height, termStart, termSeq)
 	return nil
 }
 

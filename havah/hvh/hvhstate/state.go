@@ -864,6 +864,16 @@ func (s *State) registerNodeAddress(node, owner module.Address) error {
 	return db.Set(key, owner)
 }
 
+func (s *State) getOwnerByNode(db *containerdb.DictDB, node module.Address) (module.Address, error) {
+	key := ToKey(node)
+	v := db.Get(key)
+	if v == nil {
+		return nil, scoreresult.Errorf(
+			hvhmodule.StatusNotFound, "NodeAddress not found: %s", node)
+	}
+	return v.Address(), nil
+}
+
 func (s *State) addValidatorList(owner module.Address) error {
 	db := s.getArrayDB(hvhmodule.ArrayValidators)
 	return db.Put(owner)
@@ -901,16 +911,24 @@ func (s *State) UnregisterValidator(owner module.Address) error {
 }
 
 func (s *State) GetNetworkStatus() (*NetworkStatus, error) {
+	db := s.getVarDB(hvhmodule.VarNetworkStatus)
+	return s.getNetworkStatus(db)
+}
+
+func (s *State) getNetworkStatus(db *containerdb.VarDB) (*NetworkStatus, error) {
 	var err error
 	var ns *NetworkStatus
-	db := s.getVarDB(hvhmodule.VarNetworkStatus)
-
 	if bs := db.Bytes(); bs != nil {
 		ns, err = NewNetworkStatusFromBytes(bs)
 	} else {
 		ns = NewNetworkStatus()
 	}
 	return ns, err
+}
+
+func (s *State) SetNetworkStatus(ns *NetworkStatus) error {
+	db := s.getVarDB(hvhmodule.VarNetworkStatus)
+	return db.Set(ns.Bytes())
 }
 
 func (s *State) SetValidatorInfo(owner module.Address, name, url string) error {
@@ -931,6 +949,19 @@ func (s *State) SetValidatorInfo(owner module.Address, name, url string) error {
 func (s *State) GetValidatorInfo(owner module.Address) (*ValidatorInfo, error) {
 	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
 	return s.getValidatorInfo(db, owner)
+}
+
+func (s *State) GetValidatorInfos(owners []module.Address) ([]*ValidatorInfo, error) {
+	vis := make([]*ValidatorInfo, len(owners))
+	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
+	for i, owner := range owners {
+		if vi, err := s.getValidatorInfo(db, owner); err == nil {
+			vis[i] = vi
+		} else {
+			return nil, err
+		}
+	}
+	return vis, nil
 }
 
 func (s *State) getValidatorInfo(db *containerdb.DictDB, owner module.Address) (*ValidatorInfo, error) {
@@ -1024,7 +1055,7 @@ func (s *State) setNodePublicKey(owner module.Address, publicKey []byte) (module
 	return vi.Address(), nil
 }
 
-func (s *State) GetValidators() ([]module.Address, error) {
+func (s *State) GetAvailableValidators() ([]module.Address, error) {
 	vlDB := s.getArrayDB(hvhmodule.ArrayValidators)
 	vsDB := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
 	size := vlDB.Size()
@@ -1046,19 +1077,105 @@ func (s *State) GetValidators() ([]module.Address, error) {
 
 func (s *State) SetValidatorCount(count int) error {
 	if count < 1 {
-		scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid validator count: %d", count)
+		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid validator count: %d", count)
 	}
 	db := s.getVarDB(hvhmodule.VarValidatorCount)
 	return db.Set(count)
 }
 
+// GetValidatorCount returns the number of validators involved in validating blocks
+// Initial value is 0
 func (s *State) GetValidatorCount() int {
 	db := s.getVarDB(hvhmodule.VarValidatorCount)
-	count := int(db.Int64())
-	if count > 0 {
-		return count
+	return int(db.Int64())
+}
+
+// InitStandbyValidators initialize standby validator set at the beginning of each term
+// This set will remain unchanged until the current term is over.
+func (s *State) InitStandbyValidators(standbySet []*ValidatorInfo) error {
+	var err error
+	size := len(standbySet)
+	db := s.getVarDB(hvhmodule.VarStandbyValidators)
+	if size <= 0 {
+		_, err = db.Delete()
+		return err
 	}
-	return hvhmodule.ValidatorCount
+
+	owners := NewAddressSet(size)
+	for _, v := range standbySet {
+		if err = owners.Add(v.Owner()); err != nil {
+			return err
+		}
+	}
+	return db.Set(owners.Bytes())
+}
+
+func (s *State) OnBlockVote(node module.Address, vote bool) (bool, error) {
+	ntoDB := s.getDictDB(hvhmodule.DictNodeToOwner, 1)
+	viDB := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
+	vsDB := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
+	nonVoteAllowance := int(s.GetNonVoteAllowance())
+
+	owner, err := s.getOwnerByNode(ntoDB, node)
+	if err != nil {
+		return false, err
+	}
+	vi, err := s.getValidatorInfo(viDB, owner)
+	if err != nil {
+		return false, err
+	}
+	vs, err := s.getValidatorStatus(vsDB, owner)
+	if err != nil {
+		return false, err
+	}
+
+	if vote {
+		vs.ResetNonVotes()
+	} else {
+		vs.IncrementNonVotes()
+	}
+
+	penalized := false
+	if vi.Grade() != GradeMain {
+		penalized = vs.NonVotes() > nonVoteAllowance
+		if penalized {
+			vs.ResetNonVotes()
+			vs.SetDisabled()
+		}
+	}
+	err = vsDB.Set(ToKey(owner), vs.Bytes())
+	return penalized, err
+}
+
+func (s *State) GetNextActiveValidators(count int) ([]module.Address, error) {
+	// TODO: goldworm
+	return nil, nil
+}
+
+func (s *State) IsDecentralized() bool {
+	ns, err := s.GetNetworkStatus()
+	if err != nil {
+		return false
+	}
+	return ns.IsDecentralized()
+}
+
+func (s *State) IsDecentralizationPossible(rev int) bool {
+	if rev < hvhmodule.RevisionDecentralization {
+		return false
+	}
+	validatorCount := s.GetValidatorCount()
+	if validatorCount <= 0 {
+		return false
+	}
+	validators, err := s.GetAvailableValidators()
+	if err != nil {
+		return false
+	}
+	if len(validators) < validatorCount {
+		return false
+	}
+	return false
 }
 
 func validatePrivateClaimableRate(num, denom int64) bool {
