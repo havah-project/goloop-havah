@@ -1148,8 +1148,62 @@ func (s *State) OnBlockVote(node module.Address, vote bool) (bool, error) {
 }
 
 func (s *State) GetNextActiveValidators(count int) ([]module.Address, error) {
-	// TODO: goldworm
-	return nil, nil
+	if count == 0 {
+		return nil, nil
+	}
+
+	sviDB := s.getVarDB(hvhmodule.VarStandbyValidatorsIndex)
+	index := int(sviDB.Int64())
+	if index < 0 {
+		// No available standby validatorSet
+		return nil, nil
+	}
+	orgIndex := index
+
+	standbyValidatorSet, err := s.getStandbyValidatorSet()
+	if err != nil {
+		return nil, err
+	}
+
+	newActiveValidators := make([]module.Address, 0, count)
+	viDB := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
+	vsDB := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
+	size := standbyValidatorSet.Len()
+
+	for ; index < size; index++ {
+		owner := standbyValidatorSet.Get(index)
+		if vs, err := s.getValidatorStatus(vsDB, owner); err == nil {
+			if vs.Enabled() {
+				if vi, err := s.getValidatorInfo(viDB, owner); err == nil {
+					newActiveValidators = append(newActiveValidators, vi.Address())
+					if len(newActiveValidators) == count {
+						// index points out the next standby validator
+						index++
+						break
+					}
+				}
+			}
+		}
+	}
+
+	if index != orgIndex {
+		if index == size {
+			index = -1
+		}
+		if err = sviDB.Set(index); err != nil {
+			return nil, err
+		}
+	}
+	return newActiveValidators, err
+}
+
+func (s *State) getStandbyValidatorSet() (*AddressSet, error) {
+	db := s.getVarDB(hvhmodule.VarStandbyValidators)
+	bs := db.Bytes()
+	if bs == nil {
+		return nil, scoreresult.Errorf(hvhmodule.StatusNotFound, "standbyValidatorSet not found")
+	}
+	return NewAddressSetFromBytes(bs)
 }
 
 func (s *State) IsDecentralized() bool {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"sort"
 
+	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/havah/hvh/hvhstate"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
@@ -62,4 +63,69 @@ func setActiveValidators(cc hvhmodule.CallContext, activeSet []*hvhstate.Validat
 		validators[i], _ = state.ValidatorFromAddress(vi.Address())
 	}
 	return cc.SetValidators(validators)
+}
+
+func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
+	ci := cc.ConsensusInfo()
+	if ci == nil {
+		return errors.InvalidStateError.Errorf("Invalid ConsensusInfo")
+	}
+
+	// Assume that voters and validatorSet can be different
+	voters := ci.Voters()
+	voted := ci.Voted()
+	validatorState := cc.GetValidatorState()
+	penalizedValidatorIndexes := make(map[int]struct{})
+
+	// Check block vote
+	for i, vote := range voted {
+		voter, _ := voters.Get(i)
+		nodeAddr := voter.Address()
+		if penalized, err := es.state.OnBlockVote(nodeAddr, vote); err == nil {
+			if penalized {
+				if index := validatorState.IndexOf(nodeAddr); index >= 0 {
+					penalizedValidatorIndexes[index] = struct{}{}
+				}
+			}
+		}
+	}
+
+	// Penalized validators not found
+	penalizedCount := len(penalizedValidatorIndexes)
+	if penalizedCount == 0 {
+		// No penalized validators
+		return nil
+	}
+
+	// Get standby validators to replace penalized active validators
+	newActiveValidators, err := es.state.GetNextActiveValidators(penalizedCount)
+	if err != nil {
+		return err
+	}
+
+	// Build a new active validatorSet
+	size := validatorState.Len()
+	validators := make([]module.Validator, 0, size)
+
+	// Append existing active validators except for the penalized
+	for i := 0; i < size; i++ {
+		if _, ok := penalizedValidatorIndexes[i]; !ok {
+			validator, _ := validatorState.Get(i)
+			validators = append(validators, validator)
+		}
+	}
+	// Append new validators to replace the penalized
+	for _, newAV := range newActiveValidators {
+		if validator, err := state.ValidatorFromAddress(newAV); err == nil {
+			validators = append(validators, validator)
+		} else {
+			return err
+		}
+	}
+	// Update active validatorSet with new one
+	return cc.SetValidators(validators)
+}
+
+func isItTimeToCheckBlockVote(blockIndexInTerm, blockVoteCheckPeriod int64) bool {
+	return blockVoteCheckPeriod > 0 && blockIndexInTerm%blockVoteCheckPeriod == 0
 }
