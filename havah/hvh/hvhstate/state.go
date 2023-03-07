@@ -18,6 +18,8 @@ type State struct {
 	readonly bool
 	store    trie.Mutable
 	logger   log.Logger
+
+	cachedDictDBs map[string]*containerdb.DictDB
 }
 
 func (s *State) SetLogger(logger log.Logger) {
@@ -829,7 +831,7 @@ func (s *State) registerValidatorInfo(
 		return nil, scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Too long name: %s", name)
 	}
 
-	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
+	db := s.getDictDBFromCache(hvhmodule.DictValidatorInfo)
 	if v := db.Get(ToKey(owner)); v != nil {
 		return nil, scoreresult.Errorf(
 			hvhmodule.StatusDuplicate, "ValidatorInfo already exists: %s", owner)
@@ -843,7 +845,7 @@ func (s *State) registerValidatorInfo(
 }
 
 func (s *State) registerValidatorStatus(owner module.Address) error {
-	db := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
+	db := s.getDictDBFromCache(hvhmodule.DictValidatorStatus)
 	if v := db.Get(ToKey(owner)); v != nil {
 		return scoreresult.Errorf(
 			hvhmodule.StatusDuplicate, "ValidatorStatus already exists: %s", owner)
@@ -854,7 +856,7 @@ func (s *State) registerValidatorStatus(owner module.Address) error {
 
 func (s *State) registerNodeAddress(node, owner module.Address) error {
 	key := ToKey(node)
-	db := s.getDictDB(hvhmodule.DictNodeToOwner, 1)
+	db := s.getDictDBFromCache(hvhmodule.DictNodeToOwner)
 
 	if v := db.Get(key); v != nil {
 		return scoreresult.Errorf(
@@ -888,7 +890,7 @@ func (s *State) UnregisterValidator(owner module.Address) error {
 	}
 
 	key := ToKey(owner)
-	db := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
+	db := s.getDictDBFromCache(hvhmodule.DictValidatorStatus)
 	v := db.Get(key)
 	if v == nil {
 		return scoreresult.Errorf(
@@ -932,7 +934,7 @@ func (s *State) SetNetworkStatus(ns *NetworkStatus) error {
 }
 
 func (s *State) SetValidatorInfo(owner module.Address, name, url string) error {
-	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
+	db := s.getDictDBFromCache(hvhmodule.DictValidatorInfo)
 	vi, err := s.getValidatorInfo(db, owner)
 	if err != nil {
 		return err
@@ -947,13 +949,13 @@ func (s *State) SetValidatorInfo(owner module.Address, name, url string) error {
 }
 
 func (s *State) GetValidatorInfo(owner module.Address) (*ValidatorInfo, error) {
-	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
+	db := s.getDictDBFromCache(hvhmodule.DictValidatorInfo)
 	return s.getValidatorInfo(db, owner)
 }
 
 func (s *State) GetValidatorInfos(owners []module.Address) ([]*ValidatorInfo, error) {
 	vis := make([]*ValidatorInfo, len(owners))
-	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
+	db := s.getDictDBFromCache(hvhmodule.DictValidatorInfo)
 	for i, owner := range owners {
 		if vi, err := s.getValidatorInfo(db, owner); err == nil {
 			vis[i] = vi
@@ -976,7 +978,7 @@ func (s *State) getValidatorInfo(db *containerdb.DictDB, owner module.Address) (
 }
 
 func (s *State) GetValidatorStatus(owner module.Address) (*ValidatorStatus, error) {
-	db := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
+	db := s.getDictDBFromCache(hvhmodule.DictValidatorStatus)
 	return s.getValidatorStatus(db, owner)
 }
 
@@ -991,7 +993,7 @@ func (s *State) getValidatorStatus(db *containerdb.DictDB, owner module.Address)
 
 func (s *State) EnableValidator(owner module.Address, calledByGov bool) error {
 	key := ToKey(owner)
-	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
+	db := s.getDictDBFromCache(hvhmodule.DictValidatorInfo)
 	v := db.Get(key)
 	if v == nil {
 		return scoreresult.Errorf(
@@ -1013,7 +1015,7 @@ func (s *State) EnableValidator(owner module.Address, calledByGov bool) error {
 
 // DisableValidator is called on imposing nonVotePenalty
 func (s *State) DisableValidator(owner module.Address) error {
-	db := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
+	db := s.getDictDBFromCache(hvhmodule.DictValidatorStatus)
 	vs, err := s.getValidatorStatus(db, owner)
 	if err != nil {
 		return err
@@ -1040,7 +1042,7 @@ func (s *State) SetNodePublicKey(owner module.Address, publicKey []byte) error {
 }
 
 func (s *State) setNodePublicKey(owner module.Address, publicKey []byte) (module.Address, error) {
-	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
+	db := s.getDictDBFromCache(hvhmodule.DictValidatorInfo)
 	vi, err := s.getValidatorInfo(db, owner)
 	if err != nil {
 		return nil, err
@@ -1057,7 +1059,7 @@ func (s *State) setNodePublicKey(owner module.Address, publicKey []byte) (module
 
 func (s *State) GetAvailableValidators() ([]module.Address, error) {
 	vlDB := s.getArrayDB(hvhmodule.ArrayValidators)
-	vsDB := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
+	vsDB := s.getDictDBFromCache(hvhmodule.DictValidatorStatus)
 	size := vlDB.Size()
 	validators := make([]module.Address, 0, size)
 
@@ -1111,9 +1113,9 @@ func (s *State) InitStandbyValidators(standbySet []*ValidatorInfo) error {
 }
 
 func (s *State) OnBlockVote(node module.Address, vote bool) (bool, error) {
-	ntoDB := s.getDictDB(hvhmodule.DictNodeToOwner, 1)
-	viDB := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
-	vsDB := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
+	ntoDB := s.getDictDBFromCache(hvhmodule.DictNodeToOwner)
+	viDB := s.getDictDBFromCache(hvhmodule.DictValidatorInfo)
+	vsDB := s.getDictDBFromCache(hvhmodule.DictValidatorStatus)
 	nonVoteAllowance := int(s.GetNonVoteAllowance())
 
 	owner, err := s.getOwnerByNode(ntoDB, node)
@@ -1162,12 +1164,17 @@ func (s *State) GetNextActiveValidators(count int) ([]module.Address, error) {
 
 	standbyValidatorSet, err := s.getStandbyValidatorSet()
 	if err != nil {
+		if status, ok := scoreresult.StatusOf(err); ok {
+			if status == hvhmodule.StatusNotFound {
+				return nil, nil
+			}
+		}
 		return nil, err
 	}
 
 	newActiveValidators := make([]module.Address, 0, count)
-	viDB := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
-	vsDB := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
+	viDB := s.getDictDBFromCache(hvhmodule.DictValidatorInfo)
+	vsDB := s.getDictDBFromCache(hvhmodule.DictValidatorStatus)
 	size := standbyValidatorSet.Len()
 
 	for ; index < size; index++ {
@@ -1232,6 +1239,15 @@ func (s *State) IsDecentralizationPossible(rev int) bool {
 	return true
 }
 
+func (s *State) getDictDBFromCache(key string) *containerdb.DictDB {
+	db, ok := s.cachedDictDBs[key]
+	if !ok {
+		db = s.getDictDB(key, 1)
+		s.cachedDictDBs[key] = db
+	}
+	return db
+}
+
 func validatePrivateClaimableRate(num, denom int64) bool {
 	if denom <= 0 || denom > 10000 {
 		return false
@@ -1255,8 +1271,9 @@ func validatePlanetId(id int64) error {
 func NewStateFromSnapshot(ss *Snapshot, readonly bool, logger log.Logger) *State {
 	store := trie_manager.NewMutableFromImmutable(ss.store)
 	return &State{
-		readonly,
-		store,
-		logger,
+		readonly:      readonly,
+		store:         store,
+		logger:        logger,
+		cachedDictDBs: make(map[string]*containerdb.DictDB),
 	}
 }
