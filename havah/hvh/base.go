@@ -339,16 +339,24 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 			}
 		}
 
-		// Initialize ValidatorSet at the beginning of each term
-		// ValidatorSet = Active validatorSet + Standby validatorSet
 		if ns.IsDecentralized() {
+			// Update NetworkStatus at the beginning of each term
+			if err = es.state.RenewNetworkStatusOnTermStart(); err != nil {
+				return err
+			}
+			// Initialize ValidatorSet at the beginning of each term
+			// ValidatorSet = Active validatorSet + Standby validatorSet
 			if err = es.initValidatorSet(cc); err != nil {
 				return err
 			}
-			if hvhstate.IsItTimeToCheckBlockVote(blockIndexInTerm, ns.BlockVoteCheckPeriod()) {
-				if err = es.handleBlockVote(cc); err != nil {
-					return err
-				}
+		}
+	}
+
+	// Check BlockVote for NonVotePenalty every blockVoteCheckPeriod
+	if ns.IsDecentralized() {
+		if hvhstate.IsItTimeToCheckBlockVote(blockIndexInTerm, ns.BlockVoteCheckPeriod()) {
+			if err = es.handleBlockVote(cc); err != nil {
+				return err
 			}
 		}
 	}

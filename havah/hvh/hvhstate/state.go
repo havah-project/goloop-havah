@@ -933,6 +933,36 @@ func (s *State) SetNetworkStatus(ns *NetworkStatus) error {
 	return db.Set(ns.Bytes())
 }
 
+func (s *State) RenewNetworkStatusOnTermStart() error {
+	db := s.getVarDB(hvhmodule.VarNetworkStatus)
+	ns, err := s.getNetworkStatus(db)
+	if err != nil {
+		return err
+	}
+
+	dirty := false
+	period := s.GetBlockVoteCheckPeriod()
+	allowance := s.GetNonVoteAllowance()
+
+	if ns.BlockVoteCheckPeriod() != period {
+		if err = ns.SetBlockVoteCheckPeriod(period); err != nil {
+			return err
+		}
+		dirty = true
+	}
+	if ns.NonVoteAllowance() != allowance {
+		if err = ns.SetNonVoteAllowance(allowance); err != nil {
+			return err
+		}
+		dirty = true
+	}
+
+	if dirty {
+		err = db.Set(ns.Bytes())
+	}
+	return err
+}
+
 func (s *State) SetValidatorInfo(owner module.Address, name, url string) error {
 	db := s.getDictDBFromCache(hvhmodule.DictValidatorInfo)
 	vi, err := s.getValidatorInfo(db, owner)
@@ -1211,14 +1241,6 @@ func (s *State) getStandbyValidatorSet() (*AddressSet, error) {
 		return nil, scoreresult.Errorf(hvhmodule.StatusNotFound, "standbyValidatorSet not found")
 	}
 	return NewAddressSetFromBytes(bs)
-}
-
-func (s *State) IsDecentralized() bool {
-	ns, err := s.GetNetworkStatus()
-	if err != nil {
-		return false
-	}
-	return ns.IsDecentralized()
 }
 
 func (s *State) IsDecentralizationPossible(rev int) bool {
