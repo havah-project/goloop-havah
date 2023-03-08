@@ -126,6 +126,6 @@ func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
 	return cc.SetValidators(validators)
 }
 
-func isItTimeToCheckBlockVote(blockIndexInTerm, blockVoteCheckPeriod int64) bool {
-	return blockVoteCheckPeriod > 0 && blockIndexInTerm%blockVoteCheckPeriod == 0
+func (es *ExtensionStateImpl) IsItTimeToCheckBlockVote(blockIndexInTerm int64) bool {
+	return es.state.IsItTimeToCheckBlockVote(blockIndexInTerm)
 }

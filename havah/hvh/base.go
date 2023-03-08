@@ -345,7 +345,7 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 			if err = es.initValidatorSet(cc); err != nil {
 				return err
 			}
-			if isItTimeToCheckBlockVote(blockIndexInTerm, ns.BlockVoteCheckPeriod()) {
+			if hvhstate.IsItTimeToCheckBlockVote(blockIndexInTerm, ns.BlockVoteCheckPeriod()) {
 				if err = es.handleBlockVote(cc); err != nil {
 					return err
 				}

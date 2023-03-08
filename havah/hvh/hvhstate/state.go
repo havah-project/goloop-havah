@@ -1248,6 +1248,19 @@ func (s *State) getDictDBFromCache(key string) *containerdb.DictDB {
 	return db
 }
 
+func (s *State) IsItTimeToCheckBlockVote(blockIndexInTerm int64) bool {
+	if ns, err := s.GetNetworkStatus(); err == nil {
+		if ns.IsDecentralized() {
+			return IsItTimeToCheckBlockVote(blockIndexInTerm, ns.BlockVoteCheckPeriod())
+		}
+	}
+	return false
+}
+
+func IsItTimeToCheckBlockVote(blockIndexInTerm, blockVoteCheckPeriod int64) bool {
+	return blockVoteCheckPeriod > 0 && blockIndexInTerm%blockVoteCheckPeriod == 0
+}
+
 func validatePrivateClaimableRate(num, denom int64) bool {
 	if denom <= 0 || denom > 10000 {
 		return false

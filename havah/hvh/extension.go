@@ -571,6 +571,10 @@ func (es *ExtensionStateImpl) GetBlockVoteCheckParameters(cc hvhmodule.CallConte
 	}, nil
 }
 
+func (es *ExtensionStateImpl) GetBlockVoteCheckPeriod() int64 {
+	return es.state.GetBlockVoteCheckPeriod()
+}
+
 func (es *ExtensionStateImpl) RegisterValidator(
 	owner module.Address, nodePublicKey []byte, grade int, name string) error {
 	return es.state.RegisterValidator(owner, nodePublicKey, grade, name)

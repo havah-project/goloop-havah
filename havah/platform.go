@@ -95,13 +95,16 @@ func checkBaseTX(txs module.TransactionList) bool {
 
 func (p *platform) OnValidateTransactions(wc state.WorldContext, patches, txs module.TransactionList) error {
 	needBaseTX := false
-	es := hvh.GetExtensionStateFromWorldContext(wc, nil)
+	logger := log.GlobalLogger()
+
+	es := hvh.GetExtensionStateFromWorldContext(wc, logger)
 	if es != nil {
 		issueStart := es.GetIssueStart()
 		termPeriod := es.GetTermPeriod()
 		termSeq, blockIndex := hvhstate.GetTermSequenceAndBlockIndex(wc.BlockHeight(), issueStart, termPeriod)
-		needBaseTX = termSeq >= 0 && blockIndex == 0
-		log.GlobalLogger().Debugf(
+		needBaseTX = (termSeq >= 0 && blockIndex == 0) || es.IsItTimeToCheckBlockVote(blockIndex)
+
+		logger.Debugf(
 			"is=%d tperiod=%d termSeq=%d blockIndex=%d needBaseTX=%t",
 			issueStart, termPeriod, termSeq, blockIndex, needBaseTX,
 		)
