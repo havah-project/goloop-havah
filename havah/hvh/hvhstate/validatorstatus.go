@@ -14,7 +14,7 @@ const (
 type ValidatorStatus struct {
 	version     int
 	flags       int
-	nonVotes    int
+	nonVotes    int64
 	enableCount int
 }
 
@@ -22,7 +22,7 @@ func (vs *ValidatorStatus) Version() int {
 	return vs.version
 }
 
-func (vs *ValidatorStatus) NonVotes() int {
+func (vs *ValidatorStatus) NonVotes() int64 {
 	return vs.nonVotes
 }
 
@@ -30,7 +30,7 @@ func (vs *ValidatorStatus) EnableCount() int {
 	return vs.enableCount
 }
 
-func (vs *ValidatorStatus) IncrementNonVotes() int {
+func (vs *ValidatorStatus) IncrementNonVotes() int64 {
 	vs.nonVotes++
 	return vs.nonVotes
 }

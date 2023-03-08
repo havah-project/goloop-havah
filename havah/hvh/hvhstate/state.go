@@ -1146,7 +1146,11 @@ func (s *State) OnBlockVote(node module.Address, vote bool) (bool, error) {
 	ntoDB := s.getDictDBFromCache(hvhmodule.DictNodeToOwner)
 	viDB := s.getDictDBFromCache(hvhmodule.DictValidatorInfo)
 	vsDB := s.getDictDBFromCache(hvhmodule.DictValidatorStatus)
-	nonVoteAllowance := int(s.GetNonVoteAllowance())
+	ns, err := s.GetNetworkStatus()
+	if err != nil {
+		return false, err
+	}
+	nonVoteAllowance := ns.NonVoteAllowance()
 
 	owner, err := s.getOwnerByNode(ntoDB, node)
 	if err != nil {

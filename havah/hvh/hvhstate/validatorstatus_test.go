@@ -33,7 +33,7 @@ func TestValidatorStatus_IncrementNonVotes(t *testing.T) {
 	assert.Zero(t, vs.NonVotes())
 	for i := 0; i < 3; i++ {
 		nonVotes := vs.IncrementNonVotes()
-		assert.Equal(t, i+1, nonVotes)
+		assert.Equal(t, int64(i+1), nonVotes)
 		assert.Equal(t, nonVotes, vs.NonVotes())
 	}
 
