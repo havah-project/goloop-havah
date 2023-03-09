@@ -29,14 +29,30 @@ func (es *ExtensionStateImpl) initValidatorSet(cc hvhmodule.CallContext) error {
 
 	sortValidatorInfos(vis)
 	count := es.state.GetValidatorCount()
-	activeSet, standbySet := splitValidatorInfos(vis, count)
-	if err = setActiveValidators(cc, activeSet); err != nil {
+	activeVIs, standbyVIs := splitValidatorInfos(vis, count)
+	if err = setActiveValidators(cc, activeVIs); err != nil {
 		return err
 	}
-	if err = es.state.InitStandbyValidators(standbySet); err != nil {
+	if err = es.setStandbyValidatorOwners(standbyVIs); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (es *ExtensionStateImpl) setStandbyValidatorOwners(vis []*hvhstate.ValidatorInfo) error {
+	var err error
+	size := len(vis)
+	var owners *hvhstate.AddressSet
+
+	if size > 0 {
+		owners = hvhstate.NewAddressSet(size)
+		for _, vi := range vis {
+			if err = owners.Add(vi.Owner()); err != nil {
+				return err
+			}
+		}
+	}
+	return es.state.SetStandbyValidatorOwners(owners)
 }
 
 func sortValidatorInfos(vis []*hvhstate.ValidatorInfo) {
@@ -98,7 +114,7 @@ func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
 	}
 
 	// Get standby validators to replace penalized active validators
-	newActiveValidators, err := es.state.GetNextActiveValidators(penalizedCount)
+	newActiveValidators, err := es.state.GetNextActiveValidatorsAndChangeIndex(penalizedCount)
 	if err != nil {
 		return err
 	}

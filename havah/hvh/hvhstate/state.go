@@ -1122,22 +1122,14 @@ func (s *State) GetValidatorCount() int {
 	return int(db.Int64())
 }
 
-// InitStandbyValidators initialize standby validator set at the beginning of each term
+// SetStandbyValidatorOwners initialize standby validator owner set at the beginning of each term
 // This set will remain unchanged until the current term is over.
-func (s *State) InitStandbyValidators(standbySet []*ValidatorInfo) error {
+func (s *State) SetStandbyValidatorOwners(owners *AddressSet) error {
 	var err error
-	size := len(standbySet)
 	db := s.getVarDB(hvhmodule.VarStandbyValidators)
-	if size <= 0 {
+	if owners == nil || owners.Len() == 0 {
 		_, err = db.Delete()
 		return err
-	}
-
-	owners := NewAddressSet(size)
-	for _, v := range standbySet {
-		if err = owners.Add(v.Owner()); err != nil {
-			return err
-		}
 	}
 	return db.Set(owners.Bytes())
 }
@@ -1183,7 +1175,7 @@ func (s *State) OnBlockVote(node module.Address, vote bool) (bool, error) {
 	return penalized, err
 }
 
-func (s *State) GetNextActiveValidators(count int) ([]module.Address, error) {
+func (s *State) GetNextActiveValidatorsAndChangeIndex(count int) ([]module.Address, error) {
 	if count == 0 {
 		return nil, nil
 	}
@@ -1242,7 +1234,8 @@ func (s *State) getStandbyValidatorSet() (*AddressSet, error) {
 	db := s.getVarDB(hvhmodule.VarStandbyValidators)
 	bs := db.Bytes()
 	if bs == nil {
-		return nil, scoreresult.Errorf(hvhmodule.StatusNotFound, "standbyValidatorSet not found")
+		return nil, scoreresult.Errorf(
+			hvhmodule.StatusNotFound, "standbyValidatorSet not found")
 	}
 	return NewAddressSetFromBytes(bs)
 }
