@@ -1903,6 +1903,583 @@ None
 |:----|:-----------|:---------|:---------------------|
 | -   | T_INT      | true     | Amount of lost coins |
 
+### registerValidator(owner Address, nodePublicKey bytes, grade int, name string)
+
+* Registers a validator
+* Called by Governance SCORE
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "registerValidator",
+      "params": {
+        "owner": "hx3ece50aaa01f7c4d128c029d569dd86950c34215",
+        "nodePublicKey": "0x03921d018c1302f9be67e0aca8e583f8970af127e18727d68af4e7caa81c8eb2b1",
+        "grade": "0x0",
+        "name": "ABC node"  
+      } 
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key           | VALUE Type | Required | Description                                       |
+|:--------------|:-----------|:---------|:--------------------------------------------------|
+| owner         | T_ADDRESS  | true     | Node owner address                                |
+| nodePublicKey | T_BYTES    | true     | Node publicKey from which node address is derived |
+| grade         | T_INT      | true     | Sub(0), Main(1)                                   | 
+| name          | T_STRING   | true     | Node name                                         |
+
+#### Returns
+
+`T_HASH` - txHash
+
+### unregisterValidator
+
+* Unregister a validator
+* Called by both Governance SCORE or owner
+* Once a validator has been unregistered, the node cannot be a validator anymore.
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "unregisterValidator",
+      "params": {
+        "owner": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
+      } 
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key   | VALUE Type | Required | Description        |
+|:------|:-----------|:---------|:-------------------|
+| owner | T_ADDRESS  | true     | Node owner address |
+
+#### Returns
+
+`T_HASH` - txHash
+
+### setBlockVoteCheckParameters(period int, allowance int)
+
+* Sets `BlockVoteCheckPeriod` and `NonVoteAllowance` parameters used after decentralization
+* Changed parameters are applied at the beginning of next term.
+* Called by Governance SCORE
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "setBlockVoteCheckParameters",
+      "params": {
+        "period": "0x64",
+        "allowance": "0x5"
+      } 
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key       | VALUE Type | Required | Description                                                              |
+|:----------|:-----------|:---------|:-------------------------------------------------------------------------|
+| period    | T_INT      | true     | Period in blocks when block vote checking happens                        |
+| allowance | T_INT      | true     | A validator gets penalized if its nonVotes is larger than this allowance |
+
+#### Returns
+
+`T_HASH` - txHash
+
+### getBlockVoteCheckParameters() dict
+
+* Returns `BlockVoteCheckPeriod` and NonVoteAllowance parameters
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getBlockVoteCheckParameters"
+    }
+  }
+}
+```
+
+> Response
+
+ ```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "period": "0x64",
+    "allowance": "0x5"
+  }
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+Refer to the following table: [Parameters](#setblockvotecheckparameters--period-int-allowance-int-)
+
+### getNetworkStatus() dict
+
+* Returns network status
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getNetworkStatus"
+    }
+  }
+}
+```
+
+> Response
+
+ ```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "height": "0x3e8",
+    "version": "0x0",
+    "mode": "0x0",
+    "blockVoteCheckPeriod": "0x64",
+    "nonVoteAllowance": "0x5"
+  }
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+| Key                  | VALUE Type | Required | Description                                                              |
+|:---------------------|:-----------|:---------|:-------------------------------------------------------------------------|
+| height               | T_INT      | true     | Current block height                                                     |
+| version              | T_INT      | true     | Result message format version                                            |
+| mode                 | T_INT      | true     | Network mode. init(0), decentralization(1)                               |
+| blockVoteCheckPeriod | T_INT      | true     | Period in blocks of block vote check                                     |
+| nonVoteAllowance     | T_INT      | true     | A validator gets penalized if its nonVotes is larger than this allowance |
+
+### setValidatorInfo(name string, url string)
+
+* Change the name and url of a validator
+* Called by validator owner
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "setValidatorInfo",
+      "params": {
+        "name": "Excellent node",
+        "url": "https://www.excellentnode.com/"
+      } 
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key  | VALUE Type | Required | Description            |
+|:-----|:-----------|:---------|:-----------------------|
+| name | T_STRING   | true     | Validator name         |
+| url  | T_STRING   | true     | Validator homepage URL |
+
+#### Returns
+
+`T_HASH` - txHash
+
+### getValidatorInfo(owner Address) dict
+
+* Returns the information on the validator indicated by owner
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getValidatorInfo",
+      "params": {
+        "owner": "hx0123456789012345678901234567890123456789"
+      }
+    }
+  }
+}
+```
+
+> Response
+
+ ```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "height": "0x3e8",
+    "version": "0x0",
+    "owner": "hx0123456789012345678901234567890123456789",
+    "nodePublicKey": "0x03921d018c1302f9be67e0aca8e583f8970af127e18727d68af4e7caa81c8eb2b1",
+    "node": "0x64",
+    "grade": "0x0",
+    "name": "Excellent node",
+    "url": "https://www.excellentnode.com/"
+  }
+}
+```
+
+#### Parameters
+
+| Key   | VALUE Type | Required | Description     |
+|:------|:-----------|:---------|:----------------|
+| owner | T_ADDRESS  | true     | Validator owner |
+
+#### Returns
+
+| Key           | VALUE Type | Required | Description                   |
+|:--------------|:-----------|:---------|:------------------------------|
+| height        | T_INT      | true     | Current block height          |
+| version       | T_INT      | true     | Result message format version |
+| owner         | T_ADDRESS  | true     | Validator owner               |
+| nodePublicKey | T_BYTES    | true     | Compressed node publicKey     |
+| node          | T_ADDRESS  | true     | Node address                  |
+| grade         | T_INT      | true     | sub(0), main(1)               |
+| name          | T_STRING   | true     | Validator name                |
+| url           | T_STRING   | true     | Validator URL                 |
+
+### setNodePublicKey(publicKey bytes)
+
+* Changes node publicKey for a validator indicated by owner
+* Called by validator owner
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "setNodePublicKey",
+      "params": {
+        "publicKey": "0x03921d018c1302f9be67e0aca8e583f8970af127e18727d68af4e7caa81c8eb2b1"
+      } 
+    }
+  }
+}
+```
+
+#### Parameter
+
+| Key       | VALUE Type | Required | Description               |
+|:----------|:-----------|:---------|:--------------------------|
+| publicKey | T_BYTES    | true     | Compressed node publicKey |
+
+#### Returns
+
+`T_HASH` - txHash
+
+### enableValidator(owner Address)
+
+* Enable a disabled validator indicated by owner
+* Called by Governance SCORE or validator owner
+* Since `revision 4` 
+ 
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "enableValidator",
+      "params": {
+        "owner": "hx0123456789012345678901234567890123456789"
+      } 
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key   | VALUE Type | Required | Description     |
+|:------|:-----------|:---------|:----------------|
+| owner | T_ADDRESS  | true     | Validator owner |
+
+#### Returns
+
+`T_HASH` - txHash
+
+### getValidatorStatus(owner Address) dict
+
+* Returns validator status indicated by owner
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getValidatorStatus",
+      "params": {
+        "owner": "hx0123456789012345678901234567890123456789"
+      } 
+    }
+  }
+}
+```
+
+> Response
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "height": "0x3e8",
+    "version": "0x0",
+    "flags": "0x0",
+    "nonVotes": "0x0",
+    "enableCount": "0xa"
+  }
+}
+```
+
+#### Parameters
+
+| Key   | VALUE Type | Required | Description     |
+|:------|:-----------|:---------|:----------------|
+| owner | T_ADDRESS  | true     | Validator owner |
+
+#### Returns
+
+| Key         | VALUE Type | Required | Description                                                          |
+|:------------|:-----------|:---------|:---------------------------------------------------------------------|
+| height      | T_INT      | true     | Current block height                                                 |
+| version     | T_INT      | true     | Result message format version                                        |
+| flags       | T_INT      | true     | Bitwise flags: disabled(1), disqualified(2)                          |
+| nonVotes    | T_INT      | true     | Number of times that a validator did not participate in a block vote |
+| enableCount | T_INT      | true     | Number of times that a validator can be enabled                      |
+
+#### Returns
+
+`T_HASH` - txHash
+
+### setValidatorCount(count int)
+
+* Sets the number of validators participating in block validation
+* Called by Governance SCORE
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_sendTransaction",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "setValidatorCount",
+      "params": {
+        "count": "0xa"
+      }
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key   | VALUE Type | Required | Description                                            |
+|:------|:-----------|:---------|:-------------------------------------------------------|
+| count | T_INT      | true     | Number of validators participating in block validation |
+
+#### Returns
+
+`T_HASH` - txHash
+
+### getValidatorCount() int
+
+* Returns the number of validators participating in block validation
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getValidatorCount"
+    }
+  }
+}
+```
+
+> Response
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": "0xa"
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+| Key | VALUE Type | Required | Description                                            |
+|:----|:-----------|:---------|:-------------------------------------------------------|
+| -   | T_INT      | true     | Number of validators participating in block validation |
+
+### getRegisteredValidators() dict
+
+* Returns all registered validators excluding unregistered ones
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "method": "icx_call",
+  "params": {
+    "to": "cx0000000000000000000000000000000000000000",
+    "dataType": "call",
+    "data": {
+      "method": "getRegisteredValidators"
+    }
+  }
+}
+```
+
+> Response
+
+```json
+{
+  "id": 1,
+  "jsonrpc": "2.0",
+  "result": {
+    "height": "0x3e8",
+    "validators": [
+      "hxcb90235946c8ab02e24a03b898e0994ddb78d13a",
+      "hxe3979d6118e437cff510ac6c989fe7c48162a32f",
+      "hxe6710e03332914d97bb7dff3ee6831a03cd0a7ae",
+      "hxcb35f82a3a943e040ae2b9ab2baa2118781b2bc9",
+      "hxf5be47d975a2a71a22156713ab58ec5e2338ba34"
+    ]
+  }
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+| Key        | VALUE Type  | Required | Description                                 |
+|:-----------|:------------|:---------|:--------------------------------------------|
+| height     | T_INT       | true     | Current block height                        |
+| validators | []T_ADDRESS | true     | Owner address list of registered validators |
+
 ## EventLogs
 
 HAVAH records the following eventLogs:
