@@ -1,9 +1,6 @@
 package hvh
 
 import (
-	"bytes"
-	"sort"
-
 	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/havah/hvh/hvhstate"
 	"github.com/icon-project/goloop/havah/hvhmodule"
@@ -11,66 +8,36 @@ import (
 	"github.com/icon-project/goloop/service/state"
 )
 
+var emptyValidatorMap = make(map[string]struct{})
+
 func (es *ExtensionStateImpl) isDecentralizationPossible(cc hvhmodule.CallContext) bool {
 	return es.state.IsDecentralizationPossible(cc.Revision().Value())
 }
 
 func (es *ExtensionStateImpl) initValidatorSet(cc hvhmodule.CallContext) error {
-	// owners are owner list
-	owners, err := es.state.GetAvailableValidators()
+	validatorCount := es.state.GetValidatorCount()
+
+	// addrs contains validator node addresses
+	addrs, err := es.state.GetMainValidators()
 	if err != nil {
 		return err
 	}
 
-	vis, err := es.state.GetValidatorInfos(owners)
-	if err != nil {
-		return err
-	}
-
-	sortValidatorInfos(vis)
-	count := es.state.GetValidatorCount()
-	activeVIs, standbyVIs := splitValidatorInfos(vis, count)
-	if err = setActiveValidators(cc, activeVIs); err != nil {
-		return err
-	}
-	if err = es.setStandbyValidatorOwners(standbyVIs); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (es *ExtensionStateImpl) setStandbyValidatorOwners(vis []*hvhstate.ValidatorInfo) error {
-	var err error
-	size := len(vis)
-	var owners *hvhstate.AddressSet
-
-	if size > 0 {
-		owners = hvhstate.NewAddressSet(size)
-		for _, vi := range vis {
-			if err = owners.Add(vi.Owner()); err != nil {
-				return err
-			}
+	if count := validatorCount - len(addrs); count > 0 {
+		subValidators, err := es.state.GetNextActiveValidatorsAndChangeIndex(nil, count)
+		if err != nil {
+			return err
+		}
+		if subValidators != nil {
+			addrs = append(addrs, subValidators...)
 		}
 	}
-	return es.state.SetStandbyValidatorOwners(owners)
-}
 
-func sortValidatorInfos(vis []*hvhstate.ValidatorInfo) {
-	sort.Slice(vis, func(i, j int) bool {
-		// GradeMain first
-		if vis[i].Grade() > vis[j].Grade() {
-			return true
-		}
-		return bytes.Compare(vis[i].Owner().Bytes(), vis[i].Owner().Bytes()) < 0
-	})
-}
-
-func splitValidatorInfos(
-	vis []*hvhstate.ValidatorInfo, validatorCount int) ([]*hvhstate.ValidatorInfo, []*hvhstate.ValidatorInfo) {
-	if len(vis) <= validatorCount {
-		return vis, nil
+	validators := make([]module.Validator, len(addrs))
+	for i, addr := range addrs {
+		validators[i], _ = state.ValidatorFromAddress(addr)
 	}
-	return vis[:validatorCount], vis[validatorCount:]
+	return cc.SetValidators(validators)
 }
 
 func setActiveValidators(cc hvhmodule.CallContext, activeSet []*hvhstate.ValidatorInfo) error {
@@ -114,7 +81,7 @@ func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
 	}
 
 	// Get standby validators to replace penalized active validators
-	newActiveValidators, err := es.state.GetNextActiveValidatorsAndChangeIndex(penalizedCount)
+	newActiveValidators, err := es.state.GetNextActiveValidatorsAndChangeIndex(validatorState, penalizedCount)
 	if err != nil {
 		return err
 	}

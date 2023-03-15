@@ -76,35 +76,35 @@ const (
 
 // VarDB, DictDB, ArrayDB keys
 const (
-	VarIssueAmount            = "issue_amount"          // unit: loop
-	VarIssueStart             = "issue_start"           // block height
-	VarIssueLimit             = "issue_limit"           // unit: term
-	VarTermPeriod             = "term_period"           // unit: block
-	VarIssueReductionCycle    = "issue_reduction_cycle" // unit: term
-	VarHooverBudget           = "hoover_budget"         // unit: hvh
-	VarUSDTPrice              = "usdt_price"            // unit: hvh
-	VarActiveUSDTPrice        = "active_usdt_price"     // unit: hvh
-	DictPlanet                = "planet"
-	ArrayPlanetManager        = "planet_manager"
-	DictPlanetReward          = "planet_reward"
-	VarAllPlanet              = "all_planet"
-	VarActivePlanet           = "active_planet"
-	VarWorkingPlanet          = "working_planet"
-	VarRewardTotal            = "reward_total"  // unit: hvh
-	VarRewardRemain           = "reward_remain" // unit: hvh
-	VarEcoReward              = "eco_reward"    // unit: hvh
-	VarPrivateClaimableRate   = "private_claimable_rate"
-	VarLost                   = "lost"
-	VarBlockVoteCheckPeriod   = "block_vote_check_period" // unit: block
-	VarNonVoteAllowance       = "non_vote_allowance"      // unit: count
-	VarValidatorCount         = "validator_count"
-	DictValidatorInfo         = "validator_info"
-	DictValidatorStatus       = "validator_status"
-	DictNodeToOwner           = "node_to_owner"
-	ArrayValidators           = "validators" // all registered validators
-	VarStandbyValidators      = "standby_validators"
-	VarStandbyValidatorsIndex = "standby_validators_index"
-	VarNetworkStatus          = "network_status"
+	VarIssueAmount          = "issue_amount"          // unit: loop
+	VarIssueStart           = "issue_start"           // block height
+	VarIssueLimit           = "issue_limit"           // unit: term
+	VarTermPeriod           = "term_period"           // unit: block
+	VarIssueReductionCycle  = "issue_reduction_cycle" // unit: term
+	VarHooverBudget         = "hoover_budget"         // unit: hvh
+	VarUSDTPrice            = "usdt_price"            // unit: hvh
+	VarActiveUSDTPrice      = "active_usdt_price"     // unit: hvh
+	DictPlanet              = "planet"
+	ArrayPlanetManager      = "planet_manager"
+	DictPlanetReward        = "planet_reward"
+	VarAllPlanet            = "all_planet"
+	VarActivePlanet         = "active_planet"
+	VarWorkingPlanet        = "working_planet"
+	VarRewardTotal          = "reward_total"  // unit: hvh
+	VarRewardRemain         = "reward_remain" // unit: hvh
+	VarEcoReward            = "eco_reward"    // unit: hvh
+	VarPrivateClaimableRate = "private_claimable_rate"
+	VarLost                 = "lost"
+	VarBlockVoteCheckPeriod = "block_vote_check_period" // unit: block
+	VarNonVoteAllowance     = "non_vote_allowance"      // unit: count
+	VarValidatorCount       = "validator_count"
+	DictValidatorInfo       = "validator_info"
+	DictValidatorStatus     = "validator_status"
+	DictNodeToOwner         = "node_to_owner"
+	ArrayMainValidators     = "main_validators" // main validators
+	ArraySubValidators      = "sub_validators"  // sub validators
+	VarSubValidatorsIndex   = "sub_validators_index"
+	VarNetworkStatus        = "network_status"
 )
 
 // VarDBs in SustainableFund Score

@@ -12,6 +12,7 @@ import (
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/scoreresult"
+	"github.com/icon-project/goloop/service/state"
 )
 
 type State struct {
@@ -833,7 +834,7 @@ func (s *State) RegisterValidator(owner module.Address, nodePublicKey []byte, gr
 	if err = s.registerNodeAddress(vi.Address(), owner); err != nil {
 		return err
 	}
-	if err = s.addValidatorList(owner); err != nil {
+	if err = s.addValidatorList(grade, owner); err != nil {
 		return err
 	}
 
@@ -898,8 +899,14 @@ func (s *State) getOwnerByNode(db *containerdb.DictDB, node module.Address) (mod
 	return v.Address(), nil
 }
 
-func (s *State) addValidatorList(owner module.Address) error {
-	db := s.getArrayDB(hvhmodule.ArrayValidators)
+func (s *State) addValidatorList(grade int, owner module.Address) error {
+	var key string
+	if grade == GradeMain {
+		key = hvhmodule.ArrayMainValidators
+	} else {
+		key = hvhmodule.ArraySubValidators
+	}
+	db := s.getArrayDB(key)
 	return db.Put(owner)
 }
 
@@ -1109,23 +1116,41 @@ func (s *State) setNodePublicKey(owner module.Address, publicKey []byte) (module
 	return vi.Address(), nil
 }
 
-func (s *State) GetAvailableValidators() ([]module.Address, error) {
-	vlDB := s.getArrayDB(hvhmodule.ArrayValidators)
-	vsDB := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
-	size := vlDB.Size()
-	validators := make([]module.Address, 0, size)
+func (s *State) GetMainValidators() ([]module.Address, error) {
+	mvDB := s.getArrayDB(hvhmodule.ArrayMainValidators)
+	viDB := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
+
+	size := mvDB.Size()
+	validators := make([]module.Address, size)
 
 	for i := 0; i < size; i++ {
-		owner := vlDB.Get(i).Address()
-		vs, err := s.getValidatorStatus(vsDB, owner)
+		owner := viDB.Get(i).Address()
+		vi, err := s.getValidatorInfo(viDB, owner)
 		if err != nil {
-			return nil, errors.InvalidStateError.Errorf("Mismatch between validatorList and validatorStatus")
+			return nil, scoreresult.Wrapf(
+				err, hvhmodule.StatusInvalidState,
+				"Mismatch between validatorList and validatorStatus")
 		}
-		if vs.Enabled() {
-			validators = append(validators, owner)
-		}
+		validators = append(validators, vi.Address())
 	}
 
+	return validators, nil
+}
+
+func (s *State) GetRegisteredValidatorOwners() ([]module.Address, error) {
+	mvDB := s.getArrayDB(hvhmodule.ArrayMainValidators)
+	svDB := s.getArrayDB(hvhmodule.ArraySubValidators)
+
+	msize := mvDB.Size()
+	ssize := svDB.Size()
+	validators := make([]module.Address, 0, msize+ssize)
+
+	for i := 0; i < msize; i++ {
+		validators = append(validators, mvDB.Get(i).Address())
+	}
+	for i := 0; i < ssize; i++ {
+		validators = append(validators, svDB.Get(i).Address())
+	}
 	return validators, nil
 }
 
@@ -1142,18 +1167,6 @@ func (s *State) SetValidatorCount(count int) error {
 func (s *State) GetValidatorCount() int {
 	db := s.getVarDB(hvhmodule.VarValidatorCount)
 	return int(db.Int64())
-}
-
-// SetStandbyValidatorOwners initialize standby validator owner set at the beginning of each term
-// This set will remain unchanged until the current term is over.
-func (s *State) SetStandbyValidatorOwners(owners *AddressSet) error {
-	var err error
-	db := s.getVarDB(hvhmodule.VarStandbyValidators)
-	if owners == nil || owners.Len() == 0 {
-		_, err = db.Delete()
-		return err
-	}
-	return db.Set(owners.Bytes())
 }
 
 func (s *State) OnBlockVote(node module.Address, vote bool) (bool, error) {
@@ -1197,69 +1210,55 @@ func (s *State) OnBlockVote(node module.Address, vote bool) (bool, error) {
 	return penalized, err
 }
 
-func (s *State) GetNextActiveValidatorsAndChangeIndex(count int) ([]module.Address, error) {
+func (s *State) GetNextActiveValidatorsAndChangeIndex(
+	activeValidators state.ValidatorState, count int) ([]module.Address, error) {
 	if count < 1 {
 		return nil, scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid count: %d", count)
 	}
-
-	sviDB := s.getVarDB(hvhmodule.VarStandbyValidatorsIndex)
-	index := int(sviDB.Int64())
-	if index < 0 {
-		// No available standby validatorSet
+	svDB := s.getArrayDB(hvhmodule.ArraySubValidators)
+	size := svDB.Size()
+	if size == 0 {
 		return nil, nil
 	}
-	orgIndex := index
 
-	standbyValidatorSet, err := s.getStandbyValidatorSet()
-	if err != nil {
-		if status, ok := scoreresult.StatusOf(err); ok {
-			if status == hvhmodule.StatusNotFound {
-				return nil, nil
-			}
-		}
-		return nil, err
+	var err error
+	var vi *ValidatorInfo
+	var vs *ValidatorStatus
+	sviDB := s.getVarDB(hvhmodule.VarSubValidatorsIndex)
+	svIndex := int(sviDB.Int64())
+	oldSVIndex := svIndex
+	if svIndex >= size {
+		svIndex = 0
 	}
 
-	newActiveValidators := make([]module.Address, 0, count)
+	nextActiveValidators := make([]module.Address, 0, count)
 	viDB := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
 	vsDB := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
-	size := standbyValidatorSet.Len()
 
-	for ; index < size; index++ {
-		owner := standbyValidatorSet.Get(index)
-		if vs, err := s.getValidatorStatus(vsDB, owner); err == nil {
-			if vs.Enabled() {
-				if vi, err := s.getValidatorInfo(viDB, owner); err == nil {
-					newActiveValidators = append(newActiveValidators, vi.Address())
-					if len(newActiveValidators) == count {
-						// index points out the next standby validator
-						index++
-						break
-					}
+	for i := 0; i < size && len(nextActiveValidators) == count; i++ {
+		owner := svDB.Get(svIndex).Address()
+		if vi, err = s.getValidatorInfo(viDB, owner); err != nil {
+			return nil, err
+		}
+		node := vi.Address()
+
+		if activeValidators == nil || activeValidators.IndexOf(node) < 0 {
+			if vs, err = s.getValidatorStatus(vsDB, owner); err == nil {
+				if vs.Enabled() {
+					nextActiveValidators = append(nextActiveValidators, node)
 				}
 			}
 		}
+
+		svIndex = (svIndex + 1) % size
 	}
 
-	if index != orgIndex {
-		if index == size {
-			index = -1
-		}
-		if err = sviDB.Set(index); err != nil {
+	if oldSVIndex != svIndex {
+		if err = sviDB.Set(svIndex); err != nil {
 			return nil, err
 		}
 	}
-	return newActiveValidators, err
-}
-
-func (s *State) getStandbyValidatorSet() (*AddressSet, error) {
-	db := s.getVarDB(hvhmodule.VarStandbyValidators)
-	bs := db.Bytes()
-	if bs == nil {
-		return nil, scoreresult.Errorf(
-			hvhmodule.StatusNotFound, "standbyValidatorSet not found")
-	}
-	return NewAddressSetFromBytes(bs)
+	return nextActiveValidators, err
 }
 
 func (s *State) IsDecentralizationPossible(rev int) bool {
@@ -1267,17 +1266,13 @@ func (s *State) IsDecentralizationPossible(rev int) bool {
 		return false
 	}
 	validatorCount := s.GetValidatorCount()
-	if validatorCount <= 0 {
+	if validatorCount < 1 {
 		return false
 	}
-	validators, err := s.GetAvailableValidators()
-	if err != nil {
-		return false
-	}
-	if len(validators) < validatorCount {
-		return false
-	}
-	return true
+
+	mvDB := s.getArrayDB(hvhmodule.ArrayMainValidators)
+	svDB := s.getArrayDB(hvhmodule.ArraySubValidators)
+	return (mvDB.Size() + svDB.Size()) >= validatorCount
 }
 
 func (s *State) IsItTimeToCheckBlockVote(blockIndexInTerm int64) bool {
