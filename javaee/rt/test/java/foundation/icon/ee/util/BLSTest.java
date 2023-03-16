@@ -22,6 +22,8 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import supranational.blst.P1;
 
+import java.util.Arrays;
+
 public class BLSTest {
     private static byte[] hexToBytes(String hex) {
         return Helpers.hexStringToBytes(hex);

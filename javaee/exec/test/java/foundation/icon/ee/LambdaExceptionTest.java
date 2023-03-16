@@ -17,16 +17,25 @@
 package foundation.icon.ee;
 
 import foundation.icon.ee.test.SimpleTest;
+import foundation.icon.ee.test.TransactionException;
 import foundation.icon.ee.types.Status;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.objectweb.asm.*;
+
+import java.io.IOException;
+import java.math.BigInteger;
+import java.util.function.Function;
+
+import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.FieldVisitor;
+import org.objectweb.asm.Handle;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
 import score.Context;
 import score.RevertedException;
 import score.annotation.External;
-
-import java.math.BigInteger;
-import java.util.function.Function;
 
 public class LambdaExceptionTest extends SimpleTest {
     public static class RunnableScore {

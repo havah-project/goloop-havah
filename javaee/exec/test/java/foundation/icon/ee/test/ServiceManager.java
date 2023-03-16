@@ -1,14 +1,18 @@
 package foundation.icon.ee.test;
 
 import foundation.icon.ee.Agent;
+import foundation.icon.ee.types.Address;
+import foundation.icon.ee.types.Method;
+import foundation.icon.ee.types.Result;
+import foundation.icon.ee.util.MethodUnpacker;
 import foundation.icon.ee.ipc.Connection;
 import foundation.icon.ee.ipc.EEProxy;
 import foundation.icon.ee.ipc.Proxy;
 import foundation.icon.ee.ipc.TypedObj;
 import foundation.icon.ee.score.FileIO;
-import foundation.icon.ee.types.*;
+import foundation.icon.ee.types.Status;
+import foundation.icon.ee.types.StepCost;
 import foundation.icon.ee.util.Crypto;
-import foundation.icon.ee.util.MethodUnpacker;
 import foundation.icon.ee.util.Strings;
 import org.aion.avm.core.IExternalState;
 import org.msgpack.core.MessagePack;

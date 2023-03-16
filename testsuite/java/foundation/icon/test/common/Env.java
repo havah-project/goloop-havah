@@ -19,11 +19,16 @@ package foundation.icon.test.common;
 import foundation.icon.icx.KeyWallet;
 import foundation.icon.icx.crypto.KeystoreException;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 

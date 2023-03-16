@@ -3,12 +3,10 @@ package cli
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/icon-project/goloop/common/wallet"
+	"github.com/spf13/cobra"
 	"io/ioutil"
 	"log"
-
-	"github.com/spf13/cobra"
-
-	"github.com/icon-project/goloop/common/wallet"
 )
 
 func newKeystoreGenCmd(c string) *cobra.Command {

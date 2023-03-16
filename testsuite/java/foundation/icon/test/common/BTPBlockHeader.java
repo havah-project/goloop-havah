@@ -1,8 +1,8 @@
 package foundation.icon.test.common;
 
-import foundation.icon.ee.io.DataReader;
+import foundation.icon.ee.io.*;
 
-import java.util.ArrayList;
+import java.util.*;
 
 public class BTPBlockHeader {
     private final byte[] bytes;

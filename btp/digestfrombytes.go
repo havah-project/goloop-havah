@@ -136,7 +136,7 @@ type networkTypeDigestFormat struct {
 }
 
 type networkTypeDigestCoreFromBytes struct {
-	format networkTypeDigestFormat
+	format              networkTypeDigestFormat
 }
 
 func (ntd *networkTypeDigestCoreFromBytes) NetworkTypeID() int64 {
@@ -239,7 +239,7 @@ func (h *messageDataHandler) OnData(value []byte, builder merkle.Builder) error 
 }
 
 type digestDataHandler struct {
-	core *digestCoreFromBytes
+	core   *digestCoreFromBytes
 }
 
 func (h *digestDataHandler) OnData(value []byte, builder merkle.Builder) error {
@@ -274,7 +274,7 @@ func NewDigestWithBuilder(builder merkle.Builder, hash []byte) (module.BTPDigest
 		core: core,
 	}
 	builder.RequestData(db.BytesByHash, hash, &digestDataHandler{
-		core: core,
+		core:   core,
 	})
 	return ret, nil
 }

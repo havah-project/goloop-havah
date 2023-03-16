@@ -4,10 +4,9 @@
 package ipc
 
 import (
+	"github.com/icon-project/goloop/common/errors"
 	"testing"
 	"time"
-
-	"github.com/icon-project/goloop/common/errors"
 )
 
 type testConnectionHandler struct {

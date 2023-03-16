@@ -24,6 +24,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import pi.ObjectReaderImpl;
 import pi.ObjectWriterImpl;
+import score.Address;
 import testutils.TestInstrumentation;
 
 import java.math.BigInteger;

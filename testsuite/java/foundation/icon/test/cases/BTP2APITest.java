@@ -18,15 +18,32 @@ package foundation.icon.test.cases;
 
 import foundation.icon.icx.IconService;
 import foundation.icon.icx.KeyWallet;
-import foundation.icon.icx.data.*;
+import foundation.icon.icx.data.Address;
+import foundation.icon.icx.data.BTPNetworkInfo;
+import foundation.icon.icx.data.BTPNetworkTypeInfo;
+import foundation.icon.icx.data.BTPNotification;
+import foundation.icon.icx.data.Base64;
+import foundation.icon.icx.data.Bytes;
+import foundation.icon.icx.data.TransactionResult;
 import foundation.icon.icx.transport.http.HttpProvider;
 import foundation.icon.icx.transport.jsonrpc.RpcItem;
 import foundation.icon.icx.transport.monitor.Monitor;
-import foundation.icon.test.common.*;
+import foundation.icon.test.common.BTPBlockHeader;
+import foundation.icon.test.common.Codec;
+import foundation.icon.test.common.Constants;
+import foundation.icon.test.common.Env;
+import foundation.icon.test.common.ResultTimeoutException;
+import foundation.icon.test.common.TestBase;
+import foundation.icon.test.common.TransactionHandler;
 import foundation.icon.test.score.BTP2;
 import foundation.icon.test.score.ChainScore;
 import foundation.icon.test.score.GovScore;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 
 import java.io.IOException;
 import java.math.BigInteger;
@@ -35,7 +52,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static foundation.icon.test.common.Env.LOG;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)

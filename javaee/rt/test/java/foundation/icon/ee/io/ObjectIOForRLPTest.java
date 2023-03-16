@@ -12,8 +12,7 @@ import pi.ObjectReaderImpl;
 import pi.ObjectWriterImpl;
 import testutils.TestInstrumentation;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ObjectIOForRLPTest {
     static byte[] bytes(String s) {

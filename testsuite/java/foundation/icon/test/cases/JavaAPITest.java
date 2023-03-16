@@ -21,7 +21,12 @@ import foundation.icon.ee.util.Crypto;
 import foundation.icon.icx.IconService;
 import foundation.icon.icx.KeyWallet;
 import foundation.icon.icx.SignedTransaction;
-import foundation.icon.icx.data.*;
+import foundation.icon.icx.data.Address;
+import foundation.icon.icx.data.Base64;
+import foundation.icon.icx.data.Block;
+import foundation.icon.icx.data.Bytes;
+import foundation.icon.icx.data.ConfirmedTransaction;
+import foundation.icon.icx.data.TransactionResult;
 import foundation.icon.icx.transport.http.HttpProvider;
 import foundation.icon.icx.transport.jsonrpc.RpcError;
 import foundation.icon.icx.transport.jsonrpc.RpcItem;
@@ -48,7 +53,11 @@ import java.security.SecureRandom;
 import java.util.List;
 
 import static foundation.icon.test.common.Env.LOG;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Tag(Constants.TAG_JAVA_SCORE)
 class JavaAPITest extends TestBase {

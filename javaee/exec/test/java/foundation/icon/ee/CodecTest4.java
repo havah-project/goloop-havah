@@ -20,7 +20,11 @@ import foundation.icon.ee.io.RLPCodecTest;
 import foundation.icon.ee.io.RLPNCodecTest;
 import foundation.icon.ee.test.SimpleTest;
 import org.junit.jupiter.api.Test;
-import score.*;
+import score.Address;
+import score.ByteArrayObjectWriter;
+import score.Context;
+import score.ObjectReader;
+import score.ObjectWriter;
 import score.annotation.External;
 
 import java.math.BigInteger;

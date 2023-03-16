@@ -5,13 +5,6 @@
 
 package p.score;
 
-import foundation.icon.ee.types.UnknownFailureException;
-import i.*;
-import s.java.lang.Float;
-import s.java.lang.Integer;
-import s.java.lang.Long;
-import s.java.lang.Short;
-
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandleInfo;
 import java.lang.invoke.MethodHandles;
@@ -20,6 +13,13 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+
+import foundation.icon.ee.types.UnknownFailureException;
+import i.*;
+import s.java.lang.Float;
+import s.java.lang.Integer;
+import s.java.lang.Long;
+import s.java.lang.Short;
 
 
 public final class InternalFunction extends s.java.lang.Object implements s.java.util.function.Function {
