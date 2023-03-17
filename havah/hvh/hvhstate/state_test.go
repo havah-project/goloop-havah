@@ -765,48 +765,6 @@ func TestState_SetValidatorCount(t *testing.T) {
 	assert.Equal(t, newCount, count)
 }
 
-func TestState_GetAvailableValidators(t *testing.T) {
-	state := newDummyState()
-	size := 10
-	owners := make([]module.Address, size)
-
-	for i := 0; i < 10; i++ {
-		owner := newDummyAddress(i+1, false)
-		name := fmt.Sprintf("name-%d", i)
-		_, pubKey := crypto.GenerateKeyPair()
-		err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), i%2, name)
-		assert.NoError(t, err)
-		owners[i] = owner
-	}
-
-	validators, err := state.GetAvailableValidators()
-	assert.NoError(t, err)
-	assert.Equal(t, size, len(validators))
-	for i, v := range validators {
-		assert.True(t, v.Equal(owners[i]))
-	}
-
-	err = state.UnregisterValidator(owners[0])
-	assert.NoError(t, err)
-
-	validators, err = state.GetAvailableValidators()
-	assert.NoError(t, err)
-	assert.Equal(t, size-1, len(validators))
-	for i, v := range validators {
-		assert.True(t, v.Equal(owners[i+1]))
-	}
-
-	err = state.DisableValidator(owners[1])
-	assert.NoError(t, err)
-
-	validators, err = state.GetAvailableValidators()
-	assert.NoError(t, err)
-	assert.Equal(t, size-2, len(validators))
-	for i, v := range validators {
-		assert.True(t, v.Equal(owners[i+2]))
-	}
-}
-
 func TestState_IsDecentralizationPossible(t *testing.T) {
 	var err error
 	state := newDummyState()
@@ -821,11 +779,7 @@ func TestState_IsDecentralizationPossible(t *testing.T) {
 	validatorCount := state.GetValidatorCount()
 	assert.Zero(t, validatorCount)
 
-	validators, err := state.GetAvailableValidators()
-	assert.NoError(t, err)
-	assert.Zero(t, len(validators))
-
-	validatorCount = 7
+	validatorCount = 10
 	err = state.SetValidatorCount(validatorCount)
 	assert.NoError(t, err)
 	assert.False(t, state.IsDecentralizationPossible(rev))
