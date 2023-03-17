@@ -25,7 +25,7 @@ func newDummyAddress(id int, contract bool) module.Address {
 	return common.MustNewAddress(bs)
 }
 
-func newDummyValidatorInfo(id, grade int) *ValidatorInfo {
+func newDummyValidatorInfo(id int, grade Grade) *ValidatorInfo {
 	owner := newDummyAddress(id, false)
 	name := fmt.Sprintf("name-%02d", id)
 	_, pubKey := crypto.GenerateKeyPair()
@@ -33,7 +33,7 @@ func newDummyValidatorInfo(id, grade int) *ValidatorInfo {
 	return vi
 }
 
-func newDummyValidatorInfos(size int, grade int) []*ValidatorInfo {
+func newDummyValidatorInfos(size int, grade Grade) []*ValidatorInfo {
 	vis := make([]*ValidatorInfo, size)
 	for i := 1; i <= size; i++ {
 		vis[i] = newDummyValidatorInfo(i, grade)

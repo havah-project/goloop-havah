@@ -819,7 +819,7 @@ func (s *State) GetNonVoteAllowance() int64 {
 	return hvhmodule.NonVoteAllowance
 }
 
-func (s *State) RegisterValidator(owner module.Address, nodePublicKey []byte, grade int, name string) error {
+func (s *State) RegisterValidator(owner module.Address, nodePublicKey []byte, grade Grade, name string) error {
 	s.logger.Debugf(
 		"RegisterValidator() start: owner=%s grade=%d name=%s nodePublicKey=%x",
 		owner, grade, name, nodePublicKey)
@@ -843,12 +843,12 @@ func (s *State) RegisterValidator(owner module.Address, nodePublicKey []byte, gr
 }
 
 func (s *State) registerValidatorInfo(
-	owner module.Address, nodePublicKey []byte, grade int, name string) (*ValidatorInfo, error) {
+	owner module.Address, nodePublicKey []byte, grade Grade, name string) (*ValidatorInfo, error) {
 	if owner == nil {
 		return nil, scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid owner: %v", owner)
 	}
-	if !isGradeValid(grade) {
-		return nil, scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid grade: %d", grade)
+	if grade == GradeNone {
+		return nil, scoreresult.InvalidParameterError.Errorf("Invalid grade: %s", grade)
 	}
 	if len(name) > hvhmodule.MaxValidatorNameLen {
 		return nil, scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Too long name: %s", name)
@@ -899,7 +899,7 @@ func (s *State) getOwnerByNode(db *containerdb.DictDB, node module.Address) (mod
 	return v.Address(), nil
 }
 
-func (s *State) addValidatorList(grade int, owner module.Address) error {
+func (s *State) addValidatorList(grade Grade, owner module.Address) error {
 	var key string
 	if grade == GradeMain {
 		key = hvhmodule.ArrayMainValidators
@@ -1137,7 +1137,7 @@ func (s *State) GetMainValidators() ([]module.Address, error) {
 	return validators, nil
 }
 
-func (s *State) GetRegisteredValidatorOwners() ([]module.Address, error) {
+func (s *State) GetValidatorsOf(gradeFilter GradeFilter) ([]module.Address, error) {
 	mvDB := s.getArrayDB(hvhmodule.ArrayMainValidators)
 	svDB := s.getArrayDB(hvhmodule.ArraySubValidators)
 

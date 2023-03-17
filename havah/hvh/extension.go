@@ -576,7 +576,11 @@ func (es *ExtensionStateImpl) GetBlockVoteCheckPeriod() int64 {
 }
 
 func (es *ExtensionStateImpl) RegisterValidator(
-	owner module.Address, nodePublicKey []byte, grade int, name string) error {
+	owner module.Address, nodePublicKey []byte, gradeName, name string) error {
+	grade := hvhstate.StringToGrade(gradeName)
+	if grade == hvhstate.GradeNone {
+		return scoreresult.InvalidParameterError.Errorf("Invalid grade: %s", gradeName)
+	}
 	return es.state.RegisterValidator(owner, nodePublicKey, grade, name)
 }
 
@@ -666,11 +670,18 @@ func (es *ExtensionStateImpl) GetValidatorCount() (int, error) {
 	return es.state.GetValidatorCount(), nil
 }
 
-func (es *ExtensionStateImpl) GetRegisteredValidators(cc hvhmodule.CallContext) (map[string]interface{}, error) {
+func (es *ExtensionStateImpl) GetValidatorsOf(
+	cc hvhmodule.CallContext, gradeFilterName string) (map[string]interface{}, error) {
 	height := cc.BlockHeight()
-	if validators, err := es.state.GetRegisteredValidatorOwners(); err == nil {
+	gradeFilter := hvhstate.StringToGradeFilter(gradeFilterName)
+	if gradeFilter == hvhstate.GradeFilterNone {
+		return nil, scoreresult.InvalidParameterError.Errorf("Invalid grade: %s", gradeFilterName)
+	}
+
+	if validators, err := es.state.GetValidatorsOf(gradeFilter); err == nil {
 		return map[string]interface{}{
 			"height":     height,
+			"grade":      gradeFilterName,
 			"validators": validators,
 		}, nil
 	} else {

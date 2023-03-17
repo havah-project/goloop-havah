@@ -385,7 +385,7 @@ func (s *chainScore) Ex_getBlockVoteCheckParameters() (map[string]interface{}, e
 }
 
 func (s *chainScore) Ex_registerValidator(
-	owner module.Address, nodePublicKey []byte, grade *common.HexInt, name string) error {
+	owner module.Address, nodePublicKey []byte, grade, name string) error {
 	if err := s.checkGovernance(true); err != nil {
 		return err
 	}
@@ -393,7 +393,7 @@ func (s *chainScore) Ex_registerValidator(
 	if err != nil {
 		return err
 	}
-	return es.RegisterValidator(owner, nodePublicKey, int(grade.Int64()), name)
+	return es.RegisterValidator(owner, nodePublicKey, grade, name)
 }
 
 func (s *chainScore) Ex_unregisterValidator(owner module.Address) error {
@@ -495,7 +495,7 @@ func (s *chainScore) Ex_getValidatorCount() (int, error) {
 	return es.GetValidatorCount()
 }
 
-func (s *chainScore) Ex_getRegisteredValidators() (map[string]interface{}, error) {
+func (s *chainScore) Ex_getValidatorsOf(grade string) (map[string]interface{}, error) {
 	if err := s.tryChargeCall(); err != nil {
 		return nil, err
 	}
@@ -503,5 +503,5 @@ func (s *chainScore) Ex_getRegisteredValidators() (map[string]interface{}, error
 	if err != nil {
 		return nil, err
 	}
-	return es.GetRegisteredValidators(ctx)
+	return es.GetValidatorsOf(ctx, grade)
 }

@@ -499,7 +499,7 @@ var chainMethods = []*chainMethod{
 		[]scoreapi.Parameter{
 			{"owner", scoreapi.Address, nil, nil},
 			{"nodePublicKey", scoreapi.Bytes, nil, nil},
-			{"grade", scoreapi.Integer, nil, nil},
+			{"grade", scoreapi.String, nil, nil},
 			{"name", scoreapi.String, nil, nil},
 		},
 		nil,
@@ -572,9 +572,11 @@ var chainMethods = []*chainMethod{
 			scoreapi.Integer,
 		},
 	}, hvhmodule.RevisionDecentralization, 0},
-	{scoreapi.Method{scoreapi.Function, "getRegisteredValidators",
-		scoreapi.FlagReadOnly, 0,
-		nil,
+	{scoreapi.Method{scoreapi.Function, "getValidatorsOf",
+		scoreapi.FlagReadOnly, 1,
+		[]scoreapi.Parameter{
+			{"grade", scoreapi.String, nil, nil},
+		},
 		[]scoreapi.DataType{
 			scoreapi.Dict,
 		},

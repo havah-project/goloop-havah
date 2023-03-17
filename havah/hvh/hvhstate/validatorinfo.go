@@ -9,22 +9,11 @@ import (
 	"github.com/icon-project/goloop/module"
 )
 
-const (
-	GradeSub = iota
-	GradeMain
-
-	GradeReserved
-)
-
-func isGradeValid(grade int) bool {
-	return grade >= 0 && grade < GradeReserved
-}
-
 type ValidatorInfo struct {
 	version   int
 	owner     module.Address
 	publicKey *crypto.PublicKey
-	grade     int
+	grade     Grade
 	name      string
 	url       string
 
@@ -62,7 +51,7 @@ func (vi *ValidatorInfo) SetName(name string) error {
 	return nil
 }
 
-func (vi *ValidatorInfo) Grade() int {
+func (vi *ValidatorInfo) Grade() Grade {
 	return vi.grade
 }
 
@@ -142,7 +131,7 @@ func (vi *ValidatorInfo) ToJSON() map[string]interface{} {
 }
 
 func NewValidatorInfo(
-	owner module.Address, pubKey []byte, grade int, name string) (*ValidatorInfo, error) {
+	owner module.Address, pubKey []byte, grade Grade, name string) (*ValidatorInfo, error) {
 	vi := &ValidatorInfo{
 		owner: owner,
 		grade: grade,
