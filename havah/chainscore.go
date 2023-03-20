@@ -519,10 +519,14 @@ var chainMethods = []*chainMethod{
 		},
 	}, hvhmodule.RevisionDecentralization, 0},
 	{scoreapi.Method{scoreapi.Function, "setValidatorInfo",
-		scoreapi.FlagExternal, 2,
+		scoreapi.FlagExternal, 1,
 		[]scoreapi.Parameter{
-			{"name", scoreapi.String, nil, nil},
-			{"url", scoreapi.String, nil, nil},
+			{"values", scoreapi.ListTypeOf(1, scoreapi.Struct), nil,
+				[]scoreapi.Field{
+					{"key", scoreapi.String, nil},
+					{"value", scoreapi.String, nil},
+				},
+			},
 		},
 		nil,
 	}, hvhmodule.RevisionDecentralization, 0},

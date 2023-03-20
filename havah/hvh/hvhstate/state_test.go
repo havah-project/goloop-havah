@@ -1,6 +1,7 @@
 package hvhstate
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -676,15 +677,23 @@ func TestState_SetValidatorInfo(t *testing.T) {
 	err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
 	assert.NoError(t, err)
 
-	newName := "Name-01"
-	url := "http://www.example.com"
-	err = state.SetValidatorInfo(owner, newName, url)
+	newName := "newName"
+	newUrl := "http://www.example.com/details.json"
+	_, newPubKey := crypto.GenerateKeyPair()
+	newNodePublicKey := "0x" + hex.EncodeToString(newPubKey.SerializeCompressed())
+	values := make(map[string]string)
+	values["name"] = newName
+	values["url"] = newUrl
+	values["nodePublicKey"] = newNodePublicKey
+
+	err = state.SetValidatorInfo(owner, values)
 	assert.NoError(t, err)
 
 	vi, err := state.GetValidatorInfo(owner)
 	assert.NoError(t, err)
 	assert.Equal(t, newName, vi.Name())
-	assert.Equal(t, url, vi.Url())
+	assert.Equal(t, newUrl, vi.Url())
+	assert.True(t, newPubKey.Equal(vi.PublicKey()))
 }
 
 func TestState_SetNodePublicKey(t *testing.T) {

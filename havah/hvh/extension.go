@@ -599,8 +599,14 @@ func (es *ExtensionStateImpl) GetNetworkStatus(cc hvhmodule.CallContext) (map[st
 	return jso, err
 }
 
-func (es *ExtensionStateImpl) SetValidatorInfo(cc hvhmodule.CallContext, name, url string) error {
-	return es.state.SetValidatorInfo(cc.From(), name, url)
+func (es *ExtensionStateImpl) SetValidatorInfo(cc hvhmodule.CallContext, values []map[string]interface{}) error {
+	m := make(map[string]string, len(values))
+	for _, kvPair := range values {
+		key := kvPair["key"].(string)
+		value := kvPair["value"].(string)
+		m[key] = value
+	}
+	return es.state.SetValidatorInfo(cc.From(), m)
 }
 
 func (es *ExtensionStateImpl) EnableValidator(cc hvhmodule.CallContext, owner module.Address) error {

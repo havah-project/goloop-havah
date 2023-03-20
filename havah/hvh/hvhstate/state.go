@@ -1,7 +1,9 @@
 package hvhstate
 
 import (
+	"encoding/hex"
 	"math/big"
+	"strings"
 
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/containerdb"
@@ -992,17 +994,33 @@ func (s *State) RenewNetworkStatusOnTermStart() error {
 	return err
 }
 
-func (s *State) SetValidatorInfo(owner module.Address, name, url string) error {
+func (s *State) SetValidatorInfo(owner module.Address, values map[string]string) error {
 	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
 	vi, err := s.getValidatorInfo(db, owner)
 	if err != nil {
 		return err
 	}
-	if err = vi.SetName(name); err != nil {
-		return err
-	}
-	if err = vi.SetUrl(url); err != nil {
-		return err
+	for key, value := range values {
+		switch key {
+		case "name":
+			err = vi.SetName(value)
+		case "url":
+			err = vi.SetUrl(value)
+		case "nodePublicKey":
+			if strings.HasPrefix(value, "0x") && len(value) > 2 {
+				var pubKey []byte
+				if pubKey, err = hex.DecodeString(value[2:]); err == nil {
+					err = vi.SetPublicKey(pubKey)
+				}
+			} else {
+				return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %v", value)
+			}
+		default:
+			return scoreresult.InvalidParameterError.Errorf("Invalid key: key=%s value=%s", key, value)
+		}
+		if err != nil {
+			return scoreresult.Wrapf(err, hvhmodule.StatusInvalidState, "Unexpected error")
+		}
 	}
 	return db.Set(ToKey(owner), vi.Bytes())
 }

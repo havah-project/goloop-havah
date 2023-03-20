@@ -418,7 +418,7 @@ func (s *chainScore) Ex_getNetworkStatus() (map[string]interface{}, error) {
 	return es.GetNetworkStatus(ctx)
 }
 
-func (s *chainScore) Ex_setValidatorInfo(name, url string) error {
+func (s *chainScore) Ex_setValidatorInfo(values []map[string]interface{}) error {
 	if err := s.tryChargeCall(); err != nil {
 		return err
 	}
@@ -426,7 +426,11 @@ func (s *chainScore) Ex_setValidatorInfo(name, url string) error {
 	if err != nil {
 		return err
 	}
-	return es.SetValidatorInfo(ctx, name, url)
+
+	for _, pair := range values {
+		s.log.Debugf("key=%s value=%s", pair["key"].(string), pair["value"].(string))
+	}
+	return es.SetValidatorInfo(ctx, values)
 }
 
 func (s *chainScore) Ex_enableValidator(owner module.Address) error {
