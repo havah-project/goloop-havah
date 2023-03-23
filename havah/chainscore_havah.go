@@ -477,7 +477,7 @@ func (s *chainScore) Ex_setNodePublicKey(publicKey []byte) error {
 	return es.SetNodePublicKey(ctx, publicKey)
 }
 
-func (s *chainScore) Ex_setValidatorCount(count int) error {
+func (s *chainScore) Ex_setValidatorCount(count *common.HexInt) error {
 	if err := s.checkGovernance(true); err != nil {
 		return err
 	}
@@ -485,10 +485,10 @@ func (s *chainScore) Ex_setValidatorCount(count int) error {
 	if err != nil {
 		return err
 	}
-	return es.SetValidatorCount(count)
+	return es.SetValidatorCount(count.Int64())
 }
 
-func (s *chainScore) Ex_getValidatorCount() (int, error) {
+func (s *chainScore) Ex_getValidatorCount() (int64, error) {
 	if err := s.tryChargeCall(); err != nil {
 		return 0, err
 	}

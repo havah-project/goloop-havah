@@ -2,20 +2,17 @@ package hvh
 
 import (
 	"github.com/icon-project/goloop/common/errors"
-	"github.com/icon-project/goloop/havah/hvh/hvhstate"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/state"
 )
-
-var emptyValidatorMap = make(map[string]struct{})
 
 func (es *ExtensionStateImpl) isDecentralizationPossible(cc hvhmodule.CallContext) bool {
 	return es.state.IsDecentralizationPossible(cc.Revision().Value())
 }
 
 func (es *ExtensionStateImpl) initValidatorSet(cc hvhmodule.CallContext) error {
-	validatorCount := es.state.GetValidatorCount()
+	validatorCount := int(es.state.GetValidatorCount())
 
 	// addrs contains validator node addresses
 	addrs, err := es.state.GetMainValidators()
@@ -36,14 +33,6 @@ func (es *ExtensionStateImpl) initValidatorSet(cc hvhmodule.CallContext) error {
 	validators := make([]module.Validator, len(addrs))
 	for i, addr := range addrs {
 		validators[i], _ = state.ValidatorFromAddress(addr)
-	}
-	return cc.SetValidators(validators)
-}
-
-func setActiveValidators(cc hvhmodule.CallContext, activeSet []*hvhstate.ValidatorInfo) error {
-	validators := make([]module.Validator, len(activeSet))
-	for i, vi := range activeSet {
-		validators[i], _ = state.ValidatorFromAddress(vi.Address())
 	}
 	return cc.SetValidators(validators)
 }

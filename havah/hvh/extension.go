@@ -665,14 +665,18 @@ func (es *ExtensionStateImpl) SetNodePublicKey(cc hvhmodule.CallContext, publicK
 	return err
 }
 
-func (es *ExtensionStateImpl) SetValidatorCount(count int) error {
+func (es *ExtensionStateImpl) SetValidatorCount(count int64) error {
+	if !(count > 0 && count < 10_000) {
+		return scoreresult.InvalidParameterError.Errorf("Invalid count: %d", count)
+	}
+
 	es.Logger().Debugf("SetValidatorCount() start: count=%d", count)
 	err := es.state.SetValidatorCount(count)
 	es.Logger().Debugf("SetValidatorCount() end: count=%d err=%v", count, err)
 	return err
 }
 
-func (es *ExtensionStateImpl) GetValidatorCount() (int, error) {
+func (es *ExtensionStateImpl) GetValidatorCount() (int64, error) {
 	return es.state.GetValidatorCount(), nil
 }
 

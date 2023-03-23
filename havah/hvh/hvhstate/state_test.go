@@ -767,7 +767,7 @@ func TestState_SetValidatorCount(t *testing.T) {
 	count := state.GetValidatorCount()
 	assert.Zero(t, count)
 
-	newCount := 10
+	newCount := int64(10)
 	err := state.SetValidatorCount(newCount)
 	assert.NoError(t, err)
 	count = state.GetValidatorCount()
@@ -793,7 +793,7 @@ func TestState_IsDecentralizationPossible(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, state.IsDecentralizationPossible(rev))
 
-	for i := 0; i < validatorCount; i++ {
+	for i := 0; i < int(validatorCount); i++ {
 		name := fmt.Sprintf("name-%02d", i)
 		owner := newDummyAddress(i+1, false)
 		_, pubKey := crypto.GenerateKeyPair()

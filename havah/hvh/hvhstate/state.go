@@ -1172,7 +1172,7 @@ func (s *State) GetValidatorsOf(gradeFilter GradeFilter) ([]module.Address, erro
 	return validators, nil
 }
 
-func (s *State) SetValidatorCount(count int) error {
+func (s *State) SetValidatorCount(count int64) error {
 	if count < 1 {
 		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid validator count: %d", count)
 	}
@@ -1182,9 +1182,9 @@ func (s *State) SetValidatorCount(count int) error {
 
 // GetValidatorCount returns the number of validators involved in validating blocks
 // Initial value is 0
-func (s *State) GetValidatorCount() int {
+func (s *State) GetValidatorCount() int64 {
 	db := s.getVarDB(hvhmodule.VarValidatorCount)
-	return int(db.Int64())
+	return db.Int64()
 }
 
 func (s *State) OnBlockVote(node module.Address, vote bool) (bool, error) {
@@ -1283,7 +1283,7 @@ func (s *State) IsDecentralizationPossible(rev int) bool {
 	if rev < hvhmodule.RevisionDecentralization {
 		return false
 	}
-	validatorCount := s.GetValidatorCount()
+	validatorCount := int(s.GetValidatorCount())
 	if validatorCount < 1 {
 		return false
 	}
