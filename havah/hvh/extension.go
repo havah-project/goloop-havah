@@ -90,13 +90,13 @@ func NewExtensionSnapshot(dbase db.Database, hash []byte) state.ExtensionSnapsho
 }
 
 func NewExtensionSnapshotWithBuilder(builder merkle.Builder, raw []byte) state.ExtensionSnapshot {
-	var hashes [5][]byte
-	if _, err := codec.BC.UnmarshalFromBytes(raw, &hashes); err != nil {
+	var hash []byte
+	if _, err := codec.BC.UnmarshalFromBytes(raw, &hash); err != nil {
 		return nil
 	}
 	return &ExtensionSnapshotImpl{
 		dbase: builder.Database(),
-		state: hvhstate.NewSnapshotWithBuilder(builder, hashes[0]),
+		state: hvhstate.NewSnapshotWithBuilder(builder, hash),
 	}
 }
 
