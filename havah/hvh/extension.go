@@ -656,15 +656,6 @@ func (es *ExtensionStateImpl) GetValidatorStatus(
 	return jso, err
 }
 
-func (es *ExtensionStateImpl) SetNodePublicKey(cc hvhmodule.CallContext, publicKey []byte) error {
-	from := cc.From()
-	height := cc.BlockHeight()
-	es.Logger().Debugf("SetNodePublicKey() start: height=%d from=%s publicKey=%x", height, from, publicKey)
-	err := es.state.SetNodePublicKey(from, publicKey)
-	es.Logger().Debugf("SetNodePublicKey() end: height=%d from=%s err=%v", height, from, err)
-	return err
-}
-
 func (es *ExtensionStateImpl) SetValidatorCount(count int64) error {
 	if !(count > 0 && count < 10_000) {
 		return scoreresult.InvalidParameterError.Errorf("Invalid count: %d", count)

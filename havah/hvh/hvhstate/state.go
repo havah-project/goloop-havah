@@ -1000,28 +1000,39 @@ func (s *State) SetValidatorInfo(owner module.Address, values map[string]string)
 	if err != nil {
 		return err
 	}
+
 	for key, value := range values {
 		switch key {
 		case "name":
-			err = vi.SetName(value)
+			if err = vi.SetName(value); err != nil {
+				return err
+			}
 		case "url":
-			err = vi.SetUrl(value)
+			if err = vi.SetUrl(value); err != nil {
+				return err
+			}
 		case "nodePublicKey":
 			if strings.HasPrefix(value, "0x") && len(value) > 2 {
-				var pubKey []byte
-				if pubKey, err = hex.DecodeString(value[2:]); err == nil {
-					err = vi.SetPublicKey(pubKey)
+				var publicKey []byte
+				if publicKey, err = hex.DecodeString(value[2:]); err == nil {
+					if err = vi.SetPublicKey(publicKey); err == nil {
+						if err = s.registerNodeAddress(vi.Address(), owner); err != nil {
+							return err
+						}
+					} else {
+						return err
+					}
+				} else {
+					return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %v", value)
 				}
 			} else {
 				return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %v", value)
 			}
 		default:
-			return scoreresult.InvalidParameterError.Errorf("Invalid key: key=%s value=%s", key, value)
-		}
-		if err != nil {
-			return scoreresult.Wrapf(err, hvhmodule.StatusInvalidState, "Unexpected error")
+			return scoreresult.InvalidParameterError.Errorf("Unsupported key: key=%s value=%s", key, value)
 		}
 	}
+
 	return db.Set(ToKey(owner), vi.Bytes())
 }
 
@@ -1102,36 +1113,6 @@ func (s *State) DisableValidator(owner module.Address) error {
 	}
 	vs.SetDisabled()
 	return db.Set(ToKey(owner), vs.Bytes())
-}
-
-func (s *State) SetNodePublicKey(owner module.Address, publicKey []byte) error {
-	if owner == nil {
-		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid owner")
-	}
-	if publicKey == nil || len(publicKey) == 0 {
-		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid publicKey")
-	}
-	node, err := s.setNodePublicKey(owner, publicKey)
-	if err == nil {
-		err = s.registerNodeAddress(node, owner)
-	}
-	return err
-}
-
-func (s *State) setNodePublicKey(owner module.Address, publicKey []byte) (module.Address, error) {
-	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
-	vi, err := s.getValidatorInfo(db, owner)
-	if err != nil {
-		return nil, err
-	}
-	if err = vi.SetPublicKey(publicKey); err != nil {
-		return nil, scoreresult.Wrapf(
-			err, hvhmodule.StatusIllegalArgument, "Invalid publicKey")
-	}
-	if err = db.Set(ToKey(owner), vi.Bytes()); err != nil {
-		return nil, err
-	}
-	return vi.Address(), nil
 }
 
 func (s *State) GetMainValidators() ([]module.Address, error) {

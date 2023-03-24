@@ -555,13 +555,6 @@ var chainMethods = []*chainMethod{
 			scoreapi.Dict,
 		},
 	}, hvhmodule.RevisionDecentralization, 0},
-	{scoreapi.Method{scoreapi.Function, "setNodePublicKey",
-		scoreapi.FlagExternal, 1,
-		[]scoreapi.Parameter{
-			{"publicKey", scoreapi.Bytes, nil, nil},
-		},
-		nil,
-	}, hvhmodule.RevisionDecentralization, 0},
 	{scoreapi.Method{scoreapi.Function, "setValidatorCount",
 		scoreapi.FlagExternal, 1,
 		[]scoreapi.Parameter{
