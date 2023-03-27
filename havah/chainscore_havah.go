@@ -466,7 +466,7 @@ func (s *chainScore) Ex_getValidatorStatus(owner module.Address) (map[string]int
 	return es.GetValidatorStatus(ctx, owner)
 }
 
-func (s *chainScore) Ex_setValidatorCount(count *common.HexInt) error {
+func (s *chainScore) Ex_setActiveValidatorCount(count *common.HexInt) error {
 	if err := s.checkGovernance(true); err != nil {
 		return err
 	}
@@ -474,10 +474,10 @@ func (s *chainScore) Ex_setValidatorCount(count *common.HexInt) error {
 	if err != nil {
 		return err
 	}
-	return es.SetValidatorCount(count.Int64())
+	return es.SetActiveValidatorCount(count.Int64())
 }
 
-func (s *chainScore) Ex_getValidatorCount() (int64, error) {
+func (s *chainScore) Ex_getActiveValidatorCount() (int64, error) {
 	if err := s.tryChargeCall(); err != nil {
 		return 0, err
 	}

@@ -656,19 +656,19 @@ func (es *ExtensionStateImpl) GetValidatorStatus(
 	return jso, err
 }
 
-func (es *ExtensionStateImpl) SetValidatorCount(count int64) error {
+func (es *ExtensionStateImpl) SetActiveValidatorCount(count int64) error {
 	if !(count > 0 && count < 10_000) {
 		return scoreresult.InvalidParameterError.Errorf("Invalid count: %d", count)
 	}
 
-	es.Logger().Debugf("SetValidatorCount() start: count=%d", count)
-	err := es.state.SetValidatorCount(count)
-	es.Logger().Debugf("SetValidatorCount() end: count=%d err=%v", count, err)
+	es.Logger().Debugf("SetActiveValidatorCount() start: count=%d", count)
+	err := es.state.SetActiveValidatorCount(count)
+	es.Logger().Debugf("SetActiveValidatorCount() end: count=%d err=%v", count, err)
 	return err
 }
 
 func (es *ExtensionStateImpl) GetValidatorCount() (int64, error) {
-	return es.state.GetValidatorCount(), nil
+	return es.state.GetActiveValidatorCount(), nil
 }
 
 func (es *ExtensionStateImpl) GetValidatorsOf(

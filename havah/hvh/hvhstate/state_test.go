@@ -720,13 +720,13 @@ func TestState_EnableValidator(t *testing.T) {
 
 func TestState_SetValidatorCount(t *testing.T) {
 	state := newDummyState()
-	count := state.GetValidatorCount()
+	count := state.GetActiveValidatorCount()
 	assert.Zero(t, count)
 
 	newCount := int64(10)
-	err := state.SetValidatorCount(newCount)
+	err := state.SetActiveValidatorCount(newCount)
 	assert.NoError(t, err)
-	count = state.GetValidatorCount()
+	count = state.GetActiveValidatorCount()
 	assert.Equal(t, newCount, count)
 }
 
@@ -741,11 +741,11 @@ func TestState_IsDecentralizationPossible(t *testing.T) {
 
 	rev := hvhmodule.RevisionDecentralization
 
-	validatorCount := state.GetValidatorCount()
+	validatorCount := state.GetActiveValidatorCount()
 	assert.Zero(t, validatorCount)
 
 	validatorCount = 10
-	err = state.SetValidatorCount(validatorCount)
+	err = state.SetActiveValidatorCount(validatorCount)
 	assert.NoError(t, err)
 	assert.False(t, state.IsDecentralizationPossible(rev))
 

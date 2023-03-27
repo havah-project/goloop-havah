@@ -97,7 +97,7 @@ const (
 	VarLost                 = "lost"
 	VarBlockVoteCheckPeriod = "block_vote_check_period" // unit: block
 	VarNonVoteAllowance     = "non_vote_allowance"      // unit: count
-	VarValidatorCount       = "validator_count"
+	VarActiveValidatorCount = "active_validator_count"
 	DictValidatorInfo       = "validator_info"
 	DictValidatorStatus     = "validator_status"
 	DictNodeToOwner         = "node_to_owner"

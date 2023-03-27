@@ -12,7 +12,7 @@ func (es *ExtensionStateImpl) isDecentralizationPossible(cc hvhmodule.CallContex
 }
 
 func (es *ExtensionStateImpl) initValidatorSet(cc hvhmodule.CallContext) error {
-	validatorCount := int(es.state.GetValidatorCount())
+	validatorCount := int(es.state.GetActiveValidatorCount())
 
 	// addrs contains validator node addresses
 	addrs, err := es.state.GetMainValidators()

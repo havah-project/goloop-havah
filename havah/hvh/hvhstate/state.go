@@ -1153,18 +1153,18 @@ func (s *State) GetValidatorsOf(gradeFilter GradeFilter) ([]module.Address, erro
 	return validators, nil
 }
 
-func (s *State) SetValidatorCount(count int64) error {
+func (s *State) SetActiveValidatorCount(count int64) error {
 	if count < 1 {
 		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid validator count: %d", count)
 	}
-	db := s.getVarDB(hvhmodule.VarValidatorCount)
+	db := s.getVarDB(hvhmodule.VarActiveValidatorCount)
 	return db.Set(count)
 }
 
-// GetValidatorCount returns the number of validators involved in validating blocks
+// GetActiveValidatorCount returns the number of validators involved in validating blocks
 // Initial value is 0
-func (s *State) GetValidatorCount() int64 {
-	db := s.getVarDB(hvhmodule.VarValidatorCount)
+func (s *State) GetActiveValidatorCount() int64 {
+	db := s.getVarDB(hvhmodule.VarActiveValidatorCount)
 	return db.Int64()
 }
 
@@ -1264,7 +1264,7 @@ func (s *State) IsDecentralizationPossible(rev int) bool {
 	if rev < hvhmodule.RevisionDecentralization {
 		return false
 	}
-	validatorCount := int(s.GetValidatorCount())
+	validatorCount := int(s.GetActiveValidatorCount())
 	if validatorCount < 1 {
 		return false
 	}

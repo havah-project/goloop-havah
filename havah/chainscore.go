@@ -555,14 +555,14 @@ var chainMethods = []*chainMethod{
 			scoreapi.Dict,
 		},
 	}, hvhmodule.RevisionDecentralization, 0},
-	{scoreapi.Method{scoreapi.Function, "setValidatorCount",
+	{scoreapi.Method{scoreapi.Function, "setActiveValidatorCount",
 		scoreapi.FlagExternal, 1,
 		[]scoreapi.Parameter{
 			{"count", scoreapi.Integer, nil, nil},
 		},
 		nil,
 	}, hvhmodule.RevisionDecentralization, 0},
-	{scoreapi.Method{scoreapi.Function, "getValidatorCount",
+	{scoreapi.Method{scoreapi.Function, "getActiveValidatorCount",
 		scoreapi.FlagReadOnly, 0,
 		nil,
 		[]scoreapi.DataType{
