@@ -891,6 +891,11 @@ func (s *State) registerNodeAddress(node, owner module.Address) error {
 	return db.Set(key, owner)
 }
 
+func (s *State) GetOwnerByNode(node module.Address) (module.Address, error) {
+	db := s.getDictDB(hvhmodule.DictNodeToOwner, 1)
+	return s.getOwnerByNode(db, node)
+}
+
 func (s *State) getOwnerByNode(db *containerdb.DictDB, node module.Address) (module.Address, error) {
 	key := ToKey(node)
 	v := db.Get(key)
@@ -1131,6 +1136,7 @@ func (s *State) EnableValidator(owner module.Address, calledByGov bool) error {
 	if err = vs.Enable(calledByGov); err != nil {
 		return err
 	}
+	vs.ResetNonVotes()
 	return db.Set(key, vs.Bytes())
 }
 
@@ -1229,22 +1235,24 @@ func (s *State) OnBlockVote(node module.Address, vote bool) (bool, error) {
 		return false, err
 	}
 
-	if vote {
-		vs.ResetNonVotes()
-	} else {
-		vs.IncrementNonVotes()
-	}
-
-	penalized := false
-	if vi.Grade() != GradeMain {
-		penalized = vs.NonVotes() > nonVoteAllowance
-		if penalized {
+	if vs.Enabled() {
+		if vote {
 			vs.ResetNonVotes()
-			vs.SetDisabled()
+		} else {
+			vs.IncrementNonVotes()
 		}
+
+		penalized := false
+		if vi.Grade() != GradeMain {
+			penalized = vs.NonVotes() > nonVoteAllowance
+			if penalized {
+				vs.SetDisabled()
+			}
+		}
+		err = vsDB.Set(ToKey(owner), vs.Bytes())
+		return penalized, err
 	}
-	err = vsDB.Set(ToKey(owner), vs.Bytes())
-	return penalized, err
+	return false, nil
 }
 
 func (s *State) GetNextActiveValidatorsAndChangeIndex(

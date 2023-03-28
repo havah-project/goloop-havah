@@ -856,3 +856,89 @@ func TestState_GetValidatorsOf(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Zero(t, len(validators))
 }
+
+func TestState_OnBlockVote(t *testing.T) {
+	var err error
+	var grade Grade
+	var vi *ValidatorInfo
+	var vs *ValidatorStatus
+	var owner module.Address
+
+	mainCount := 7
+	subCount := 3
+	validatorCount := mainCount + subCount
+
+	state := newDummyState()
+	assert.NoError(t, state.RenewNetworkStatusOnTermStart())
+
+	validators := make([]module.Address, validatorCount)
+
+	for i := 0; i < validatorCount; i++ {
+		name := fmt.Sprintf("name-%02d", i)
+		owner = newDummyAddress(i+1, false)
+		_, pubKey := crypto.GenerateKeyPair()
+
+		if i < mainCount {
+			grade = GradeMain
+		} else {
+			grade = GradeSub
+		}
+
+		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), grade, name)
+		assert.NoError(t, err)
+
+		vi, err = state.GetValidatorInfo(owner)
+		assert.NoError(t, err)
+		validators[i] = vi.Address()
+	}
+
+	var penalized bool
+	for _, v := range validators {
+		penalized, err = state.OnBlockVote(v, true)
+		assert.NoError(t, err)
+		assert.False(t, penalized)
+
+		owner, err = state.GetOwnerByNode(v)
+		assert.NoError(t, err)
+
+		vs, err = state.GetValidatorStatus(owner)
+		assert.NoError(t, err)
+		assert.Zero(t, vs.NonVotes())
+		assert.True(t, vs.Enabled())
+		assert.Zero(t, vs.EnableCount())
+	}
+
+	node := validators[0]
+	size := int(hvhmodule.NonVoteAllowance) + 1
+	owner, err = state.GetOwnerByNode(node)
+	assert.NoError(t, err)
+	for i := 0; i < size; i++ {
+		penalized, err = state.OnBlockVote(node, false)
+		assert.NoError(t, err)
+		assert.False(t, penalized)
+
+		vs, err = state.GetValidatorStatus(owner)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(i + 1), vs.NonVotes())
+		assert.True(t, vs.Enabled())
+		assert.Zero(t, vs.EnableCount())
+	}
+
+	node = validators[mainCount]
+	size = int(hvhmodule.NonVoteAllowance) + 1
+	owner, err = state.GetOwnerByNode(node)
+	assert.NoError(t, err)
+	for i := 0; i < size; i++ {
+		expectedPenalized := i == size - 1
+
+		penalized, err = state.OnBlockVote(node, false)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedPenalized, penalized)
+
+		vs, err = state.GetValidatorStatus(owner)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(i + 1), vs.NonVotes())
+		assert.Equal(t, !expectedPenalized, vs.Enabled())
+		assert.Zero(t, vs.EnableCount())
+	}
+}
