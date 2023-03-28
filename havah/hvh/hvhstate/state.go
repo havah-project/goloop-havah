@@ -836,7 +836,7 @@ func (s *State) RegisterValidator(owner module.Address, nodePublicKey []byte, gr
 	if err = s.registerNodeAddress(vi.Address(), owner); err != nil {
 		return err
 	}
-	if err = s.addValidatorList(grade, owner); err != nil {
+	if err = s.addToValidatorList(grade, owner); err != nil {
 		return err
 	}
 
@@ -901,15 +901,50 @@ func (s *State) getOwnerByNode(db *containerdb.DictDB, node module.Address) (mod
 	return v.Address(), nil
 }
 
-func (s *State) addValidatorList(grade Grade, owner module.Address) error {
-	var key string
-	if grade == GradeMain {
-		key = hvhmodule.ArrayMainValidators
-	} else {
-		key = hvhmodule.ArraySubValidators
+func (s *State) addToValidatorList(grade Grade, owner module.Address) error {
+	db := s.getValidatorArrayDB(grade)
+	if db == nil {
+		return scoreresult.InvalidParameterError.Errorf("Invalid grade: %s", grade)
 	}
-	db := s.getArrayDB(key)
 	return db.Put(owner)
+}
+
+func (s *State) removeFromValidatorList(grade Grade, owner module.Address) error {
+	db := s.getValidatorArrayDB(grade)
+	if db == nil {
+		return scoreresult.InvalidParameterError.Errorf("Invalid grade: %s", grade)
+	}
+
+	size := db.Size()
+	if size > 0 {
+		addr := db.Pop().Address()
+		if owner.Equal(addr) {
+			return nil
+		}
+
+		newSize := size - 1
+		for i := 0; i < newSize; i++ {
+			if value := db.Get(i); value != nil {
+				if owner.Equal(value.Address()) {
+					return db.Set(i, addr)
+				}
+			}
+		}
+	}
+
+	return errors.InvalidStateError.Errorf(
+		"Failed to removeFromValidatorList: grade=%s owner=%s validators=%d", grade, owner, size)
+}
+
+func (s *State) getValidatorArrayDB(grade Grade) *containerdb.ArrayDB {
+	switch grade {
+	case GradeMain:
+		return s.getArrayDB(hvhmodule.ArrayMainValidators)
+	case GradeSub:
+		return s.getArrayDB(hvhmodule.ArraySubValidators)
+	default:
+		return nil
+	}
 }
 
 func (s *State) UnregisterValidator(owner module.Address) error {
@@ -920,27 +955,25 @@ func (s *State) UnregisterValidator(owner module.Address) error {
 		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid owner: %v", owner)
 	}
 
-	key := ToKey(owner)
-	db := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
-	v := db.Get(key)
-	if v == nil {
-		return scoreresult.Errorf(
-			hvhmodule.StatusNotFound, "ValidatorStatus not found: %s", owner)
-	}
-	bs := v.Bytes()
-	if bs == nil {
-		return scoreresult.Errorf(
-			hvhmodule.StatusNotFound, "ValidatorStatus not found: %s", owner)
-	}
-
-	vs, err := NewValidatorStatusFromBytes(bs)
+	vsDB := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
+	vs, err := s.getValidatorStatus(vsDB, owner)
 	if err != nil {
-		return errors.InvalidStateError.Wrapf(
-			err, "Failed to create a ValidatorStatus from bytes: %s", owner)
+		return err
 	}
 
 	vs.SetDisqualified()
-	return db.Set(key, vs.Bytes())
+	key := ToKey(owner)
+	if err = vsDB.Set(key, vs.Bytes()); err != nil {
+		return err
+	}
+
+	viDB := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
+	vi, err := s.getValidatorInfo(viDB, owner)
+	if err != nil {
+		return err
+	}
+
+	return s.removeFromValidatorList(vi.Grade(), owner)
 }
 
 func (s *State) GetNetworkStatus() (*NetworkStatus, error) {
