@@ -637,6 +637,7 @@ func TestState_RegisterValidator(t *testing.T) {
 
 	err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
 	assert.Error(t, err)
+
 }
 
 func TestState_UnregisterValidator(t *testing.T) {
@@ -758,4 +759,100 @@ func TestState_IsDecentralizationPossible(t *testing.T) {
 	}
 
 	assert.True(t, state.IsDecentralizationPossible(rev))
+}
+
+func TestState_GetValidatorsOf(t *testing.T) {
+	var err error
+	var validators []module.Address
+	mainCount := 7
+	subCount := 5
+	validatorCount := mainCount + subCount
+	mainOwners := make([]module.Address, 0, mainCount)
+	subOwners := make([]module.Address, 0, subCount)
+
+	state := newDummyState()
+
+	for i := 0; i < mainCount; i++ {
+		name := fmt.Sprintf("name-%02d", i)
+		owner := newDummyAddress(i+1, false)
+		_, pubKey := crypto.GenerateKeyPair()
+
+		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeMain, name)
+		assert.NoError(t, err)
+
+		mainOwners = append(mainOwners, owner)
+	}
+	for i := mainCount; i < validatorCount; i++ {
+		name := fmt.Sprintf("name-%02d", i)
+		owner := newDummyAddress(i+1, false)
+		_, pubKey := crypto.GenerateKeyPair()
+
+		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+		assert.NoError(t, err)
+
+		subOwners = append(subOwners, owner)
+	}
+
+	allOwners := make([]module.Address, 0, mainCount+subCount)
+	allOwners = append(allOwners, mainOwners...)
+	allOwners = append(allOwners, subOwners...)
+	ownersOf := [][]module.Address{subOwners, mainOwners, allOwners}
+
+	for _, gFilter := range []GradeFilter{GradeFilterSub, GradeFilterMain, GradeFilterAll} {
+		owners := ownersOf[gFilter]
+		validators, err = state.GetValidatorsOf(gFilter)
+		assert.NoError(t, err)
+		assert.Equal(t, len(owners), len(validators))
+		for i, v := range validators {
+			assert.True(t, v.Equal(owners[i]))
+		}
+	}
+
+	// Unregister a main validator
+	idx := 1
+	ownerToRemove := mainOwners[idx]
+	assert.NoError(t, state.UnregisterValidator(ownerToRemove))
+	mainOwners = append(mainOwners[:idx], mainOwners[idx+1:]...)
+	assert.Equal(t, mainCount-1, len(mainOwners))
+
+	validators, err = state.GetValidatorsOf(GradeFilterMain)
+	assert.NoError(t, err)
+	assert.Equal(t, len(mainOwners), len(validators))
+	for i := 0; i < len(validators); i++ {
+		assert.False(t, validators[i].Equal(ownerToRemove))
+	}
+
+	// Unregister a sub validator
+	idx = 1
+	ownerToRemove = subOwners[1]
+	assert.NoError(t, state.UnregisterValidator(ownerToRemove))
+	subOwners = append(subOwners[:idx], subOwners[idx+1:]...)
+	assert.Equal(t, subCount-1, len(subOwners))
+
+	validators, err = state.GetValidatorsOf(GradeFilterSub)
+	assert.NoError(t, err)
+	assert.Equal(t, subCount-1, len(validators))
+	for i := 0; i < len(validators); i++ {
+		assert.False(t, validators[i].Equal(ownerToRemove))
+	}
+
+	// Unregister all main validators
+	for _, owner := range mainOwners {
+		assert.NoError(t, state.UnregisterValidator(owner))
+	}
+	validators, err = state.GetValidatorsOf(GradeFilterMain)
+	assert.NoError(t, err)
+	assert.Zero(t, len(validators))
+
+	// Unregister all sub validators
+	for _, owner := range subOwners {
+		assert.NoError(t, state.UnregisterValidator(owner))
+	}
+	validators, err = state.GetValidatorsOf(GradeFilterSub)
+	assert.NoError(t, err)
+	assert.Zero(t, len(validators))
+
+	validators, err = state.GetValidatorsOf(GradeFilterAll)
+	assert.NoError(t, err)
+	assert.Zero(t, len(validators))
 }

@@ -1169,21 +1169,26 @@ func (s *State) GetMainValidators() ([]module.Address, error) {
 	return validators, nil
 }
 
+// GetValidatorsOf returns a list of validator owner filtered by grade
 func (s *State) GetValidatorsOf(gradeFilter GradeFilter) ([]module.Address, error) {
-	mvDB := s.getArrayDB(hvhmodule.ArrayMainValidators)
-	svDB := s.getArrayDB(hvhmodule.ArraySubValidators)
+	validatorOwners := make([]module.Address, 0, 20)
 
-	msize := mvDB.Size()
-	ssize := svDB.Size()
-	validators := make([]module.Address, 0, msize+ssize)
+	if gradeFilter == GradeFilterMain || gradeFilter == GradeFilterAll {
+		db := s.getArrayDB(hvhmodule.ArrayMainValidators)
+		size := db.Size()
+		for i := 0; i < size; i++ {
+			validatorOwners = append(validatorOwners, db.Get(i).Address())
+		}
+	}
+	if gradeFilter == GradeFilterSub || gradeFilter == GradeFilterAll {
+		db := s.getArrayDB(hvhmodule.ArraySubValidators)
+		size := db.Size()
+		for i := 0; i < size; i++ {
+			validatorOwners = append(validatorOwners, db.Get(i).Address())
+		}
+	}
 
-	for i := 0; i < msize; i++ {
-		validators = append(validators, mvDB.Get(i).Address())
-	}
-	for i := 0; i < ssize; i++ {
-		validators = append(validators, svDB.Get(i).Address())
-	}
-	return validators, nil
+	return validatorOwners, nil
 }
 
 func (s *State) SetActiveValidatorCount(count int64) error {
