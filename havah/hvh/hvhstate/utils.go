@@ -57,3 +57,14 @@ func validatePlanetId(id int64) error {
 	}
 	return nil
 }
+
+func GetTermStartAndIndex(height, issueStart, termPeriod int64) (int64, int64, error){
+	if height < issueStart {
+		return -1, -1, scoreresult.Errorf(
+			hvhmodule.StatusIllegalArgument,
+			"height(%d) < issueStart(%d)", height, issueStart)
+	}
+	termIndex := (height - issueStart) % termPeriod
+	termStart := height - termIndex
+	return termStart, termIndex, nil
+}

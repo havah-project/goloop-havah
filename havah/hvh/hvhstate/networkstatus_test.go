@@ -72,6 +72,21 @@ func TestNetworkStatus_SetNonVoteAllowance(t *testing.T) {
 	assert.Equal(t, allowance, ns2.NonVoteAllowance())
 }
 
+func TestNetworkStatus_SetActiveValidatorCount(t *testing.T) {
+	count := int64(10)
+	ns := NewNetworkStatus()
+	assert.Equal(t, int64(0), ns.ActiveValidatorCount())
+	assert.NoError(t, ns.SetActiveValidatorCount(count))
+	assert.Equal(t, count, ns.ActiveValidatorCount())
+
+	assert.Error(t, ns.SetActiveValidatorCount(int64(-10)))
+
+	ns2, err := NewNetworkStatusFromBytes(ns.Bytes())
+	assert.NoError(t, err)
+	assert.True(t, ns2.Equal(ns))
+	assert.Equal(t, count, ns2.ActiveValidatorCount())
+}
+
 func TestNetworkStatus_IsDecentralized(t *testing.T) {
 	ns := NewNetworkStatus()
 	assert.False(t, ns.IsDecentralized())

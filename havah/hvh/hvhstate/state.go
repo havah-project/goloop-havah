@@ -1012,6 +1012,7 @@ func (s *State) RenewNetworkStatusOnTermStart() error {
 	dirty := false
 	period := s.GetBlockVoteCheckPeriod()
 	allowance := s.GetNonVoteAllowance()
+	count := s.GetActiveValidatorCount()
 
 	if ns.BlockVoteCheckPeriod() != period {
 		if err = ns.SetBlockVoteCheckPeriod(period); err != nil {
@@ -1021,6 +1022,12 @@ func (s *State) RenewNetworkStatusOnTermStart() error {
 	}
 	if ns.NonVoteAllowance() != allowance {
 		if err = ns.SetNonVoteAllowance(allowance); err != nil {
+			return err
+		}
+		dirty = true
+	}
+	if ns.ActiveValidatorCount() != count {
+		if err = ns.SetActiveValidatorCount(count); err != nil {
 			return err
 		}
 		dirty = true

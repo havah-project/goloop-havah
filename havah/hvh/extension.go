@@ -593,8 +593,13 @@ func (es *ExtensionStateImpl) GetNetworkStatus(cc hvhmodule.CallContext) (map[st
 	height := cc.BlockHeight()
 	ns, err := es.state.GetNetworkStatus()
 	if err == nil {
-		jso = ns.ToJSON()
-		jso["height"] = height
+		issueStart := es.state.GetIssueStart()
+		termPeriod := es.state.GetTermPeriod()
+		if termStart, _, err := hvhstate.GetTermStartAndIndex(height, issueStart, termPeriod); err == nil {
+			jso = ns.ToJSON()
+			jso["height"] = height
+			jso["termStart"] = termStart
+		}
 	}
 	return jso, err
 }

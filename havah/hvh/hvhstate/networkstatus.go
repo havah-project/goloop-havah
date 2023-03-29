@@ -17,6 +17,7 @@ type NetworkStatus struct {
 	mode                 NetMode
 	blockVoteCheckPeriod int64
 	nonVoteAllowance     int64
+	activeValidatorCount int64
 }
 
 func (ns *NetworkStatus) Version() int {
@@ -57,30 +58,43 @@ func (ns *NetworkStatus) SetNonVoteAllowance(allowance int64) error {
 	return nil
 }
 
+func (ns *NetworkStatus) ActiveValidatorCount() int64 {
+	return ns.activeValidatorCount
+}
+
+func (ns *NetworkStatus) SetActiveValidatorCount(count int64) error {
+	if count < 1 {
+		return errors.IllegalArgumentError.Errorf("Invalid activeValidatorCount: %d", count)
+	}
+	ns.activeValidatorCount = count
+	return nil
+}
+
 func (ns *NetworkStatus) Equal(other *NetworkStatus) bool {
 	return ns.version == other.version &&
 		ns.mode == other.mode &&
 		ns.blockVoteCheckPeriod == other.blockVoteCheckPeriod &&
-		ns.nonVoteAllowance == other.nonVoteAllowance
+		ns.nonVoteAllowance == other.nonVoteAllowance &&
+		ns.activeValidatorCount == other.activeValidatorCount
 }
 
 func (ns *NetworkStatus) ToJSON() map[string]interface{} {
 	return map[string]interface{}{
-		"version":              ns.version,
 		"mode":                 ns.mode,
 		"blockVoteCheckPeriod": ns.blockVoteCheckPeriod,
 		"nonVoteAllowance":     ns.nonVoteAllowance,
+		"activeValidatorCount": ns.activeValidatorCount,
 	}
 }
 
 func (ns *NetworkStatus) RLPDecodeSelf(d codec.Decoder) error {
 	return d.DecodeListOf(
-		&ns.version, &ns.mode, &ns.blockVoteCheckPeriod, &ns.nonVoteAllowance)
+		&ns.version, &ns.mode, &ns.blockVoteCheckPeriod, &ns.nonVoteAllowance, &ns.activeValidatorCount)
 }
 
 func (ns *NetworkStatus) RLPEncodeSelf(e codec.Encoder) error {
 	return e.EncodeListOf(
-		ns.version, ns.mode, ns.blockVoteCheckPeriod, ns.nonVoteAllowance)
+		ns.version, ns.mode, ns.blockVoteCheckPeriod, ns.nonVoteAllowance, ns.activeValidatorCount)
 }
 
 func (ns *NetworkStatus) Bytes() []byte {
