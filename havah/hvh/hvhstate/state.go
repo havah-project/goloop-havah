@@ -1162,14 +1162,14 @@ func (s *State) GetMainValidators() ([]module.Address, error) {
 	validators := make([]module.Address, size)
 
 	for i := 0; i < size; i++ {
-		owner := viDB.Get(i).Address()
+		owner := mvDB.Get(i).Address()
 		vi, err := s.getValidatorInfo(viDB, owner)
 		if err != nil {
 			return nil, scoreresult.Wrapf(
 				err, hvhmodule.StatusInvalidState,
-				"Mismatch between validatorList and validatorStatus")
+				"Mismatch between mainValidators and validatorInfo")
 		}
-		validators = append(validators, vi.Address())
+		validators[i] = vi.Address()
 	}
 
 	return validators, nil

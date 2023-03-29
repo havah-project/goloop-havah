@@ -942,3 +942,51 @@ func TestState_OnBlockVote(t *testing.T) {
 		assert.Zero(t, vs.EnableCount())
 	}
 }
+
+func TestState_GetMainValidators(t *testing.T) {
+	var err error
+	state := newDummyState()
+	size := 7
+	owners := make([]module.Address, size)
+	expValidators := make([]module.Address, size)
+
+	for i := 0; i < size; i++ {
+		name := fmt.Sprintf("name-%02d", i)
+		owner := newDummyAddress(i+1, false)
+		_, pubKey := crypto.GenerateKeyPair()
+
+		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeMain, name)
+		assert.NoError(t, err)
+
+		expValidators[i] = common.NewAccountAddressFromPublicKey(pubKey)
+		owners[i] = owner
+	}
+
+	validators, err := state.GetMainValidators()
+	assert.NoError(t, err)
+	assert.Equal(t, size, len(validators))
+
+	for i := 0; i < size; i++ {
+		assert.True(t, validators[i].Equal(expValidators[i]))
+	}
+
+	idx := size / 2
+	err = state.UnregisterValidator(owners[idx])
+	assert.NoError(t, err)
+
+	validators, err = state.GetMainValidators()
+	assert.NoError(t, err)
+	assert.Equal(t, size - 1, len(validators))
+
+	expValidators = append(expValidators[:idx], expValidators[idx+1:]...)
+	for _, ev := range expValidators {
+		found := false
+		for _, v := range validators {
+			if ev.Equal(v) {
+				found = true
+				break
+			}
+		}
+		assert.True(t, found)
+	}
+}
