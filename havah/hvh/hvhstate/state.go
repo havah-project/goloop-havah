@@ -1339,30 +1339,6 @@ func (s *State) IsItTimeToCheckBlockVote(blockIndexInTerm int64) bool {
 	return false
 }
 
-func IsItTimeToCheckBlockVote(blockIndexInTerm, blockVoteCheckPeriod int64) bool {
-	return blockVoteCheckPeriod > 0 && blockIndexInTerm%blockVoteCheckPeriod == 0
-}
-
-func validatePrivateClaimableRate(num, denom int64) bool {
-	if denom <= 0 || denom > 10000 {
-		return false
-	}
-	if num < 0 {
-		return false
-	}
-	if num > denom {
-		return false
-	}
-	return true
-}
-
-func validatePlanetId(id int64) error {
-	if id < 0 {
-		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid id: %d", id)
-	}
-	return nil
-}
-
 func NewStateFromSnapshot(ss *Snapshot, readonly bool, logger log.Logger) *State {
 	store := trie_manager.NewMutableFromImmutable(ss.store)
 	return &State{
