@@ -1257,14 +1257,19 @@ func (s *State) OnBlockVote(node module.Address, vote bool) (bool, error) {
 
 func (s *State) GetNextActiveValidatorsAndChangeIndex(
 	activeValidators state.ValidatorState, count int) ([]module.Address, error) {
-	if count < 1 {
+	if count < 0 {
 		return nil, scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid count: %d", count)
 	}
+	if count == 0 {
+		return nil, nil
+	}
+
 	svDB := s.getArrayDB(hvhmodule.ArraySubValidators)
 	size := svDB.Size()
 	if size == 0 {
 		return nil, nil
 	}
+	count = min(count, size)
 
 	var err error
 	var vi *ValidatorInfo
@@ -1280,7 +1285,7 @@ func (s *State) GetNextActiveValidatorsAndChangeIndex(
 	viDB := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
 	vsDB := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
 
-	for i := 0; i < size && len(nextActiveValidators) == count; i++ {
+	for i := 0; i < size && len(nextActiveValidators) < count; i++ {
 		owner := svDB.Get(svIndex).Address()
 		if vi, err = s.getValidatorInfo(viDB, owner); err != nil {
 			return nil, err
@@ -1304,6 +1309,11 @@ func (s *State) GetNextActiveValidatorsAndChangeIndex(
 		}
 	}
 	return nextActiveValidators, err
+}
+
+func (s *State) GetSubValidatorsIndex() int64 {
+	sviDB := s.getVarDB(hvhmodule.VarSubValidatorsIndex)
+	return sviDB.Int64()
 }
 
 func (s *State) IsDecentralizationPossible(rev int) bool {
