@@ -1136,3 +1136,45 @@ func TestState_GetNextActiveValidatorsAndChangeIndex(t *testing.T) {
 		})
 	}
 }
+
+func TestState_SetBlockVoteCheckParameters(t *testing.T) {
+	state := newDummyState()
+	assert.Equal(t, hvhmodule.BlockVoteCheckPeriod, state.GetBlockVoteCheckPeriod())
+	assert.Equal(t, hvhmodule.NonVoteAllowance, state.GetNonVoteAllowance())
+
+	tests := []struct{
+		period int64
+		allowance int64
+		success bool
+	}{
+		{0, 0, true},
+		{0, 100, true},
+		{100, 0, true},
+		{100, 70, true},
+		{200, 80, true},
+		{-10, 80, false},
+		{10, -80, false},
+		{-100, -80, false},
+	}
+
+	for i, test := range tests {
+		period := test.period
+		allowance := test.allowance
+		success := test.success
+		name := fmt.Sprintf("test%02d_%d_%d_%t", i, period, allowance, success)
+		t.Run(name, func(t *testing.T){
+			oPeriod := state.GetBlockVoteCheckPeriod()
+			oAllowance := state.GetNonVoteAllowance()
+
+			err := state.SetBlockVoteCheckParameters(period, allowance)
+			assert.Equal(t, success, err == nil)
+			if success {
+				assert.Equal(t, period, state.GetBlockVoteCheckPeriod())
+				assert.Equal(t, allowance, state.GetNonVoteAllowance())
+			} else {
+				assert.Equal(t, oPeriod, state.GetBlockVoteCheckPeriod())
+				assert.Equal(t, oAllowance, state.GetNonVoteAllowance())
+			}
+		})
+	}
+}
