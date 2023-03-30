@@ -730,6 +730,10 @@ func TestState_SetValidatorCount(t *testing.T) {
 	assert.NoError(t, err)
 	count = state.GetActiveValidatorCount()
 	assert.Equal(t, newCount, count)
+
+	assert.Error(t, state.SetActiveValidatorCount(0))
+	count = state.GetActiveValidatorCount()
+	assert.Equal(t, newCount, count)
 }
 
 func TestState_IsDecentralizationPossible(t *testing.T) {
@@ -1175,6 +1179,57 @@ func TestState_SetBlockVoteCheckParameters(t *testing.T) {
 				assert.Equal(t, oPeriod, state.GetBlockVoteCheckPeriod())
 				assert.Equal(t, oAllowance, state.GetNonVoteAllowance())
 			}
+		})
+	}
+}
+
+func TestState_SetNetworkStatus(t *testing.T) {
+	state := newDummyState()
+	emptyNS := NewNetworkStatus()
+	ns, err := state.GetNetworkStatus()
+	assert.NoError(t, err)
+	assert.True(t, ns.Equal(emptyNS))
+
+	ns.SetDecentralized()
+	assert.NoError(t, ns.SetActiveValidatorCount(25))
+	assert.NoError(t, ns.SetNonVoteAllowance(100))
+	assert.NoError(t, ns.SetBlockVoteCheckPeriod(100))
+	assert.NoError(t, state.SetNetworkStatus(ns))
+
+	ns2, err := state.GetNetworkStatus()
+	assert.NoError(t, err)
+	assert.True(t, ns != ns2)
+	assert.True(t, ns2.Equal(ns))
+}
+
+func TestState_IsItTimeToCheckBlockVote(t *testing.T) {
+	state := newDummyState()
+	tests := []struct{
+		blockIndex int64
+		mode NetMode
+		period int64
+		allowance int64
+		result bool
+	}{
+		{0, NetModeInit, 0, 0, false},
+		{0, NetModeDecentralized, 0, 5, false},
+		{0, NetModeInit, 10, 5, false},
+		{7, NetModeDecentralized, 10, 5, false},
+		{0, NetModeDecentralized, 10, 0, true},
+		{10, NetModeDecentralized, 10, 0, true},
+		{20, NetModeDecentralized, 20, 3, true},
+		{40, NetModeDecentralized, 20, 3, true},
+	}
+
+	ns, _ := state.GetNetworkStatus()
+	for i, test := range tests {
+		name := fmt.Sprintf("name-%02d", i)
+		t.Run(name, func(t *testing.T){
+			ns.SetMode(test.mode)
+			assert.NoError(t, ns.SetBlockVoteCheckPeriod(test.period))
+			assert.NoError(t, ns.SetNonVoteAllowance(test.allowance))
+			assert.NoError(t, state.SetNetworkStatus(ns))
+			assert.Equal(t, test.result, state.IsItTimeToCheckBlockVote(test.blockIndex))
 		})
 	}
 }
