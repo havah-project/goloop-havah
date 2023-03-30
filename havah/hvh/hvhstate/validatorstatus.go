@@ -122,7 +122,6 @@ func (vs *ValidatorStatus) Bytes() []byte {
 
 func (vs *ValidatorStatus) ToJSON() map[string]interface{} {
 	return map[string]interface{}{
-		"version":     vs.version,
 		"flags":       vs.flags,
 		"nonVotes":    vs.nonVotes,
 		"enableCount": vs.enableCount,

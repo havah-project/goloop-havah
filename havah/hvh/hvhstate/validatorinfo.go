@@ -120,7 +120,6 @@ func (vi *ValidatorInfo) Equal(other *ValidatorInfo) bool {
 
 func (vi *ValidatorInfo) ToJSON() map[string]interface{} {
 	return map[string]interface{}{
-		"version":       vi.version,
 		"owner":         vi.owner,
 		"nodePublicKey": vi.publicKey.SerializeCompressed(),
 		"node":          vi.Address(),
