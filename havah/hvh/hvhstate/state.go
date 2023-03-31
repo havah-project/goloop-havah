@@ -1002,11 +1002,26 @@ func (s *State) SetNetworkStatus(ns *NetworkStatus) error {
 	return db.Set(ns.Bytes())
 }
 
+func (s *State) SetDecentralized() error {
+	db := s.getVarDB(hvhmodule.VarNetworkStatus)
+	if ns, err := s.getNetworkStatus(db); err == nil {
+		ns.SetDecentralized()
+		return s.SetNetworkStatus(ns)
+	} else {
+		return err
+	}
+}
+
 func (s *State) RenewNetworkStatusOnTermStart() error {
 	db := s.getVarDB(hvhmodule.VarNetworkStatus)
 	ns, err := s.getNetworkStatus(db)
 	if err != nil {
 		return err
+	}
+	if !ns.IsDecentralized() {
+		s.logger.Debugf(
+			"RenewNetworkStatusOnTermStart() should not be called before decentralization")
+		return nil
 	}
 
 	dirty := false

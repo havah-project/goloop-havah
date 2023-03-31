@@ -874,6 +874,7 @@ func TestState_OnBlockVote(t *testing.T) {
 	validatorCount := mainCount + subCount
 
 	state := newDummyState()
+	assert.NoError(t, state.SetDecentralized())
 	assert.NoError(t, state.RenewNetworkStatusOnTermStart())
 
 	validators := make([]module.Address, validatorCount)
@@ -1232,4 +1233,27 @@ func TestState_IsItTimeToCheckBlockVote(t *testing.T) {
 			assert.Equal(t, test.result, state.IsItTimeToCheckBlockVote(test.blockIndex))
 		})
 	}
+}
+
+func TestState_RenewNetworkStatusOnTermStart(t *testing.T) {
+	state := newDummyState()
+	period := int64(10)
+	allowance := int64(3)
+	avCount := int64(10)
+
+	oldNs, _ := state.GetNetworkStatus()
+	assert.False(t, oldNs.IsDecentralized())
+
+	assert.NoError(t, state.SetBlockVoteCheckParameters(period, allowance))
+	assert.NoError(t, state.SetActiveValidatorCount(avCount))
+	assert.NoError(t, state.RenewNetworkStatusOnTermStart())
+	ns, _ := state.GetNetworkStatus()
+	assert.True(t, ns.Equal(oldNs))
+
+	ns.SetDecentralized()
+	assert.NoError(t, state.SetNetworkStatus(ns))
+
+	assert.NoError(t, state.RenewNetworkStatusOnTermStart())
+	ns, _ = state.GetNetworkStatus()
+	assert.False(t, ns.Equal(oldNs))
 }
