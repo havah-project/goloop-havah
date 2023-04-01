@@ -80,7 +80,7 @@ func (ns *NetworkStatus) Equal(other *NetworkStatus) bool {
 
 func (ns *NetworkStatus) ToJSON() map[string]interface{} {
 	return map[string]interface{}{
-		"mode":                 ns.mode,
+		"mode":                 int(ns.mode),
 		"blockVoteCheckPeriod": ns.blockVoteCheckPeriod,
 		"nonVoteAllowance":     ns.nonVoteAllowance,
 		"activeValidatorCount": ns.activeValidatorCount,
