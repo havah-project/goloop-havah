@@ -685,10 +685,14 @@ func (es *ExtensionStateImpl) GetValidatorsOf(
 	}
 
 	if validators, err := es.state.GetValidatorsOf(gradeFilter); err == nil {
+		addrs := make([]interface{}, len(validators))
+		for i, v := range validators {
+			addrs[i] = v
+		}
 		return map[string]interface{}{
 			"height":     height,
 			"grade":      gradeFilterName,
-			"validators": validators,
+			"validators": addrs,
 		}, nil
 	} else {
 		return nil, err
