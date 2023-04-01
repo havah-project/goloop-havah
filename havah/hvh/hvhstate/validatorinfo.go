@@ -123,7 +123,7 @@ func (vi *ValidatorInfo) ToJSON() map[string]interface{} {
 		"owner":         vi.owner,
 		"nodePublicKey": vi.publicKey.SerializeCompressed(),
 		"node":          vi.Address(),
-		"grade":         vi.grade,
+		"grade":         vi.grade.String(),
 		"name":          vi.name,
 		"url":           vi.url,
 	}
