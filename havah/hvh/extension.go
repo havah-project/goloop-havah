@@ -565,9 +565,9 @@ func (es *ExtensionStateImpl) SetBlockVoteCheckParameters(period, allowance int6
 
 func (es *ExtensionStateImpl) GetBlockVoteCheckParameters(cc hvhmodule.CallContext) (map[string]interface{}, error) {
 	return map[string]interface{}{
-		"height":    cc.BlockHeight(),
-		"period":    es.state.GetBlockVoteCheckPeriod(),
-		"allowance": es.state.GetNonVoteAllowance(),
+		"height":               cc.BlockHeight(),
+		"blockVoteCheckPeriod": es.state.GetBlockVoteCheckPeriod(),
+		"nonVoteAllowance":     es.state.GetNonVoteAllowance(),
 	}, nil
 }
 
