@@ -47,7 +47,17 @@ func (s *State) GetSnapshot() *Snapshot {
 }
 
 func (s *State) Reset(ss *Snapshot) error {
-	return s.store.Reset(ss.store)
+	s.logger.Debugf("Reset() start")
+	s.ClearCache()
+	err := s.store.Reset(ss.store)
+	s.logger.Debugf("Reset() end: err=%v", err)
+	return err
+}
+
+func (s *State) ClearCache() {
+	if len(s.cachedContainerDBs) > 0 {
+		s.cachedContainerDBs = make(map[string]interface{})
+	}
 }
 
 func (s *State) getVarDB(key string) *containerdb.VarDB {

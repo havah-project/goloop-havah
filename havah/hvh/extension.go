@@ -134,7 +134,7 @@ func (es *ExtensionStateImpl) Reset(ess state.ExtensionSnapshot) {
 
 // ClearCache is called before executing the first transaction in a block and at the end of base transaction
 func (es *ExtensionStateImpl) ClearCache() {
-	// es.state.ClearCache()
+	es.state.ClearCache()
 }
 
 func (es *ExtensionStateImpl) InitPlatformConfig(cfg *PlatformConfig) error {
