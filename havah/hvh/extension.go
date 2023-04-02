@@ -159,7 +159,17 @@ func (es *ExtensionStateImpl) NewBaseTransactionData(height int64) map[string]in
 
 	issueAmount := es.state.GetIssueAmount(height, issueStart)
 	if issueAmount == nil || issueAmount.Sign() <= 0 {
-		return nil
+		termPeriod := es.GetTermPeriod()
+		_, blockIndex := hvhstate.GetTermSequenceAndBlockIndex(height, issueStart, termPeriod)
+		if !es.IsItTimeToCheckBlockVote(blockIndex) {
+			return nil
+		}
+
+		if issueAmount == nil {
+			issueAmount = hvhmodule.BigIntZero
+		} else if issueAmount.Sign() < 0 {
+			es.logger.Panicf("Invalid issueAmount: %d", issueAmount)
+		}
 	}
 
 	jso := map[string]interface{}{
