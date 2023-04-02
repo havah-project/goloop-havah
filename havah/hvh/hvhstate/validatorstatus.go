@@ -14,8 +14,8 @@ const (
 type ValidatorStatus struct {
 	version     int
 	flags       int
-	nonVotes    int64
-	enableCount int
+	nonVotes     int64
+	enabledCount int
 }
 
 func (vs *ValidatorStatus) Version() int {
@@ -27,7 +27,7 @@ func (vs *ValidatorStatus) NonVotes() int64 {
 }
 
 func (vs *ValidatorStatus) EnableCount() int {
-	return vs.enableCount
+	return hvhmodule.MaxEnableCount - vs.enabledCount
 }
 
 func (vs *ValidatorStatus) IncrementNonVotes() int64 {
@@ -49,21 +49,21 @@ func (vs *ValidatorStatus) Enable(calledByGov bool) error {
 
 func (vs *ValidatorStatus) enableByGov() error {
 	err := vs.enable()
-	vs.enableCount = 0
+	vs.enabledCount = 0
 	return err
 }
 
 func (vs *ValidatorStatus) enableByOwner() error {
-	if vs.enableCount >= hvhmodule.MaxEnableCount {
+	if vs.enabledCount >= hvhmodule.MaxEnableCount {
 		return scoreresult.AccessDeniedError.Errorf(
-			"MaxEnableCount exceeded: %d", vs.enableCount)
+			"MaxEnableCount exceeded: %d", vs.enabledCount)
 	}
 	return vs.enable()
 }
 
 func (vs *ValidatorStatus) enable() error {
 	if vs.Disabled() {
-		vs.enableCount++
+		vs.enabledCount++
 		vs.setFlags(FlagDisabled, false)
 	}
 	return nil
@@ -102,18 +102,18 @@ func (vs *ValidatorStatus) all(flags int) bool {
 }
 
 func (vs *ValidatorStatus) RLPDecodeSelf(d codec.Decoder) error {
-	return d.DecodeListOf(&vs.version, &vs.flags, &vs.nonVotes, &vs.enableCount)
+	return d.DecodeListOf(&vs.version, &vs.flags, &vs.nonVotes, &vs.enabledCount)
 }
 
 func (vs *ValidatorStatus) RLPEncodeSelf(e codec.Encoder) error {
-	return e.EncodeListOf(vs.version, vs.flags, vs.nonVotes, vs.enableCount)
+	return e.EncodeListOf(vs.version, vs.flags, vs.nonVotes, vs.enabledCount)
 }
 
 func (vs *ValidatorStatus) Equal(other *ValidatorStatus) bool {
 	return vs.version == other.version &&
 		vs.flags == other.flags &&
 		vs.nonVotes == other.nonVotes &&
-		vs.enableCount == other.enableCount
+		vs.enabledCount == other.enabledCount
 }
 
 func (vs *ValidatorStatus) Bytes() []byte {
@@ -124,7 +124,7 @@ func (vs *ValidatorStatus) ToJSON() map[string]interface{} {
 	return map[string]interface{}{
 		"flags":       vs.flags,
 		"nonVotes":    vs.nonVotes,
-		"enableCount": vs.enableCount,
+		"enableCount": vs.EnableCount(),
 	}
 }
 

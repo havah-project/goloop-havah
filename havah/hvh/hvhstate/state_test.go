@@ -708,16 +708,48 @@ func TestState_EnableValidator(t *testing.T) {
 	assert.NoError(t, err)
 
 	vs, err := state.GetValidatorStatus(owner)
+	enableCount := vs.EnableCount()
 	assert.NoError(t, err)
-	assert.Zero(t, vs.EnableCount())
+	assert.Equal(t, hvhmodule.MaxEnableCount, enableCount)
 
-	err = state.EnableValidator(owner, false)
-	assert.NoError(t, err)
-	assert.Zero(t, vs.EnableCount())
-
+	// Called by an invalid owner
 	NoOwner := newDummyAddress(2, false)
 	err = state.EnableValidator(NoOwner, false)
 	assert.Error(t, err)
+	assert.Equal(t, enableCount, vs.EnableCount())
+
+	// Case where calling EnableValidator() to an enabled validator
+	err = state.EnableValidator(owner, false)
+	assert.NoError(t, err)
+	assert.Equal(t, hvhmodule.MaxEnableCount, vs.EnableCount())
+
+	for i := 1; i <= hvhmodule.MaxEnableCount; i++ {
+		assert.NoError(t, state.DisableValidator(owner))
+		vs, err = state.GetValidatorStatus(owner)
+		assert.NoError(t, err)
+		assert.True(t, vs.Disabled())
+
+		err = state.EnableValidator(owner, false)
+		assert.NoError(t, err)
+
+		vs, err = state.GetValidatorStatus(owner)
+		assert.NoError(t, err)
+		assert.Equal(t, hvhmodule.MaxEnableCount-i, vs.EnableCount())
+		assert.True(t, vs.Enabled())
+	}
+
+	assert.NoError(t, state.DisableValidator(owner))
+	vs, err = state.GetValidatorStatus(owner)
+	assert.NoError(t, err)
+	assert.True(t, vs.Disabled())
+
+	err = state.EnableValidator(owner, false)
+	assert.Error(t, err)
+
+	vs, err = state.GetValidatorStatus(owner)
+	assert.NoError(t, err)
+	assert.True(t, vs.Disabled())
+	assert.Zero(t, vs.EnableCount())
 }
 
 func TestState_SetValidatorCount(t *testing.T) {
@@ -911,7 +943,7 @@ func TestState_OnBlockVote(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Zero(t, vs.NonVotes())
 		assert.True(t, vs.Enabled())
-		assert.Zero(t, vs.EnableCount())
+		assert.Equal(t, hvhmodule.MaxEnableCount, vs.EnableCount())
 	}
 
 	node := validators[0]
@@ -927,7 +959,7 @@ func TestState_OnBlockVote(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, int64(i + 1), vs.NonVotes())
 		assert.True(t, vs.Enabled())
-		assert.Zero(t, vs.EnableCount())
+		assert.Equal(t, hvhmodule.MaxEnableCount, vs.EnableCount())
 	}
 
 	node = validators[mainCount]
@@ -945,7 +977,7 @@ func TestState_OnBlockVote(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, int64(i + 1), vs.NonVotes())
 		assert.Equal(t, !expectedPenalized, vs.Enabled())
-		assert.Zero(t, vs.EnableCount())
+		assert.Equal(t, hvhmodule.MaxEnableCount, vs.EnableCount())
 	}
 }
 

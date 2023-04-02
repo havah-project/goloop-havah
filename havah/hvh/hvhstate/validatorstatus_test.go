@@ -74,12 +74,12 @@ func TestValidatorStatus_Enable(t *testing.T) {
 	err := vs.Enable(false)
 	assert.Error(t, err)
 	assert.True(t, vs.Disabled())
-	assert.Equal(t, hvhmodule.MaxEnableCount, vs.EnableCount())
+	assert.Zero(t, vs.EnableCount())
 
 	err = vs.Enable(true)
 	assert.NoError(t, err)
 	assert.False(t, vs.Disabled())
-	assert.Zero(t, vs.EnableCount())
+	assert.Equal(t, hvhmodule.MaxEnableCount, vs.EnableCount())
 }
 
 func TestValidatorStatus_Disqualified(t *testing.T) {
