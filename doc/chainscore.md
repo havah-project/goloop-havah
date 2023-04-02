@@ -1676,8 +1676,8 @@ None
  ```json
 {
   "result": {
-    "blockVoteCheckPeriod": "0x64",
-    "nonVoteAllowance": "0x5"
+    "blockVoteCheckPeriod": "0x1e",
+    "nonVoteAllowance": "0x14"
   }
 }
 ```
@@ -1715,9 +1715,10 @@ None
   "result": {
     "height": "0x3e8",
     "termStart": "0x3e0",
-    "mode": "0x0",
-    "blockVoteCheckPeriod": "0x64",
-    "nonVoteAllowance": "0x5"
+    "mode": "0x1",
+    "blockVoteCheckPeriod": "0x1e",
+    "nonVoteAllowance": "0x14",
+    "activeValidatorCount": "0xa"
   }
 }
 ```
@@ -1735,6 +1736,7 @@ None
 | mode                 | T_INT      | true     | Network mode. init(0), decentralization(1)                             |
 | blockVoteCheckPeriod | T_INT      | true     | Period in blocks of block vote check                                   |
 | nonVoteAllowance     | T_INT      | true     | Validator gets penalized if its nonVotes is larger than this allowance |
+| activeValidatorCount | T_INT      | true     | Maximum number of active validators                                    |
 
 ### setValidatorInfo(values []{key string, value string})
 
@@ -1776,6 +1778,7 @@ None
 | key   | T_STRING   | true     | `nodePublicKey`, `name`, `url` |
 | value | T_STRING   | true     | New value for a given key      |
 
+* If the nodePublicKey of an active validator is changed, activeValidatorSet is also changed
 * Additional values for key field would be added in the future
 
 #### Returns
@@ -1838,7 +1841,9 @@ None
 
 ### enableValidator(owner Address)
 
-* Enable a disabled validator indicated by owner
+* Enable a disabled validator indicated by owner, resetting its nonVotes to 0
+* If it is called by Governance SCORE, then the enableCount of validator will be reverted to initial value
+* Initial enableCount: `3`
 * Called by Governance SCORE or validator owner
 * Since `revision 4` 
  
@@ -1891,7 +1896,7 @@ None
     "height": "0x3e8",
     "flags": "0x0",
     "nonVotes": "0x0",
-    "enableCount": "0xa"
+    "enableCount": "0x3"
   }
 }
 ```
@@ -1915,9 +1920,9 @@ None
 
 `T_HASH` - txHash
 
-### setValidatorCount(count int)
+### setActiveValidatorCount(count int)
 
-* Sets the number of validators participating in block validation
+* Sets the maximum number of active validators participating in block validation
 * Called by Governance SCORE
 * Since `revision 4`
 
@@ -1926,7 +1931,7 @@ None
 ```json
 {
   "data": {
-    "method": "setValidatorCount",
+    "method": "setActiveValidatorCount",
     "params": {
       "count": "0xa"
     }
@@ -1936,17 +1941,17 @@ None
 
 #### Parameters
 
-| Key   | VALUE Type | Required | Description                                            |
-|:------|:-----------|:---------|:-------------------------------------------------------|
-| count | T_INT      | true     | Number of validators participating in block validation |
+| Key   | VALUE Type | Required | Description                                                           |
+|:------|:-----------|:---------|:----------------------------------------------------------------------|
+| count | T_INT      | true     | Maximum number of active validators participating in block validation |
 
 #### Returns
 
 `T_HASH` - txHash
 
-### getValidatorCount() int
+### getActiveValidatorCount() int
 
-* Returns the number of validators participating in block validation
+* Returns the maximum number of active validators participating in block validation
 * Since `revision 4`
 
 > Request
@@ -1954,7 +1959,7 @@ None
 ```json
 {
   "data": {
-    "method": "getValidatorCount"
+    "method": "getActiveValidatorCount"
   }
 }
 ```
@@ -1979,7 +1984,7 @@ None
 
 ### getValidatorsOf(grade string) dict
 
-* Returns the registered validators with a given grade
+* Returns the owner addresses of registered validators filtered by `grade`
 * Since `revision 4`
 
 > Request
