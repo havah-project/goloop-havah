@@ -336,6 +336,7 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 				if err = es.state.SetNetworkStatus(ns); err != nil {
 					return err
 				}
+				onDecentralizedEvent(cc, es.state.GetActiveValidatorCount())
 			}
 		}
 
