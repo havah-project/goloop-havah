@@ -34,6 +34,28 @@ import (
 	"github.com/icon-project/goloop/service/state"
 )
 
+type ValidatorDataType int
+
+const (
+	VDataTypeNone ValidatorDataType = 0
+	VDataTypeInfo ValidatorDataType = 1
+	VDataTypeStatus ValidatorDataType = 2
+	VDataTypeAll = VDataTypeInfo | VDataTypeStatus
+)
+
+func StringToValidatorDataType(value string) ValidatorDataType {
+	switch value {
+	case "info":
+		return VDataTypeInfo
+	case "status":
+		return VDataTypeStatus
+	case "all":
+		return VDataTypeAll
+	default:
+		return VDataTypeNone
+	}
+}
+
 type ExtensionSnapshotImpl struct {
 	dbase db.Database
 	state *hvhstate.Snapshot
@@ -737,6 +759,64 @@ func (es *ExtensionStateImpl) GetValidatorsOf(
 	} else {
 		return nil, err
 	}
+}
+
+func (es *ExtensionStateImpl) GetValidatorsInfo(
+	cc hvhmodule.CallContext, dataType string) (map[string]interface{}, error) {
+	var err error
+	height := cc.BlockHeight()
+	es.Logger().Debugf("GetValidatorsInfo() start: height=%d dataType=%s", height, dataType)
+
+	vDataType := StringToValidatorDataType(dataType)
+	if vDataType == VDataTypeNone {
+		return nil, scoreresult.InvalidParameterError.Errorf("Invalid dataType: %s", dataType)
+	}
+
+	owners, err := es.state.GetValidatorsOf(hvhstate.GradeFilterAll)
+	if err != nil {
+		return nil, err
+	}
+
+	var vi *hvhstate.ValidatorInfo
+	var vs *hvhstate.ValidatorStatus
+	var jso map[string]interface{}
+	validators := make([]interface{}, len(owners))
+	ret := make(map[string]interface{})
+
+	for i, owner := range owners {
+		if vDataType & VDataTypeInfo != 0 {
+			vi, err = es.state.GetValidatorInfo(owner)
+			if err != nil {
+				return nil, err
+			}
+			jso = vi.ToJSON()
+		} else {
+			jso = nil
+		}
+
+		if vDataType & VDataTypeStatus != 0 {
+			vs, err = es.state.GetValidatorStatus(owner)
+			if err != nil {
+				return nil, err
+			}
+			vsJso := vs.ToJSON()
+			if jso == nil {
+				jso = vsJso
+				jso["owner"] = owner
+			} else {
+				for k, v := range vsJso {
+					jso[k] = v
+				}
+			}
+		}
+
+		validators[i] = jso
+	}
+
+	ret["height"] = height
+	ret["validators"] = validators
+	es.Logger().Debugf("GetValidatorsInfo() end")
+	return ret, nil
 }
 
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {

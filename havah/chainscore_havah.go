@@ -498,3 +498,14 @@ func (s *chainScore) Ex_getValidatorsOf(grade string) (map[string]interface{}, e
 	}
 	return es.GetValidatorsOf(ctx, grade)
 }
+
+func (s *chainScore) Ex_getValidatorsInfo(dataType string) (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetValidatorsInfo(ctx, dataType)
+}
