@@ -962,33 +962,44 @@ func (s *State) getValidatorArrayDB(grade Grade) *containerdb.ArrayDB {
 	}
 }
 
-func (s *State) UnregisterValidator(owner module.Address) error {
+func (s *State) UnregisterValidator(owner module.Address) (module.Address, error) {
 	s.logger.Debugf("UnregisterValidator() start: owner=%s", owner)
 	defer s.logger.Debugf("UnregisterValidator() end: owner=%s", owner)
 
-	if owner == nil {
-		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid owner: %v", owner)
+	if owner == nil || owner.IsContract() {
+		return nil, scoreresult.InvalidParameterError.Errorf("Invalid argument: owner=%s", owner)
 	}
 
 	vsDB := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
 	vs, err := s.getValidatorStatus(vsDB, owner)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	if vs.Disqualified() {
+		// Already unregistered, so nothing to do
+		return nil, nil
+	}
+
+	// Turn disqualified flag on
 	vs.SetDisqualified()
 	key := ToKey(owner)
 	if err = vsDB.Set(key, vs.Bytes()); err != nil {
-		return err
+		return nil, err
 	}
 
+	// Remove it from validatorList based on its grade
+	var vi *ValidatorInfo
 	viDB := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
-	vi, err := s.getValidatorInfo(viDB, owner)
+	vi, err = s.getValidatorInfo(viDB, owner)
 	if err != nil {
-		return err
+		return nil, err
 	}
-
-	return s.removeFromValidatorList(vi.Grade(), owner)
+	err = s.removeFromValidatorList(vi.Grade(), owner)
+	if err != nil {
+		return nil, err
+	}
+	return vi.Address(), nil
 }
 
 func (s *State) GetNetworkStatus() (*NetworkStatus, error) {
@@ -1310,6 +1321,7 @@ func (s *State) GetNextActiveValidatorsAndChangeIndex(
 	svIndex := int(sviDB.Int64())
 	oldSVIndex := svIndex
 	if svIndex >= size {
+		// If svIndex is invalid, reset the index to 0
 		svIndex = 0
 	}
 

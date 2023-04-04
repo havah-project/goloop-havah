@@ -594,8 +594,38 @@ func (es *ExtensionStateImpl) RegisterValidator(
 	return es.state.RegisterValidator(owner, nodePublicKey, grade, name)
 }
 
-func (es *ExtensionStateImpl) UnregisterValidator(owner module.Address) error {
-	return es.state.UnregisterValidator(owner)
+func (es *ExtensionStateImpl) UnregisterValidator(cc hvhmodule.CallContext, owner module.Address) error {
+	from := cc.From()
+	if from == nil {
+		return scoreresult.InvalidParameterError.Errorf("Invalid argument: from=%s", from)
+	}
+	if owner == nil || owner.IsContract() {
+		return scoreresult.InvalidParameterError.Errorf("Invalid argument: owner=%s", owner)
+	}
+	isCallerGov := from.Equal(cc.Governance())
+	if !isCallerGov && !from.Equal(owner) {
+		return scoreresult.AccessDeniedError.Errorf("No permission: from=%s owner=%s", from, owner)
+	}
+
+	node, err := es.state.UnregisterValidator(owner)
+	if err != nil {
+		return err
+	}
+	if node != nil {
+		// Change active validator set if it is an active validator
+		validatorState := cc.GetValidatorState()
+		idx := validatorState.IndexOf(node)
+		if idx < 0 {
+			// No need to change active validator set
+			return nil
+		}
+		validatorToRemove, ok := validatorState.Get(idx)
+		if !ok {
+			return nil
+		}
+		return es.replaceActiveValidators(cc, []module.Validator{validatorToRemove})
+	}
+	return nil
 }
 
 func (es *ExtensionStateImpl) GetNetworkStatus(cc hvhmodule.CallContext) (map[string]interface{}, error) {

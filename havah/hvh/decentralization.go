@@ -47,7 +47,7 @@ func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
 	voters := ci.Voters()
 	voted := ci.Voted()
 	validatorState := cc.GetValidatorState()
-	penalizedValidatorIndexes := make(map[int]struct{})
+	validatorsToRemove := make([]module.Validator, 0)
 
 	// Check block vote
 	for i, vote := range voted {
@@ -56,48 +56,68 @@ func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
 		if penalized, err := es.state.OnBlockVote(nodeAddr, vote); err == nil {
 			if penalized {
 				if index := validatorState.IndexOf(nodeAddr); index >= 0 {
-					penalizedValidatorIndexes[index] = struct{}{}
+					validatorsToRemove = append(validatorsToRemove, voter)
 				}
 			}
 		}
 	}
 
 	// Penalized validators not found
-	penalizedCount := len(penalizedValidatorIndexes)
+	penalizedCount := len(validatorsToRemove)
 	if penalizedCount == 0 {
 		// No penalized validators
 		return nil
 	}
 
-	// Get standby validators to replace penalized active validators
-	newActiveValidators, err := es.state.GetNextActiveValidatorsAndChangeIndex(validatorState, penalizedCount)
-	if err != nil {
-		return err
-	}
-
-	// Build a new active validatorSet
-	size := validatorState.Len()
-	validators := make([]module.Validator, 0, size)
-
-	// Append existing active validators except for the penalized
-	for i := 0; i < size; i++ {
-		if _, ok := penalizedValidatorIndexes[i]; !ok {
-			validator, _ := validatorState.Get(i)
-			validators = append(validators, validator)
-		}
-	}
-	// Append new validators to replace the penalized
-	for _, newAV := range newActiveValidators {
-		if validator, err := state.ValidatorFromAddress(newAV); err == nil {
-			validators = append(validators, validator)
-		} else {
-			return err
-		}
-	}
-	// Update active validatorSet with new one
-	return cc.SetValidators(validators)
+	return es.replaceActiveValidators(cc, validatorsToRemove)
 }
 
 func (es *ExtensionStateImpl) IsItTimeToCheckBlockVote(blockIndexInTerm int64) bool {
 	return es.state.IsItTimeToCheckBlockVote(blockIndexInTerm)
+}
+
+func (es *ExtensionStateImpl) replaceActiveValidators(
+	cc hvhmodule.CallContext, validatorsToRemove []module.Validator) error {
+	es.logger.Debugf("replaceActiveValidators(): start: validatorsToRemove=%v", validatorsToRemove)
+
+	if len(validatorsToRemove) == 0 {
+		// Nothing to remove
+		return nil
+	}
+
+	count := 0  // Number of removed validators
+	validatorState := cc.GetValidatorState()
+	// Remove old validators
+	for _, validator := range validatorsToRemove {
+		if validatorState.Remove(validator) {
+			count++
+		}
+	}
+
+	if count == 0 {
+		// No validator is removed
+		es.logger.Debugf("replaceActiveValidators(): end")
+		return nil
+	}
+
+	// Get the new standby validators from sub validators
+	validatorsToAdd, err := es.state.GetNextActiveValidatorsAndChangeIndex(validatorState, count)
+	if err != nil {
+		return err
+	}
+
+	// Add new validators
+	var validator module.Validator
+	for _, addr := range validatorsToAdd {
+		validator, err = state.ValidatorFromAddress(addr)
+		if err != nil {
+			return err
+		}
+		if err = validatorState.Add(validator); err != nil {
+			return err
+		}
+	}
+
+	es.logger.Debugf("replaceActiveValidators(): end: validatorsToAdd=%v", validatorsToAdd)
+	return nil
 }

@@ -397,14 +397,14 @@ func (s *chainScore) Ex_registerValidator(
 }
 
 func (s *chainScore) Ex_unregisterValidator(owner module.Address) error {
-	if err := s.checkGovernance(true); err != nil {
+	if err := s.tryChargeCall(); err != nil {
 		return err
 	}
-	es, _, err := s.getExtensionStateAndContext()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
-	return es.UnregisterValidator(owner)
+	return es.UnregisterValidator(ctx, owner)
 }
 
 func (s *chainScore) Ex_getNetworkStatus() (map[string]interface{}, error) {

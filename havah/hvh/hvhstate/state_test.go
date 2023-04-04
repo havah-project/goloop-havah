@@ -642,6 +642,7 @@ func TestState_RegisterValidator(t *testing.T) {
 }
 
 func TestState_UnregisterValidator(t *testing.T) {
+	var node module.Address
 	owner := newDummyAddress(1, false)
 	name := "name-01"
 	_, pubKey := crypto.GenerateKeyPair()
@@ -658,13 +659,17 @@ func TestState_UnregisterValidator(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, vs.Disabled())
 	assert.False(t, vs.Disqualified())
+	assert.True(t, vs.Enabled())
 
+	// Try to unregister a not-registered validator
 	invalidOwner := newDummyAddress(2, false)
-	err = state.UnregisterValidator(invalidOwner)
+	node, err = state.UnregisterValidator(invalidOwner)
 	assert.Error(t, err)
+	assert.Nil(t, node)
 
-	err = state.UnregisterValidator(owner)
+	node, err = state.UnregisterValidator(owner)
 	assert.NoError(t, err)
+	assert.True(t, node.Equal(vi.Address()))
 
 	vs, err = state.GetValidatorStatus(owner)
 	assert.True(t, vs.Disqualified())
@@ -848,7 +853,8 @@ func TestState_GetValidatorsOf(t *testing.T) {
 	// Unregister a main validator
 	idx := 1
 	ownerToRemove := mainOwners[idx]
-	assert.NoError(t, state.UnregisterValidator(ownerToRemove))
+	_, err = state.UnregisterValidator(ownerToRemove)
+	assert.NoError(t, err)
 	mainOwners = append(mainOwners[:idx], mainOwners[idx+1:]...)
 	assert.Equal(t, mainCount-1, len(mainOwners))
 
@@ -862,7 +868,8 @@ func TestState_GetValidatorsOf(t *testing.T) {
 	// Unregister a sub validator
 	idx = 1
 	ownerToRemove = subOwners[1]
-	assert.NoError(t, state.UnregisterValidator(ownerToRemove))
+	_, err = state.UnregisterValidator(ownerToRemove)
+	assert.NoError(t, err)
 	subOwners = append(subOwners[:idx], subOwners[idx+1:]...)
 	assert.Equal(t, subCount-1, len(subOwners))
 
@@ -875,7 +882,8 @@ func TestState_GetValidatorsOf(t *testing.T) {
 
 	// Unregister all main validators
 	for _, owner := range mainOwners {
-		assert.NoError(t, state.UnregisterValidator(owner))
+		_, err = state.UnregisterValidator(owner)
+		assert.NoError(t, err)
 	}
 	validators, err = state.GetValidatorsOf(GradeFilterMain)
 	assert.NoError(t, err)
@@ -883,7 +891,8 @@ func TestState_GetValidatorsOf(t *testing.T) {
 
 	// Unregister all sub validators
 	for _, owner := range subOwners {
-		assert.NoError(t, state.UnregisterValidator(owner))
+		_, err = state.UnregisterValidator(owner)
+		assert.NoError(t, err)
 	}
 	validators, err = state.GetValidatorsOf(GradeFilterSub)
 	assert.NoError(t, err)
@@ -1009,7 +1018,7 @@ func TestState_GetMainValidators(t *testing.T) {
 	}
 
 	idx := size / 2
-	err = state.UnregisterValidator(owners[idx])
+	_, err = state.UnregisterValidator(owners[idx])
 	assert.NoError(t, err)
 
 	validators, err = state.GetMainValidators()
@@ -1155,7 +1164,8 @@ func TestState_GetNextActiveValidatorsAndChangeIndex(t *testing.T) {
 		{count: 1, expLen: 1, expSVIndex: 4},
 	}
 	owner, _ = state.GetOwnerByNode(expValidators[4])
-	assert.NoError(t, state.UnregisterValidator(owner))
+	_, err = state.UnregisterValidator(owner)
+	assert.NoError(t, err)
 	// sub_validators: |0|1|2|3|5|6|
 	for i, test := range args {
 		name := fmt.Sprintf("one-unregistered-%d", i)
