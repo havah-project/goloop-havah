@@ -40,6 +40,10 @@ func (vs *ValidatorStatus) ResetNonVotes() {
 }
 
 func (vs *ValidatorStatus) Enable(calledByGov bool) error {
+	if vs.Disqualified() {
+		return scoreresult.AccessDeniedError.New("Already unregistered")
+	}
+
 	if calledByGov {
 		return vs.enableByGov()
 	} else {

@@ -80,6 +80,15 @@ func TestValidatorStatus_Enable(t *testing.T) {
 	assert.NoError(t, err)
 	assert.False(t, vs.Disabled())
 	assert.Equal(t, hvhmodule.MaxEnableCount, vs.EnableCount())
+
+	vs.SetDisabled()
+	vs.SetDisqualified()
+	for _, calledByGov := range []bool{true, false} {
+		err = vs.Enable(calledByGov)
+		assert.Error(t, err)
+		assert.True(t, vs.Disabled())
+		assert.True(t, vs.Disqualified())
+	}
 }
 
 func TestValidatorStatus_Disqualified(t *testing.T) {
