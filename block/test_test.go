@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/icon-project/goloop/btp"
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/codec"
 	"github.com/icon-project/goloop/common/crypto"
@@ -19,10 +20,8 @@ import (
 	"github.com/icon-project/goloop/service/txresult"
 )
 
-const (
-	gheight           int64 = 0
-	defaultValidators       = 1
-)
+const gheight int64 = 0
+const defaultValidators = 1
 
 type testChain struct {
 	module.Chain
@@ -251,11 +250,6 @@ func (l *testTransactionList) effect() *testTransactionEffect {
 	return l._effect
 }
 
-func (l *testTransactionList) receipts() []*testReceipt {
-	l.updateCache()
-	return l._receipts
-}
-
 func (l *testTransactionList) updateCache() {
 	if l._effect == nil {
 		l._effect = &testTransactionEffect{}
@@ -337,6 +331,7 @@ type testTransitionResult struct {
 }
 
 type testTransition struct {
+	module.Transition
 	patchTransactions  *testTransactionList
 	normalTransactions *testTransactionList
 	baseValidators     *testValidatorList
@@ -352,10 +347,6 @@ type testTransition struct {
 
 func (tr *testTransition) setExeChan(ch chan struct{}) {
 	tr._exeChan = ch
-}
-
-func (tr *testTransition) exeChan() chan<- struct{} {
-	return tr._exeChan
 }
 
 func (tr *testTransition) PatchTransactions() module.TransactionList {
@@ -532,6 +523,10 @@ func (tr *testTransition) Equal(t2 module.Transition) bool {
 		tr.normalTransactions.Equal(tr2.normalTransactions) &&
 		common.BlockInfoEqual(tr._bi, tr2._bi) &&
 		common.ConsensusInfoEqual(tr._csi, tr2._csi)
+}
+
+func (tr *testTransition) BTPSection() module.BTPSection {
+	return btp.ZeroBTPSection
 }
 
 type testServiceManager struct {
@@ -727,6 +722,14 @@ func (sm *testServiceManager) GetNextBlockVersion(result []byte) int {
 	return module.BlockVersion2
 }
 
+func (sm *testServiceManager) NextProofContextMapFromResult(result []byte) (module.BTPProofContextMap, error) {
+	return btp.ZeroProofContextMap, nil
+}
+
+func (sm *testServiceManager) BTPSectionFromResult(result []byte) (module.BTPSection, error) {
+	return btp.ZeroBTPSection, nil
+}
+
 type testValidator struct {
 	Address_ *common.Address
 }
@@ -837,6 +840,22 @@ func (vs *testCommitVoteSet) Hash() []byte {
 
 func (vs *testCommitVoteSet) Timestamp() int64 {
 	return vs.Timestamp_
+}
+
+func (vs *testCommitVoteSet) VoteRound() int32 {
+	return 0
+}
+
+func (vs *testCommitVoteSet) BlockVoteSetBytes() []byte {
+	return vs.Bytes()
+}
+
+func (vs *testCommitVoteSet) NTSDProofCount() int {
+	return 0
+}
+
+func (vs *testCommitVoteSet) NTSDProofAt(i int) []byte {
+	return nil
 }
 
 func newRandomTestValidatorList(n int) *testValidatorList {

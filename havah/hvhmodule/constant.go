@@ -95,6 +95,16 @@ const (
 	VarEcoReward            = "eco_reward"    // unit: hvh
 	VarPrivateClaimableRate = "private_claimable_rate"
 	VarLost                 = "lost"
+	VarBlockVoteCheckPeriod = "block_vote_check_period" // unit: block
+	VarNonVoteAllowance     = "non_vote_allowance"      // unit: count
+	VarActiveValidatorCount = "active_validator_count"
+	DictValidatorInfo       = "validator_info"
+	DictValidatorStatus     = "validator_status"
+	DictNodeToOwner         = "node_to_owner"
+	ArrayMainValidators     = "main_validators" // main validators
+	ArraySubValidators      = "sub_validators"  // sub validators
+	VarSubValidatorsIndex   = "sub_validators_index"
+	VarNetworkStatus        = "network_status"
 )
 
 // VarDBs in SustainableFund Score
@@ -109,9 +119,19 @@ const (
 const (
 	StatusIllegalArgument = module.StatusReverted + iota
 	StatusNotFound
-	StatusCriticalError
+	StatusInvalidState
 	StatusRewardError
 	StatusNotReady
+	StatusDuplicate
+)
+
+// Decentralization
+const (
+	BlockVoteCheckPeriod int64 = 30
+	NonVoteAllowance     int64 = 20
+	MaxValidatorNameLen        = 50
+	MaxValidatorUrlLen         = 100
+	MaxEnableCount             = 3
 )
 
 // The following variables are read-only

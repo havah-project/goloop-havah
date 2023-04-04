@@ -91,7 +91,7 @@ func (h *DepositHandler) ExecuteSync(cc CallContext) (err error, ro *codec.Typed
 		return err2, nil, nil
 	}
 
-	if cc.QueryMode() {
+	if cc.ReadOnlyMode() {
 		return scoreresult.AccessDeniedError.New("DepositControlIsNotAllowed"), nil, nil
 	}
 
@@ -170,6 +170,10 @@ func (h *DepositHandler) ExecuteSync(cc CallContext) (err error, ro *codec.Typed
 			id = []byte{}
 		}
 		value := h.data.Amount.Value()
+		if value != nil && value.Sign() < 0 {
+			return scoreresult.InvalidRequestError.Errorf(
+				"InvalidAmount(%d)", value), nil, nil
+		}
 
 		if amount, fee, err := as2.WithdrawDeposit(cc, id, value); err != nil {
 			return err, nil, nil

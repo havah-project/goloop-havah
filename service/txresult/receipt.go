@@ -1,6 +1,7 @@
 package txresult
 
 import (
+	"container/list"
 	"encoding/hex"
 	"encoding/json"
 	"io"
@@ -13,6 +14,7 @@ import (
 	"github.com/icon-project/goloop/common/codec"
 	"github.com/icon-project/goloop/common/db"
 	"github.com/icon-project/goloop/common/errors"
+	"github.com/icon-project/goloop/common/intconv"
 	"github.com/icon-project/goloop/common/log"
 	"github.com/icon-project/goloop/common/merkle"
 	"github.com/icon-project/goloop/common/trie"
@@ -217,6 +219,7 @@ type receipt struct {
 	reason    error
 	// steps for fee
 	feeSteps *big.Int
+	btpMsgs  *list.List
 }
 
 func (r *receipt) SCOREAddress() module.Address {
@@ -385,6 +388,10 @@ func (r *receipt) LogsBloom() module.LogsBloom {
 	return &r.data.LogsBloom
 }
 
+func (r *receipt) BTPMessages() *list.List {
+	return r.btpMsgs
+}
+
 func (r *receipt) EventLogIterator() module.EventLogIterator {
 	if r.version >= Version2 {
 		return &eventLogIteratorV2{r.eventLogs.Iterator()}
@@ -498,6 +505,7 @@ func failureReasonByCode(status module.Status) *failureReason {
 type Receipt interface {
 	module.Receipt
 	AddLog(addr module.Address, indexed, data [][]byte)
+	AddBTPMessages(messages list.List)
 	// AddPayment adds payment information.
 	// addr is payer. steps is total steps paid by the payer.
 	// feeSteps is amount of steps for fee.
@@ -631,6 +639,13 @@ func (r *receipt) AddLog(addr module.Address, indexed, data [][]byte) {
 
 	r.data.EventLogs = append(r.data.EventLogs, log)
 	r.data.LogsBloom.AddLog(&log.eventLogData.Addr, log.eventLogData.Indexed)
+}
+
+func (r *receipt) AddBTPMessages(messages list.List) {
+	if r.btpMsgs == nil {
+		r.btpMsgs = list.New()
+	}
+	r.btpMsgs.PushBackList(&messages)
 }
 
 func (r *receipt) SetCumulativeStepUsed(cumulativeUsed *big.Int) {
@@ -777,14 +792,15 @@ func NewReceipt(database db.Database, revision module.Revision, to module.Addres
 	return r
 }
 
+var reSignature = regexp.MustCompile(`^(\w+)\(((?:\w+)(?:,(?:\w+))*)?\)$`)
+
 func DecomposeEventSignature(s string) (string, []string) {
-	reg := regexp.MustCompile(`^(\w+)\(((?:\w+)(?:,(?:\w+))*)\)$`)
-	if reg == nil {
+	matches := reSignature.FindStringSubmatch(s)
+	if matches == nil {
 		return "", nil
 	}
-	matches := reg.FindStringSubmatch(s)
-	if len(matches) < 2 {
-		return "", nil
+	if len(matches[2]) == 0 {
+		return matches[1], []string{}
 	}
 	return matches[1], strings.Split(matches[2], ",")
 }
@@ -801,13 +817,15 @@ func EventDataStringToBytesByType(t string, v string) ([]byte, error) {
 	switch t {
 	case "Address":
 		var addr common.Address
-		if err := addr.SetString(v); err != nil {
+		if err := addr.SetStringStrict(v); err != nil {
 			return nil, err
 		}
 		return addr.Bytes(), nil
 	case "int":
 		var ivalue common.HexInt
-		ivalue.SetString(v, 0)
+		if err := intconv.ParseBigInt(ivalue.Value(), v); err != nil {
+			return nil, err
+		}
 		return ivalue.Bytes(), nil
 	case "str":
 		return []byte(v), nil
@@ -819,8 +837,10 @@ func EventDataStringToBytesByType(t string, v string) ([]byte, error) {
 	case "bool":
 		if v == "0x1" {
 			return []byte{1}, nil
+		} else if v == "0x0" {
+			return []byte{0}, nil
 		}
-		return []byte{0}, nil
+		return nil, errors.Errorf("IllegalFormatForBool(%s)", v)
 	default:
 		return nil, errors.Errorf("UnknownType(%s)For(%s)", t, v)
 	}

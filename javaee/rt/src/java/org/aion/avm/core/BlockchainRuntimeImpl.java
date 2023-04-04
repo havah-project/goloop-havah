@@ -8,6 +8,8 @@ package org.aion.avm.core;
 import a.ByteArray;
 import foundation.icon.ee.io.RLPDataReader;
 import foundation.icon.ee.io.RLPDataWriter;
+import foundation.icon.ee.io.RLPNDataReader;
+import foundation.icon.ee.io.RLPNDataWriter;
 import foundation.icon.ee.types.Address;
 import foundation.icon.ee.types.Bytes;
 import foundation.icon.ee.types.ManualRevertException;
@@ -235,12 +237,22 @@ public class BlockchainRuntimeImpl implements IBlockchainRuntime {
 
         var prevState = rds.getTop();
         rds.pushState();
-        foundation.icon.ee.types.Result res = externalState.call(
-                new Address(targetAddress.toByteArray()),
-                value.getUnderlying(),
-                stepLeft,
-                dataType,
-                dataObj);
+        foundation.icon.ee.types.Result res;
+        try {
+            res = externalState.call(
+                    new Address(targetAddress.toByteArray()),
+                    value.getUnderlying(),
+                    stepLeft,
+                    dataType,
+                    dataObj);
+        } finally {
+            // Any exception from ExternalState.call() is critical. Even though
+            // the exception would terminate the thread, restore the runtime
+            // setup attachment state for easy debugging. Without this, a new
+            // RuntimeAssertionError is thrown due to imbalanced attach/detach
+            InstrumentationHelpers.returnToExecutingFrame(this.thisDAppSetup);
+        }
+
         if (res.getStatus() == 0 && prevState != null) {
             prevState.inherit(rds.getTop());
         }
@@ -249,7 +261,6 @@ public class BlockchainRuntimeImpl implements IBlockchainRuntime {
         task.setEID(res.getEID());
         task.setPrevEID(res.getPrevEID());
 
-        InstrumentationHelpers.returnToExecutingFrame(this.thisDAppSetup);
         var newRS = rds.getTop().getRuntimeState(task.getPrevEID());
         rds.getTop().removeRuntimeStatesByAddress(cid);
         assert newRS!=null;
@@ -347,6 +358,20 @@ public class BlockchainRuntimeImpl implements IBlockchainRuntime {
     }
 
     @Override
+    public ByteArray avm_aggregate(s.java.lang.String type, ByteArray prevAgg,
+            ByteArray values) {
+        Objects.requireNonNull(type, "Type can't be NULL");
+        Objects.requireNonNull(values, "Values can't be NULL");
+        byte[] pa = null;
+        if (prevAgg!=null) {
+            pa = prevAgg.getUnderlying();
+        }
+        return new ByteArray(Crypto.aggregate(
+                type.getUnderlying(), pa, values.getUnderlying()
+        ));
+    }
+
+    @Override
     public p.score.Address avm_getAddressFromKey(ByteArray publicKey) {
         Objects.requireNonNull(publicKey, "publicKey is NULL");
         return new p.score.Address(Crypto.getAddressBytesFromKey(publicKey.getUnderlying()));
@@ -423,6 +448,8 @@ public class BlockchainRuntimeImpl implements IBlockchainRuntime {
             s.java.lang.String codec, ByteArray byteArray) {
         var c = codec==null ? null : codec.getUnderlying();
         if ("RLPn".equals(c)) {
+            return new ObjectReaderImpl(new RLPNDataReader(byteArray.getUnderlying()));
+        } else if ("RLP".equals(c)) {
             return new ObjectReaderImpl(new RLPDataReader(byteArray.getUnderlying()));
         }
         throw new IllegalArgumentException("bad codec");
@@ -433,6 +460,8 @@ public class BlockchainRuntimeImpl implements IBlockchainRuntime {
             s.java.lang.String codec) {
         var c = codec==null ? null : codec.getUnderlying();
         if ("RLPn".equals(c)) {
+            return new ObjectWriterImpl(new RLPNDataWriter());
+        } else if ("RLP".equals(c)) {
             return new ObjectWriterImpl(new RLPDataWriter());
         }
         throw new IllegalArgumentException("bad codec");

@@ -36,6 +36,7 @@ public class AllowlistProvider {
                     .filter(method -> isSupportedExecutable(method) && hasValidParamTypes(method))
                     .map(AllowlistProvider::generateMethodDescriptor)
                     .sorted(Comparator.comparing(m -> m.parameters))
+                    .distinct()
                     .collect(Collectors.toList());
             classDeclaredMethodMap.put(jclClass, declaredMethodList);
         }
@@ -49,8 +50,7 @@ public class AllowlistProvider {
         jclClassNames.removeAll(MethodDescriptorCollector.getOmittedClassNames());
         jclClassNames.removeAll(Arrays.asList(
                 "score/RevertedException",
-                "score/UserRevertedException",
-                "score/UserRevertException"
+                "score/UserRevertedException"
         ));
         jclClassNames.replaceAll(s -> PackageConstants.kShadowSlashPrefix + s);
 

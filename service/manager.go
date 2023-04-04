@@ -7,12 +7,13 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/icon-project/goloop/btp"
 	"github.com/icon-project/goloop/chain/base"
 	"github.com/icon-project/goloop/common/containerdb"
 	"github.com/icon-project/goloop/common/merkle"
 	"github.com/icon-project/goloop/network"
 	"github.com/icon-project/goloop/service/scoreresult"
-	ssync "github.com/icon-project/goloop/service/sync"
+	ssync "github.com/icon-project/goloop/service/sync2"
 	"github.com/icon-project/goloop/service/txresult"
 
 	"github.com/icon-project/goloop/common/errors"
@@ -29,16 +30,18 @@ import (
 	"github.com/icon-project/goloop/service/state"
 )
 
-const ConfigTransitionResultCacheEntryCount = 10
-const ConfigTransitionResultCacheEntrySize = 1024 * 1024
+const (
+	ConfigTransitionResultCacheEntryCount = 10
+	ConfigTransitionResultCacheEntrySize  = 1024 * 1024
+	ConfigMaxDroppedTxSlotSize            = 10000
+	ConfigDroppedTxSlotDuration           = 1000 * time.Millisecond
+)
 
 type manager struct {
 	// tx pool should be connected to transition for more than one branches.
 	// Currently, it doesn't allow another branch, so add tx pool here.
-	tim          TXIDManager
-	tm           *TransactionManager
-	patchTxPool  *TransactionPool
-	normalTxPool *TransactionPool
+	tim TXIDManager
+	tm  *TransactionManager
 
 	patchMetric  *metric.TxMetric
 	normalMetric *metric.TxMetric
@@ -73,7 +76,12 @@ func NewManager(chain module.Chain, nm module.NetworkManager,
 		return nil, err
 	}
 	tsc := NewTimestampChecker()
-	tim, err := NewTXIDManager(chain.Database(), tsc)
+	droppedTxSlotSize := chain.NormalTxPoolSize()
+	if droppedTxSlotSize > ConfigMaxDroppedTxSlotSize {
+		droppedTxSlotSize = ConfigMaxDroppedTxSlotSize
+	}
+	tic := NewTxIDCache(ConfigDroppedTxSlotDuration, droppedTxSlotSize, logger)
+	tim, err := NewTXIDManager(chain.Database(), tsc, tic)
 	if err != nil {
 		logger.Warnf("FAIL to create TXIDManager : %v\n", err)
 		return nil, err
@@ -355,7 +363,7 @@ func (m *manager) checkTransitionResult(t module.Transition) (*transition, error
 		return nil, nil
 	}
 	tst, ok := t.(*transition)
-	if !ok || tst.step != stepComplete {
+	if !ok || !tst.completed() {
 		return nil, errors.ErrIllegalArgument
 	}
 	return tst, nil
@@ -368,13 +376,13 @@ func newTransaction(txi interface{}) (transaction.Transaction, error) {
 		if err != nil {
 			return nil, errors.WithCode(err, InvalidTransactionError)
 		}
-		return ntx.(transaction.Transaction), nil
+		return ntx, nil
 	case string:
 		ntx, err := transaction.NewTransactionFromJSON([]byte(txo))
 		if err != nil {
 			return nil, errors.WithCode(err, InvalidTransactionError)
 		}
-		return ntx.(transaction.Transaction), nil
+		return ntx, nil
 	case transaction.Transaction:
 		return txo, nil
 	default:
@@ -610,14 +618,6 @@ func (c dummyDepositContext) BlockHeight() int64 {
 	return c.height
 }
 
-func boolToJSON(v bool) interface{} {
-	if v {
-		return "0x1"
-	} else {
-		return "0x0"
-	}
-}
-
 func (s *scoreStatus) ToJSON(height int64, version module.JSONVersion) (interface{}, error) {
 	ret := make(map[string]interface{})
 	if owner := s.ass.ContractOwner(); owner != nil {
@@ -711,6 +711,91 @@ func (m *manager) GetNextBlockVersion(result []byte) int {
 	return v
 }
 
+func (m *manager) BTPNetworkFromResult(result []byte, nid int64) (module.BTPNetwork, error) {
+	as, err := m.getSystemByteStoreState(result)
+	if err != nil {
+		return nil, err
+	}
+	btpContext := state.NewBTPContext(nil, as)
+	nw, err := btpContext.GetNetwork(nid)
+	if err != nil {
+		return nil, err
+	}
+	return nw, nil
+}
+
+func (m *manager) BTPNetworkTypeFromResult(result []byte, ntid int64) (module.BTPNetworkType, error) {
+	as, err := m.getSystemByteStoreState(result)
+	if err != nil {
+		return nil, err
+	}
+	btpContext := state.NewBTPContext(nil, as)
+	nt, err := btpContext.GetNetworkType(ntid)
+	if err != nil {
+		return nil, err
+	}
+	return nt, nil
+}
+
+func (m *manager) BTPNetworkTypeIDsFromResult(result []byte) ([]int64, error) {
+	as, err := m.getSystemByteStoreState(result)
+	if err != nil {
+		return nil, err
+	}
+	btpContext := state.NewBTPContext(nil, as)
+	ntids, err := btpContext.GetNetworkTypeIDs()
+	if err != nil {
+		return nil, err
+	}
+	return ntids, nil
+}
+
+func (m *manager) BTPDigestFromResult(result []byte) (module.BTPDigest, error) {
+	wss, err := m.trc.GetWorldSnapshot(result, nil)
+	if err != nil {
+		return nil, err
+	}
+	btpData := wss.BTPData()
+	if len(btpData) == 0 {
+		return btp.ZeroDigest, nil
+	}
+	bk, err := m.db.GetBucket(db.BytesByHash)
+	if err != nil {
+		return nil, err
+	}
+	digestBytes, err := bk.Get(btpData)
+	if err != nil {
+		return nil, err
+	}
+	digest, err := btp.NewDigestFromBytes(digestBytes)
+	if err != nil {
+		return nil, err
+	}
+	return digest, nil
+}
+
+func (m *manager) BTPSectionFromResult(result []byte) (module.BTPSection, error) {
+	digest, err := m.BTPDigestFromResult(result)
+	if err != nil {
+		return nil, err
+	}
+	store, err := m.getSystemByteStoreState(result)
+	if err != nil {
+		return nil, err
+	}
+	btpContext := state.NewBTPContext(nil, store)
+	return btp.NewSection(digest, btpContext, m.db)
+}
+
+func (m *manager) NextProofContextMapFromResult(result []byte) (module.BTPProofContextMap, error) {
+	store, err := m.getSystemByteStoreState(result)
+	if err != nil {
+		return nil, err
+	}
+	btpContext := state.NewBTPContext(nil, store)
+	return btp.NewProofContextMap(btpContext)
+}
+
 func (m *manager) HasTransaction(id []byte) bool {
 	return m.tm.HasTx(id)
 }
@@ -732,11 +817,11 @@ func (m *manager) ExportResult(result []byte, vh []byte, d db.Database) error {
 	if err != nil {
 		return err
 	}
-	e := merkle.NewCopyContext(m.db, d)
+	e := merkle.PrepareCopyContext(m.db, d)
 	txresult.NewReceiptListWithBuilder(e.Builder(), r.NormalReceiptHash)
 	txresult.NewReceiptListWithBuilder(e.Builder(), r.PatchReceiptHash)
 	ess := m.plt.NewExtensionWithBuilder(e.Builder(), r.ExtensionData)
-	state.NewWorldSnapshotWithBuilder(e.Builder(), r.StateHash, vh, ess)
+	state.NewWorldSnapshotWithBuilder(e.Builder(), r.StateHash, vh, ess, r.BTPData)
 	return e.Run()
 }
 
@@ -749,7 +834,7 @@ func (m *manager) ImportResult(result []byte, vh []byte, src db.Database) error 
 	txresult.NewReceiptListWithBuilder(e.Builder(), r.NormalReceiptHash)
 	txresult.NewReceiptListWithBuilder(e.Builder(), r.PatchReceiptHash)
 	es := m.plt.NewExtensionWithBuilder(e.Builder(), r.ExtensionData)
-	state.NewWorldSnapshotWithBuilder(e.Builder(), r.StateHash, vh, es)
+	state.NewWorldSnapshotWithBuilder(e.Builder(), r.StateHash, vh, es, r.BTPData)
 	return e.Run()
 }
 

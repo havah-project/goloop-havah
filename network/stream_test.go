@@ -6,11 +6,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/codec"
+	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/wallet"
 	"github.com/icon-project/goloop/module"
 	clock "github.com/icon-project/goloop/test/clock"
@@ -158,12 +158,6 @@ type tReceiveStreamMessageEvent struct {
 	SM streamMessage
 }
 
-type tFailureEvent struct {
-	Err error
-	PI  module.ProtocolInfo
-	B   []byte
-}
-
 type tJoinEvent struct {
 	ID module.PeerID
 }
@@ -190,10 +184,6 @@ func (r *tReactor) OnReceive(pi module.ProtocolInfo, b []byte, id module.PeerID)
 		r.ch <- tReceiveEvent{pi, b, id}
 	}
 	return false, nil
-}
-
-func (r *tReactor) OnFailure(err error, pi module.ProtocolInfo, b []byte) {
-	r.ch <- tFailureEvent{err, pi, b}
 }
 
 func (r *tReactor) OnJoin(id module.PeerID) {

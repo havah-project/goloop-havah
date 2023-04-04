@@ -420,6 +420,164 @@ var chainMethods = []*chainMethod{
 			scoreapi.Integer,
 		},
 	}, 2, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "getBTPNetworkTypeID",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"name", scoreapi.String, nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.Integer,
+		},
+	}, hvhmodule.RevisionBTP2, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "getBTPPublicKey",
+		scoreapi.FlagReadOnly | scoreapi.FlagExternal, 2,
+		[]scoreapi.Parameter{
+			{"address", scoreapi.Address, nil, nil},
+			{"name", scoreapi.String, nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.Bytes,
+		},
+	}, hvhmodule.RevisionBTP2, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "openBTPNetwork",
+		scoreapi.FlagExternal, 3,
+		[]scoreapi.Parameter{
+			{"networkTypeName", scoreapi.String, nil, nil},
+			{"name", scoreapi.String, nil, nil},
+			{"owner", scoreapi.Address, nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.Integer,
+		},
+	}, hvhmodule.RevisionBTP2, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "closeBTPNetwork",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"id", scoreapi.Integer, nil, nil},
+		},
+		nil,
+	}, hvhmodule.RevisionBTP2, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "sendBTPMessage",
+		scoreapi.FlagExternal, 2,
+		[]scoreapi.Parameter{
+			{"networkId", scoreapi.Integer, nil, nil},
+			{"message", scoreapi.Bytes, nil, nil},
+		},
+		nil,
+	}, hvhmodule.RevisionBTP2, 0},
+	{scoreapi.Method{
+		scoreapi.Function, "setBTPPublicKey",
+		scoreapi.FlagExternal, 2,
+		[]scoreapi.Parameter{
+			{"name", scoreapi.String, nil, nil},
+			{"pubKey", scoreapi.Bytes, nil, nil},
+		},
+		nil,
+	}, hvhmodule.RevisionBTP2, 0},
+	{scoreapi.Method{scoreapi.Function, "setBlockVoteCheckParameters",
+		scoreapi.FlagExternal, 2,
+		[]scoreapi.Parameter{
+			{"period", scoreapi.Integer, nil, nil},
+			{"allowance", scoreapi.Integer, nil, nil},
+		},
+		nil,
+	}, hvhmodule.RevisionDecentralization, 0},
+	{scoreapi.Method{scoreapi.Function, "getBlockVoteCheckParameters",
+		scoreapi.FlagReadOnly, 0,
+		nil,
+		[]scoreapi.DataType{
+			scoreapi.Dict,
+		},
+	}, hvhmodule.RevisionDecentralization, 0},
+	{scoreapi.Method{scoreapi.Function, "registerValidator",
+		scoreapi.FlagExternal, 4,
+		[]scoreapi.Parameter{
+			{"owner", scoreapi.Address, nil, nil},
+			{"nodePublicKey", scoreapi.Bytes, nil, nil},
+			{"grade", scoreapi.String, nil, nil},
+			{"name", scoreapi.String, nil, nil},
+		},
+		nil,
+	}, hvhmodule.RevisionDecentralization, 0},
+	{scoreapi.Method{scoreapi.Function, "unregisterValidator",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"owner", scoreapi.Address, nil, nil},
+		},
+		nil,
+	}, hvhmodule.RevisionDecentralization, 0},
+	{scoreapi.Method{scoreapi.Function, "getNetworkStatus",
+		scoreapi.FlagReadOnly, 0,
+		nil,
+		[]scoreapi.DataType{
+			scoreapi.Dict,
+		},
+	}, hvhmodule.RevisionDecentralization, 0},
+	{scoreapi.Method{scoreapi.Function, "setValidatorInfo",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"values", scoreapi.ListTypeOf(1, scoreapi.Struct), nil,
+				[]scoreapi.Field{
+					{"key", scoreapi.String, nil},
+					{"value", scoreapi.String, nil},
+				},
+			},
+		},
+		nil,
+	}, hvhmodule.RevisionDecentralization, 0},
+	{scoreapi.Method{scoreapi.Function, "enableValidator",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"owner", scoreapi.Address, nil, nil},
+		},
+		nil,
+	}, hvhmodule.RevisionDecentralization, 0},
+	{scoreapi.Method{scoreapi.Function, "getValidatorInfo",
+		scoreapi.FlagReadOnly, 1,
+		[]scoreapi.Parameter{
+			{"owner", scoreapi.Address, nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.Dict,
+		},
+	}, hvhmodule.RevisionDecentralization, 0},
+	{scoreapi.Method{scoreapi.Function, "getValidatorStatus",
+		scoreapi.FlagReadOnly, 1,
+		[]scoreapi.Parameter{
+			{"owner", scoreapi.Address, nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.Dict,
+		},
+	}, hvhmodule.RevisionDecentralization, 0},
+	{scoreapi.Method{scoreapi.Function, "setActiveValidatorCount",
+		scoreapi.FlagExternal, 1,
+		[]scoreapi.Parameter{
+			{"count", scoreapi.Integer, nil, nil},
+		},
+		nil,
+	}, hvhmodule.RevisionDecentralization, 0},
+	{scoreapi.Method{scoreapi.Function, "getActiveValidatorCount",
+		scoreapi.FlagReadOnly, 0,
+		nil,
+		[]scoreapi.DataType{
+			scoreapi.Integer,
+		},
+	}, hvhmodule.RevisionDecentralization, 0},
+	{scoreapi.Method{scoreapi.Function, "getValidatorsOf",
+		scoreapi.FlagReadOnly, 1,
+		[]scoreapi.Parameter{
+			{"grade", scoreapi.String, nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.Dict,
+		},
+	}, hvhmodule.RevisionDecentralization, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {

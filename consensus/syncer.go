@@ -19,13 +19,13 @@ type Engine interface {
 	fastsync.BlockProofProvider
 
 	GetCommitBlockParts(h int64) PartSet
-	GetCommitPrecommits(h int64) *voteList
-	GetPrecommits(r int32) *voteList
+	GetCommitPrecommits(h int64) *VoteList
+	GetPrecommits(r int32) *VoteList
 	// GetVotes returns union of a set of prevotes pv(i) where
 	// pvMask.Get(i) == 0 and a set of precommits pc(i) where
 	// pcMask.Get(i) == 0. For example, if the all bits for mask is 1,
 	// no votes are returned.
-	GetVotes(r int32, pvMask *bitArray, pcMask *bitArray) *voteList
+	GetVotes(r int32, pvMask *bitArray, pcMask *bitArray) *VoteList
 	GetRoundState() *peerRoundState
 
 	Height() int64
@@ -33,7 +33,7 @@ type Engine interface {
 	Step() step
 
 	ReceiveBlockPartMessage(msg *BlockPartMessage, unicast bool) (int, error)
-	ReceiveVoteListMessage(msg *voteListMessage, unicast bool) error
+	ReceiveVoteListMessage(msg *VoteListMessage, unicast bool) error
 	ReceiveBlock(br fastsync.BlockResult)
 }
 
@@ -93,7 +93,7 @@ func (p *peer) doSync() (module.ProtocolInfo, Message) {
 
 	if p.Height < e.Height() || (p.Height == e.Height() && e.Step() >= stepCommit) {
 		if p.BlockPartsMask == nil {
-			var vl *voteList
+			var vl *VoteList
 			if p.Height == e.Height() {
 				// send prevotes to prevent the peer from entering precommit
 				// without polka and sending nil precommit
@@ -150,7 +150,7 @@ func (p *peer) doSync() (module.ProtocolInfo, Message) {
 		p.log.Tracef("Votes for round %v\n", e.Round())
 		return ProtoVoteList, msg
 	} else if p.Round < e.Round() {
-		vl := e.GetVotes(e.Round() - 1, p.PrevotesMask, p.PrecommitsMask)
+		vl := e.GetVotes(e.Round()-1, p.PrevotesMask, p.PrecommitsMask)
 		msg := newVoteListMessage()
 		msg.VoteList = vl
 		p.peerRoundState = nil
@@ -338,7 +338,7 @@ func (s *syncer) OnReceive(sp module.ProtocolInfo, bs []byte,
 				p.setRoundState(&m.peerRoundState)
 			}
 		}
-	case *voteListMessage:
+	case *VoteListMessage:
 		err = s.engine.ReceiveVoteListMessage(m, true)
 		if err != nil {
 			return false, err
@@ -349,21 +349,6 @@ func (s *syncer) OnReceive(sp module.ProtocolInfo, bs []byte,
 		s.log.Warnf("received unknown message %v\n", msg)
 	}
 	return true, nil
-}
-
-func (s *syncer) OnFailure(
-	err error,
-	pi module.ProtocolInfo,
-	b []byte,
-) {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	s.log.Debugf("OnFailure: subprotocol:%v err:%+v\n", pi, err)
-
-	if !s.running {
-		return
-	}
 }
 
 func (s *syncer) OnJoin(id module.PeerID) {
@@ -441,7 +426,7 @@ func (s *syncer) doSendRoundStateMessage(id module.PeerID) {
 	if id == nil {
 		if len(s.peers) > 0 {
 			s.log.Debugf("neighborcastRoundState %v\n", msg)
-			err = s.ph.Broadcast(ProtoRoundState, bs, module.BROADCAST_NEIGHBOR)
+			err = s.ph.Broadcast(ProtoRoundState, bs, module.BroadcastNeighbor)
 		}
 	} else {
 		s.log.Debugf("sendRoundState %v To:%v\n", msg, common.HexPre(id.Bytes()))

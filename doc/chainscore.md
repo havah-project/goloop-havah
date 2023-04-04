@@ -28,17 +28,10 @@ Basic JSON-RPC APIs that ChainScore provides commonly, regardless of a specific 
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "setRevision",
-      "params": {
-        "code": "0x13"
-      }
+  "data": {
+    "method": "setRevision",
+    "params": {
+      "code": "0x13"
     }
   }
 }
@@ -62,15 +55,8 @@ Basic JSON-RPC APIs that ChainScore provides commonly, regardless of a specific 
  
  ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getRevision"
-    }
+  "data": {
+    "method": "getRevision"
   }
 }
 ```
@@ -79,8 +65,6 @@ Basic JSON-RPC APIs that ChainScore provides commonly, regardless of a specific 
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": "0x13"
 }
 ```
@@ -102,18 +86,11 @@ None
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "setStepCost",
-      "params": {
-        "type": "apiCall",
-        "cost": "0x2710"
-      }
+  "data": {
+    "method": "setStepCost",
+    "params": {
+      "type": "apiCall",
+      "cost": "0x2710"
     }
   }
 }
@@ -158,17 +135,10 @@ None
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getStepCost",
-      "params": {
-        "type": "apiCall"
-      }
+  "data": {
+    "method": "getStepCost",
+    "params": {
+      "type": "apiCall"
     }
   }
 }
@@ -178,8 +148,6 @@ None
  
  ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": "0x2710"
 }
 ```
@@ -202,15 +170,8 @@ None
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getStepCosts"
-    }
+  "data": {
+    "method": "getStepCosts"
   }
 }
 ```
@@ -219,8 +180,6 @@ None
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": {
     "schema": "0x1",
     "default": "0x186a0",
@@ -259,18 +218,11 @@ None
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "setMaxStepLimit",
-      "params": {
-        "contextType": "query",
-        "limit": "0x2faf080"
-      }
+  "data": {
+    "method": "setMaxStepLimit",
+    "params": {
+      "contextType": "query",
+      "limit": "0x2faf080"
     }
   }
 }
@@ -295,17 +247,10 @@ None
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getMaxStepLimit",
-      "params": {
-        "contextType": "invoke"
-      }
+  "data": {
+    "method": "getMaxStepLimit",
+    "params": {
+      "contextType": "invoke"
     }
   }
 }
@@ -315,8 +260,6 @@ None
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": "0x9502f900"
 }
 ```
@@ -340,17 +283,10 @@ None
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "setStepPrice",
-      "params": {
-        "price": "0x2e90edd00"
-      }
+  "data": {
+    "method": "setStepPrice",
+    "params": {
+      "price": "0x2e90edd00"
     }
   }
 }
@@ -374,15 +310,8 @@ None
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getStepPrice"
-    }
+  "data": {
+    "method": "getStepPrice"
   }
 }
 ```
@@ -391,8 +320,6 @@ None
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": "0x2e90edd00"
 }
 ```
@@ -413,15 +340,8 @@ None
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000001",
-    "dataType": "call",
-    "data": {
-      "method": "getServiceConfig"
-    }
+  "data": {
+    "method": "getServiceConfig"
   }
 }
 ``` 
@@ -430,8 +350,6 @@ None
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": "0x1"
 }  
 ```
@@ -468,18 +386,11 @@ None
 
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1234,
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "setScoreOwner",
-      "params": {
-        "score": "cx8d3ef83a63d8bbd3f08c4a8b8a18fbae13368b40",
-        "owner": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
-      }
+  "data": {
+    "method": "setScoreOwner",
+    "params": {
+      "score": "cx8d3ef83a63d8bbd3f08c4a8b8a18fbae13368b40",
+      "owner": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
     }
   }
 }
@@ -504,17 +415,10 @@ None
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getScoreOwner",
-      "params": {
-        "score": "cx8d3ef83a63d8bbd3f08c4a8b8a18fbae13368b40"
-      }
+  "data": {
+    "method": "getScoreOwner",
+    "params": {
+      "score": "cx8d3ef83a63d8bbd3f08c4a8b8a18fbae13368b40"
     }
   }
 }
@@ -524,8 +428,6 @@ None
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
 }
 ```
@@ -551,17 +453,10 @@ None
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "setTimestampThreshold",
-      "params": {
-        "threshold": "0x493e0"
-      }
+  "data": {
+    "method": "setTimestampThreshold",
+    "params": {
+      "threshold": "0x493e0"
     }
   }
 }
@@ -585,15 +480,8 @@ None
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getTimestampThreshold"
-    }
+  "data": {
+    "method": "getTimestampThreshold"
   }
 }
 ```
@@ -602,8 +490,6 @@ None
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": "0x493e0"
 }
 ```
@@ -626,17 +512,10 @@ None
  
  ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "addDeployer",
-      "params": {
-        "address": "hx0123456789012345678901234567890123456789"
-      }
+  "data": {
+    "method": "addDeployer",
+    "params": {
+      "address": "hx0123456789012345678901234567890123456789"
     }
   }
 }
@@ -661,17 +540,10 @@ None
 
  ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "removeDeployer",
-      "params": {
-        "address": "hx0123456789012345678901234567890123456789"
-      }
+  "data": {
+    "method": "removeDeployer",
+    "params": {
+      "address": "hx0123456789012345678901234567890123456789"
     }
   }
 }
@@ -695,17 +567,10 @@ None
 
  ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "isDeployer",
-      "params": {
-        "address": "hx0123456789012345678901234567890123456789"
-      }
+  "data": {
+    "method": "isDeployer",
+    "params": {
+      "address": "hx0123456789012345678901234567890123456789"
     }
   }
 }
@@ -715,8 +580,6 @@ None
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": "0x1"
 }
 ``` 
@@ -739,15 +602,8 @@ None
 
  ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getDeployers"
-    }
+  "data": {
+    "method": "getDeployers"
   }
 }
 ```
@@ -756,8 +612,6 @@ None
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": [
     "hx0123456789012345678901234567890123456789",
     "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
@@ -783,17 +637,10 @@ None
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "grantValidator",
-      "params": {
-        "address": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
-      }
+  "data": {
+    "method": "grantValidator",
+    "params": {
+      "address": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
     }
   }
 }
@@ -818,17 +665,10 @@ None
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "revokeValidator",
-      "params": {
-        "address": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
-      }
+  "data": {
+    "method": "revokeValidator",
+    "params": {
+      "address": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
     }
   }
 }
@@ -852,15 +692,8 @@ None
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getValidators"
-    }
+  "data": {
+    "method": "getValidators"
   }
 }
 ```
@@ -869,8 +702,6 @@ None
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": [
     "hx3ece50aaa01f7c4d128c029d569dd86950c34215",
     "hxd55474243722deb1333480583cb01b38e04b90d7",
@@ -898,17 +729,10 @@ None
  
  ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "setRoundLimitFactor",
-      "params": {
-        "factor": "0x3"
-      }
+  "data": {
+    "method": "setRoundLimitFactor",
+    "params": {
+      "factor": "0x3"
     }
   }
 }
@@ -932,15 +756,8 @@ None
  
  ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getRoundLimitFactor"
-    }
+  "data": {
+    "method": "getRoundLimitFactor"
   }
 }
 ```
@@ -949,8 +766,6 @@ None
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": "0x3"
 }
 ```
@@ -976,17 +791,10 @@ HAVAH-specific JSON-RPC APIs
  
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1234,
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "startRewardIssue",
-      "params": {
-        "height": "0x64"
-      }
+  "data": {
+    "method": "startRewardIssue",
+    "params": {
+      "height": "0x64"
     }
   }
 }
@@ -1011,17 +819,10 @@ HAVAH-specific JSON-RPC APIs
  
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1234,
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "addPlanetManager",
-      "params": {
-        "address": "hx0123456789012345678901234567890123456789"
-      }
+  "data": {
+    "method": "addPlanetManager",
+    "params": {
+      "address": "hx0123456789012345678901234567890123456789"
     }
   }
 }
@@ -1046,17 +847,10 @@ HAVAH-specific JSON-RPC APIs
  
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1234,
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "removePlanetManager",
-      "params": {
-        "address": "hx0123456789012345678901234567890123456789"
-      }
+  "data": {
+    "method": "removePlanetManager",
+    "params": {
+      "address": "hx0123456789012345678901234567890123456789"
     }
   }
 }
@@ -1080,17 +874,10 @@ HAVAH-specific JSON-RPC APIs
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "isPlanetManager",
-      "params": {
-        "address": "hx8f21e5c54f016b6a5d5fe65486908592151a7c57"
-      }
+  "data": {
+    "method": "isPlanetManager",
+    "params": {
+      "address": "hx8f21e5c54f016b6a5d5fe65486908592151a7c57"
     }
   }
 }
@@ -1100,8 +887,6 @@ HAVAH-specific JSON-RPC APIs
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": "0x1"
 }
 ```
@@ -1116,7 +901,7 @@ HAVAH-specific JSON-RPC APIs
 
 | Key | VALUE Type | Required | Description           |
 |:----|:-----------|:---------|:----------------------|
-| -   | T_BOOL     | true     | true(0x0), false(0x1) |
+| -   | T_BOOL     | true     | false(0x0), true(0x1) |
 
 ### registerPlanet(id int, isPrivate bool, isCompany bool, owner Address, usdt int, price int)
 
@@ -1127,22 +912,15 @@ HAVAH-specific JSON-RPC APIs
  
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1234,
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "registerPlanet",
-      "params": {
-        "id": "0x1",
-        "isPrivate": "0x0",
-        "isCompany": "0x0",
-        "owner": "hx8f21e5c54f016b6a5d5fe65486908592151a7c57",
-        "usdt": "0x12a05f200", 
-        "price": "0xa968163f0a57b400000"
-      }
+  "data": {
+    "method": "registerPlanet",
+    "params": {
+      "id": "0x1",
+      "isPrivate": "0x0",
+      "isCompany": "0x0",
+      "owner": "hx8f21e5c54f016b6a5d5fe65486908592151a7c57",
+      "usdt": "0x12a05f200", 
+      "price": "0xa968163f0a57b400000"
     }
   }
 }
@@ -1171,17 +949,10 @@ HAVAH-specific JSON-RPC APIs
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getPlanetInfo",
-      "params": {
-        "id": "0x1"
-      }
+  "data": {
+    "method": "getPlanetInfo",
+    "params": {
+      "id": "0x1"
     }
   }
 }
@@ -1191,8 +962,6 @@ HAVAH-specific JSON-RPC APIs
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": {
     "isCompany": "0x0",
     "isPrivate": "0x0",
@@ -1231,17 +1000,10 @@ HAVAH-specific JSON-RPC APIs
  
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1234,
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "unregisterPlanet",
-      "params": {
-        "id": "0x1"
-      }
+  "data": {
+    "method": "unregisterPlanet",
+    "params": {
+      "id": "0x1"
     }
   }
 }
@@ -1270,18 +1032,11 @@ HAVAH-specific JSON-RPC APIs
  
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1234,
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "setPlannetOwner",
-      "params": {
-        "id": "0x1",
-        "owner": "hx0123456789012345678901234567890123456789"
-      }
+  "data": {
+    "method": "setPlannetOwner",
+    "params": {
+      "id": "0x1",
+      "owner": "hx0123456789012345678901234567890123456789"
     }
   }
 }
@@ -1310,17 +1065,10 @@ HAVAH-specific JSON-RPC APIs
  
 ```json
 {
-  "id": 1234,
-  "jsonrpc": "2.0",
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "reportPlanetWork",
-      "params": {
-        "id": "0x1"
-      }
+  "data": {
+    "method": "reportPlanetWork",
+    "params": {
+      "id": "0x1"
     }
   }
 }
@@ -1351,17 +1099,10 @@ HAVAH-specific JSON-RPC APIs
  
 ```json
 {
-  "jsonrpc": "2.0",
-  "id": 1234,
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "claimPlanetReward",
-      "params": {
-        "ids": ["0x1", "0x2", "0x10"]
-      }
+  "data": {
+    "method": "claimPlanetReward",
+    "params": {
+      "ids": ["0x1", "0x2", "0x10"]
     }
   }
 }
@@ -1390,17 +1131,10 @@ HAVAH-specific JSON-RPC APIs
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getRewardInfoOf",
-      "params": {
-        "id": "0x1"
-      }
+  "data": {
+    "method": "getRewardInfoOf",
+    "params": {
+      "id": "0x1"
     }
   }
 }
@@ -1410,8 +1144,6 @@ HAVAH-specific JSON-RPC APIs
  
  ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": {
     "height": "0x3e8",
     "id": "0x1",
@@ -1432,7 +1164,7 @@ HAVAH-specific JSON-RPC APIs
 
 | Key       | VALUE Type | Required | Description                                               |
 |:----------|:-----------|:---------|:----------------------------------------------------------|
-| height    | T_INT      | true     | Current block height                                      |
+| height    | T_INT      | true     | Block height of state                                     |
 | id        | T_INT      | true     | Planet ID                                                 |
 | total     | T_INT      | true     | Total accumulated rewards until now                       |
 | remain    | T_INT      | true     | Difference between Total Rewards and Claimed Rewards      |
@@ -1442,21 +1174,14 @@ HAVAH-specific JSON-RPC APIs
 
 * Returns the overall reward information
 * This call returns an error response before the start of the first term
-* It is not allowed to call this function via intercall on query mode
+* It is not allowed to call this function via inter-call on query mode
 
 > Request
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getRewardInfo"
-    }
+  "data": {
+    "method": "getRewardInfo"
   }
 }
 ```
@@ -1465,8 +1190,6 @@ HAVAH-specific JSON-RPC APIs
 
  ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": {
     "height": "0x3e8",
     "termSequence": "0x0",
@@ -1483,7 +1206,7 @@ None
 
 | Key                   | VALUE Type | Required | Description                                  |
 |:----------------------|:-----------|:---------|:---------------------------------------------|
-| height                | T_INT      | true     | Current block height                         |
+| height                | T_INT      | true     | Block height of state                        |
 | termSequence          | T_INT      | false    | Sequence of a term starting with 0           |
 | rewardPerActivePlanet | T_INT      | false    | Estimated reward per active planet each term |
 
@@ -1498,16 +1221,8 @@ None
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "from": "hxbe258ceb872e08851f1f59694dac2558708ece11",
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getIssueInfo"
-    }
+  "data": {
+    "method": "getIssueInfo"
   }
 }
 ```
@@ -1516,8 +1231,6 @@ None
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": {
     "height": "0x41",
     "issueReductionCycle": "0x168",
@@ -1536,7 +1249,7 @@ None
 
 | Key                   | VALUE Type | Required | Description                                            |
 |:----------------------|:-----------|:---------|:-------------------------------------------------------|
-| height                | T_INT      | true     | Current block height                                   |
+| height                | T_INT      | true     | Block height of state                                  |
 | termPeriod            | T_INT      | true     | Coin issuing term period (unit: block)                 |
 | issueReductionCycle   | T_INT      | true     | issueAmount is reduced at a fixed rate every cycle     |
 | issueStart            | T_INT      | false    | BlockHeight when issuing coin will begin               |
@@ -1553,15 +1266,8 @@ None
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getUSDTPrice"
-    }
+  "data": {
+    "method": "getUSDTPrice"
   }
 }
 ```
@@ -1570,8 +1276,6 @@ None
  
  ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": "0x8ac7230489e80000"
 }
 ```
@@ -1596,17 +1300,10 @@ None
 
 ```json
 {
-  "id": 1234,
-  "jsonrpc": "2.0",
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "setUSDTPrice",
-      "params": {
-        "price": "0x8ac7230489e80000"
-      }
+  "data": {
+    "method": "setUSDTPrice",
+    "params": {
+      "price": "0x8ac7230489e80000"
     }
   }
 }
@@ -1669,18 +1366,11 @@ N/A
 
 ```json
 {
-  "id": 1234,
-  "jsonrpc": "2.0",
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "setPrivateClaimableRate",
-      "params": {
-        "numerator": "0x1",
-        "denominator": "0x18"
-      }
+  "data": {
+    "method": "setPrivateClaimableRate",
+    "params": {
+      "numerator": "0x1",
+      "denominator": "0x18"
     }
   }
 }
@@ -1710,15 +1400,8 @@ N/A
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getPrivateClaimableRate"
-    }
+  "data": {
+    "method": "getPrivateClaimableRate"
   }
 }
 ```
@@ -1727,8 +1410,6 @@ N/A
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": {
     "numerator": "0x0",
     "denominator": "0x18"
@@ -1755,17 +1436,10 @@ None
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getRewardInfosOf",
-      "params": {
-        "ids": ["0x1", "0x2", "0x3"]
-      }
+  "data": {
+    "method": "getRewardInfosOf",
+    "params": {
+      "ids": ["0x1", "0x2", "0x3"]
     }
   }
 }
@@ -1775,8 +1449,6 @@ None
  
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": {
     "height": "0x20e",
     "rewardInfos": [
@@ -1808,7 +1480,7 @@ None
 
 | Key         | VALUE Type      | Required | Description                              |
 |:------------|:----------------|:---------|:-----------------------------------------|
-| height      | T_INT           | true     | Current block height                     |
+| height      | T_INT           | true     | Block height of state                    |
 | rewardInfos | []T_REWARD_INFO | true     | Reward information list of given planets |
 
 > T_REWARD_INFO
@@ -1831,17 +1503,10 @@ None
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_sendTransaction",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "withdrawLostTo",
-      "params": {
-        "to": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
-      }
+  "data": {
+    "method": "withdrawLostTo",
+    "params": {
+      "to": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
     }
   }
 }
@@ -1870,15 +1535,8 @@ None
 
 ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
-  "method": "icx_call",
-  "params": {
-    "to": "cx0000000000000000000000000000000000000000",
-    "dataType": "call",
-    "data": {
-      "method": "getLost"
-    }
+  "data": {
+    "method": "getLost"
   }
 }
 ```
@@ -1887,8 +1545,6 @@ None
  
  ```json
 {
-  "id": 1,
-  "jsonrpc": "2.0",
   "result": "0x8ac7230489e80000"
 }
 ```
@@ -1902,6 +1558,480 @@ None
 | Key | VALUE Type | Required | Description          |
 |:----|:-----------|:---------|:---------------------|
 | -   | T_INT      | true     | Amount of lost coins |
+
+### registerValidator(owner Address, nodePublicKey bytes, grade string, name string)
+
+* Registers a validator
+* Called by Governance SCORE
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "data": {
+    "method": "registerValidator",
+    "params": {
+      "owner": "hx3ece50aaa01f7c4d128c029d569dd86950c34215",
+      "nodePublicKey": "0x03921d018c1302f9be67e0aca8e583f8970af127e18727d68af4e7caa81c8eb2b1",
+      "grade": "sub",
+      "name": "ABC node"  
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key           | VALUE Type | Required | Description        |
+|:--------------|:-----------|:---------|:-------------------|
+| owner         | T_ADDRESS  | true     | Node owner address |
+| nodePublicKey | T_BYTES    | true     | Node publicKey     |
+| grade         | T_STRING   | true     | `sub`, `main`      | 
+| name          | T_STRING   | true     | Node name          |
+
+#### Returns
+
+`T_HASH` - txHash
+
+### unregisterValidator(owner Address)
+
+* Unregisters a validator
+* Called by Governance SCORE or validator owner
+* Once a validator has been unregistered, the node cannot be a validator anymore
+* Since `revision 4`
+
+> Request
+ 
+```json
+{
+  "data": {
+    "method": "unregisterValidator",
+    "params": {
+      "owner": "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
+    } 
+  }
+}
+```
+
+#### Parameters
+
+| Key   | VALUE Type | Required | Description        |
+|:------|:-----------|:---------|:-------------------|
+| owner | T_ADDRESS  | true     | Node owner address |
+
+#### Returns
+
+`T_HASH` - txHash
+
+### setBlockVoteCheckParameters(period int, allowance int)
+
+* Sets `blockVoteCheckPeriod` and `nonVoteAllowance` parameters used after decentralization
+* Changed parameters are applied at the beginning of next term.
+* Called by Governance SCORE
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "data": {
+    "method": "setBlockVoteCheckParameters",
+    "params": {
+      "period": "0x64",
+      "allowance": "0x5"
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key       | VALUE Type | Required | Description                                                              |
+|:----------|:-----------|:---------|:-------------------------------------------------------------------------|
+| period    | T_INT      | true     | block vote checking period in blocks                                     |
+| allowance | T_INT      | true     | A validator gets penalized if its nonVotes is larger than this allowance |
+
+#### Returns
+
+`T_HASH` - txHash
+
+### getBlockVoteCheckParameters() dict
+
+* Returns `blockVoteCheckPeriod` and `nonVoteAllowance` parameters
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "data": {
+    "method": "getBlockVoteCheckParameters"
+  }
+}
+```
+
+> Response
+
+ ```json
+{
+  "result": {
+    "blockVoteCheckPeriod": "0x1e",
+    "nonVoteAllowance": "0x14"
+  }
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+| Key                  | VALUE Type | Required | Description                                                              |
+|:---------------------|:-----------|:---------|:-------------------------------------------------------------------------|
+| blockVoteCheckPeriod | T_INT      | true     | block vote checking period in blocks                                     |
+| nonVoteAllowance     | T_INT      | true     | A validator gets penalized if its nonVotes is larger than this allowance |
+
+### getNetworkStatus() dict
+
+* Returns network status
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "data": {
+    "method": "getNetworkStatus"
+  }
+}
+```
+
+> Response
+
+ ```json
+{
+  "result": {
+    "height": "0x3e8",
+    "termStart": "0x3e0",
+    "mode": "0x1",
+    "blockVoteCheckPeriod": "0x1e",
+    "nonVoteAllowance": "0x14",
+    "activeValidatorCount": "0xa"
+  }
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+| Key                  | VALUE Type | Required | Description                                                            |
+|:---------------------|:-----------|:---------|:-----------------------------------------------------------------------|
+| height               | T_INT      | true     | Block height of state                                                  |
+| termStart            | T_INT      | true     | Block height when this term starts                                     |
+| mode                 | T_INT      | true     | Network mode. init(0), decentralization(1)                             |
+| blockVoteCheckPeriod | T_INT      | true     | Period in blocks of block vote check                                   |
+| nonVoteAllowance     | T_INT      | true     | Validator gets penalized if its nonVotes is larger than this allowance |
+| activeValidatorCount | T_INT      | true     | Maximum number of active validators                                    |
+
+### setValidatorInfo(values []{key string, value string})
+
+* Changes some properties of a validator info
+* Owners can update as many fields in validator information as they want at once
+* Called by validator owner
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "data": {
+    "method": "setValidatorInfo",
+    "params": [
+      {
+        "key": "nodePublicKey",
+        "value": "0x03921d018c1302f9be67e0aca8e583f8970af127e18727d68af4e7caa81c8eb2b1"
+      },
+      {
+        "key": "url",
+        "value": "https://www.worldbestnode.com/details.json"
+      }
+    ]      
+  }
+}
+```
+
+#### Parameters
+
+| Key    | VALUE Type    | Required | Description                                 |
+|:-------|:--------------|:---------|:--------------------------------------------|
+| values | []T_KEY_VALUE | true     | Key/value pairs to change in validator info |
+
+> T_KEY_VALUE
+
+| Key   | VALUE Type | Required | Description                    |
+|:------|:-----------|:---------|:-------------------------------|
+| key   | T_STRING   | true     | `nodePublicKey`, `name`, `url` |
+| value | T_STRING   | true     | New value for a given key      |
+
+* If the nodePublicKey of an active validator is changed, activeValidatorSet is also changed
+* Additional values for key field would be added in the future
+
+#### Returns
+
+`T_HASH` - txHash
+
+### getValidatorInfo(owner Address) dict
+
+* Returns the information on the validator indicated by owner
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "data": {
+    "method": "getValidatorInfo",
+    "params": {
+      "owner": "hx0123456789012345678901234567890123456789"
+    }
+  }
+}
+```
+
+> Response
+
+ ```json
+{
+  "result": {
+    "height": "0x3e8",
+    "owner": "hx0123456789012345678901234567890123456789",
+    "nodePublicKey": "0x03921d018c1302f9be67e0aca8e583f8970af127e18727d68af4e7caa81c8eb2b1",
+    "node": "hx2563e6542d310a4e09f5f2851f2c497bdce45ac0",
+    "grade": "sub",
+    "name": "Excellent node",
+    "url": "https://www.excellentnode.com/details.json"
+  }
+}
+```
+
+#### Parameters
+
+| Key   | VALUE Type | Required | Description     |
+|:------|:-----------|:---------|:----------------|
+| owner | T_ADDRESS  | true     | Validator owner |
+
+#### Returns
+
+| Key           | VALUE Type | Required | Description                                    |
+|:--------------|:-----------|:---------|:-----------------------------------------------|
+| height        | T_INT      | true     | Block height of state                          |
+| owner         | T_ADDRESS  | true     | Validator owner (immutable)                    |
+| nodePublicKey | T_BYTES    | true     | Compressed node publicKey                      |
+| node          | T_ADDRESS  | true     | Node address derived from nodePublicKey        |
+| grade         | T_STRING   | true     | `sub`, `main`                                  |
+| name          | T_STRING   | true     | Validator name                                 |
+| url           | T_STRING   | true     | URL to return validator details in json format |
+
+* The json format of validator details will be described in a separate document.
+
+### enableValidator(owner Address)
+
+* Enable a disabled validator indicated by owner, resetting its nonVotes to 0
+* If it is called by Governance SCORE, then the enableCount of validator will be reverted to initial value
+* Initial enableCount: `3`
+* Called by Governance SCORE or validator owner
+* Since `revision 4` 
+ 
+> Request
+
+```json
+{
+  "data": {
+    "method": "enableValidator",
+    "params": {
+      "owner": "hx0123456789012345678901234567890123456789"
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key   | VALUE Type | Required | Description     |
+|:------|:-----------|:---------|:----------------|
+| owner | T_ADDRESS  | true     | Validator owner |
+
+#### Returns
+
+`T_HASH` - txHash
+
+### getValidatorStatus(owner Address) dict
+
+* Returns the validator status indicated by owner
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "data": {
+    "method": "getValidatorStatus",
+    "params": {
+      "owner": "hx0123456789012345678901234567890123456789"
+    }
+  }
+}
+```
+
+> Response
+
+```json
+{
+  "result": {
+    "height": "0x3e8",
+    "flags": "0x0",
+    "nonVotes": "0x0",
+    "enableCount": "0x3"
+  }
+}
+```
+
+#### Parameters
+
+| Key   | VALUE Type | Required | Description     |
+|:------|:-----------|:---------|:----------------|
+| owner | T_ADDRESS  | true     | Validator owner |
+
+#### Returns
+
+| Key         | VALUE Type | Required | Description                                                          |
+|:------------|:-----------|:---------|:---------------------------------------------------------------------|
+| height      | T_INT      | true     | Block height of state                                                |
+| flags       | T_INT      | true     | Bitwise flags: disabled(1), disqualified(2)                          |
+| nonVotes    | T_INT      | true     | Number of times that a validator did not participate in a block vote |
+| enableCount | T_INT      | true     | Number of times that a validator can be enabled                      |
+
+#### Returns
+
+`T_HASH` - txHash
+
+### setActiveValidatorCount(count int)
+
+* Sets the maximum number of active validators participating in block validation
+* Called by Governance SCORE
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "data": {
+    "method": "setActiveValidatorCount",
+    "params": {
+      "count": "0xa"
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key   | VALUE Type | Required | Description                                                           |
+|:------|:-----------|:---------|:----------------------------------------------------------------------|
+| count | T_INT      | true     | Maximum number of active validators participating in block validation |
+
+#### Returns
+
+`T_HASH` - txHash
+
+### getActiveValidatorCount() int
+
+* Returns the maximum number of active validators participating in block validation
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "data": {
+    "method": "getActiveValidatorCount"
+  }
+}
+```
+
+> Response
+
+```json
+{
+  "result": "0xa"
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+| Key | VALUE Type | Required | Description                                            |
+|:----|:-----------|:---------|:-------------------------------------------------------|
+| -   | T_INT      | true     | Number of validators participating in block validation |
+
+### getValidatorsOf(grade string) dict
+
+* Returns the owner addresses of registered validators filtered by `grade`
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "data": {
+    "method": "getValidatorsOf",
+    "params": {
+      "grade": "sub"
+    }
+  }
+}
+```
+
+> Response
+
+```json
+{
+  "result": {
+    "height": "0x3e8",
+    "grade": "sub",
+    "validators": [
+      "hxcb90235946c8ab02e24a03b898e0994ddb78d13a",
+      "hxe3979d6118e437cff510ac6c989fe7c48162a32f",
+      "hxe6710e03332914d97bb7dff3ee6831a03cd0a7ae",
+      "hxcb35f82a3a943e040ae2b9ab2baa2118781b2bc9",
+      "hxf5be47d975a2a71a22156713ab58ec5e2338ba34"
+    ]
+  }
+}
+```
+
+#### Parameters
+
+None
+
+#### Returns
+
+| Key        | VALUE Type  | Required | Description                                                 |
+|:-----------|:------------|:---------|:------------------------------------------------------------|
+| height     | T_INT       | true     | Block height of state                                       |
+| grade      | T_STRING    | true     | Grade of validators: `sub`, `main`, `all`                   |
+| validators | []T_ADDRESS | true     | Owner addresses of registered validators with a given grade |
+
+* `all` means all validators regardless of their grades
+* Unregistered validators are not contained in `validators` value
 
 ## EventLogs
 

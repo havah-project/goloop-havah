@@ -134,7 +134,7 @@ func (es *ExtensionStateImpl) Reset(ess state.ExtensionSnapshot) {
 
 // ClearCache is called before executing the first transaction in a block and at the end of base transaction
 func (es *ExtensionStateImpl) ClearCache() {
-	// es.state.ClearCache()
+	es.state.ClearCache()
 }
 
 func (es *ExtensionStateImpl) InitPlatformConfig(cfg *PlatformConfig) error {
@@ -159,7 +159,17 @@ func (es *ExtensionStateImpl) NewBaseTransactionData(height int64) map[string]in
 
 	issueAmount := es.state.GetIssueAmount(height, issueStart)
 	if issueAmount == nil || issueAmount.Sign() <= 0 {
-		return nil
+		termPeriod := es.GetTermPeriod()
+		_, blockIndex := hvhstate.GetTermSequenceAndBlockIndex(height, issueStart, termPeriod)
+		if !es.IsItTimeToCheckBlockVote(blockIndex) {
+			return nil
+		}
+
+		if issueAmount == nil {
+			issueAmount = hvhmodule.BigIntZero
+		} else if issueAmount.Sign() < 0 {
+			es.logger.Panicf("Invalid issueAmount: %d", issueAmount)
+		}
 	}
 
 	jso := map[string]interface{}{
@@ -557,6 +567,146 @@ func (es *ExtensionStateImpl) WithdrawLostTo(cc hvhmodule.CallContext, to module
 
 func (es *ExtensionStateImpl) GetLost() (*big.Int, error) {
 	return es.state.GetLost()
+}
+
+func (es *ExtensionStateImpl) SetBlockVoteCheckParameters(period, allowance int64) error {
+	return es.state.SetBlockVoteCheckParameters(period, allowance)
+}
+
+func (es *ExtensionStateImpl) GetBlockVoteCheckParameters(cc hvhmodule.CallContext) (map[string]interface{}, error) {
+	return map[string]interface{}{
+		"height":               cc.BlockHeight(),
+		"blockVoteCheckPeriod": es.state.GetBlockVoteCheckPeriod(),
+		"nonVoteAllowance":     es.state.GetNonVoteAllowance(),
+	}, nil
+}
+
+func (es *ExtensionStateImpl) GetBlockVoteCheckPeriod() int64 {
+	return es.state.GetBlockVoteCheckPeriod()
+}
+
+func (es *ExtensionStateImpl) RegisterValidator(
+	owner module.Address, nodePublicKey []byte, gradeName, name string) error {
+	grade := hvhstate.StringToGrade(gradeName)
+	if grade == hvhstate.GradeNone {
+		return scoreresult.InvalidParameterError.Errorf("Invalid grade: %s", gradeName)
+	}
+	return es.state.RegisterValidator(owner, nodePublicKey, grade, name)
+}
+
+func (es *ExtensionStateImpl) UnregisterValidator(owner module.Address) error {
+	return es.state.UnregisterValidator(owner)
+}
+
+func (es *ExtensionStateImpl) GetNetworkStatus(cc hvhmodule.CallContext) (map[string]interface{}, error) {
+	var jso map[string]interface{}
+	height := cc.BlockHeight()
+	ns, err := es.state.GetNetworkStatus()
+	if err == nil {
+		issueStart := es.state.GetIssueStart()
+		termPeriod := es.state.GetTermPeriod()
+		if termStart, _, err := hvhstate.GetTermStartAndIndex(height, issueStart, termPeriod); err == nil {
+			jso = ns.ToJSON()
+			jso["height"] = height
+			jso["termStart"] = termStart
+		}
+	}
+	return jso, err
+}
+
+func (es *ExtensionStateImpl) SetValidatorInfo(cc hvhmodule.CallContext, values []map[string]interface{}) error {
+	m := make(map[string]string, len(values))
+	for _, kvPair := range values {
+		key := kvPair["key"].(string)
+		value := kvPair["value"].(string)
+		m[key] = value
+	}
+	return es.state.SetValidatorInfo(cc.From(), m)
+}
+
+func (es *ExtensionStateImpl) EnableValidator(cc hvhmodule.CallContext, owner module.Address) error {
+	from := cc.From()
+	if from == nil {
+		return scoreresult.InvalidParameterError.Errorf("Invalid argument: from=%s", from)
+	}
+	if owner == nil || owner.IsContract() {
+		return scoreresult.InvalidParameterError.Errorf("Invalid argument: owner=%s", owner)
+	}
+	isCallerGov := from.Equal(cc.Governance())
+	if !isCallerGov && !from.Equal(owner) {
+		return scoreresult.AccessDeniedError.Errorf("No permission: from=%s owner=%s", from, owner)
+	}
+	return es.state.EnableValidator(owner, isCallerGov)
+}
+
+func (es *ExtensionStateImpl) GetValidatorInfo(
+	cc hvhmodule.CallContext, owner module.Address) (map[string]interface{}, error) {
+	height := cc.BlockHeight()
+	es.Logger().Debugf("GetValidatorInfo() start: height=%d owner=%s", height, owner)
+
+	var jso map[string]interface{}
+	vi, err := es.state.GetValidatorInfo(owner)
+	if err == nil {
+		jso = vi.ToJSON()
+		jso["height"] = height
+	}
+
+	es.Logger().Debugf("GetValidatorInfo() end: owner=%s err=%v", owner, err)
+	return jso, err
+}
+
+func (es *ExtensionStateImpl) GetValidatorStatus(
+	cc hvhmodule.CallContext, owner module.Address) (map[string]interface{}, error) {
+	height := cc.BlockHeight()
+	es.Logger().Debugf("GetValidatorStatus() start: height=%d owner=%s", height, owner)
+
+	var jso map[string]interface{}
+	vs, err := es.state.GetValidatorStatus(owner)
+	if err == nil {
+		jso = vs.ToJSON()
+		jso["height"] = height
+	}
+
+	es.Logger().Debugf("GetValidatorStatus() end: owner=%s err=%v", owner, err)
+	return jso, err
+}
+
+func (es *ExtensionStateImpl) SetActiveValidatorCount(count int64) error {
+	if !(count > 0 && count < 10_000) {
+		return scoreresult.InvalidParameterError.Errorf("Invalid count: %d", count)
+	}
+
+	es.Logger().Debugf("SetActiveValidatorCount() start: count=%d", count)
+	err := es.state.SetActiveValidatorCount(count)
+	es.Logger().Debugf("SetActiveValidatorCount() end: count=%d err=%v", count, err)
+	return err
+}
+
+func (es *ExtensionStateImpl) GetValidatorCount() (int64, error) {
+	return es.state.GetActiveValidatorCount(), nil
+}
+
+func (es *ExtensionStateImpl) GetValidatorsOf(
+	cc hvhmodule.CallContext, gradeFilterName string) (map[string]interface{}, error) {
+	height := cc.BlockHeight()
+	gradeFilter := hvhstate.StringToGradeFilter(gradeFilterName)
+	if gradeFilter == hvhstate.GradeFilterNone {
+		return nil, scoreresult.InvalidParameterError.Errorf("Invalid grade: %s", gradeFilterName)
+	}
+
+	if validators, err := es.state.GetValidatorsOf(gradeFilter); err == nil {
+		addrs := make([]interface{}, len(validators))
+		for i, v := range validators {
+			addrs[i] = v
+		}
+		return map[string]interface{}{
+			"height":     height,
+			"grade":      gradeFilterName,
+			"validators": addrs,
+		}, nil
+	} else {
+		return nil, err
+	}
 }
 
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {

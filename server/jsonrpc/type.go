@@ -19,11 +19,14 @@ func (hs HexBytes) Bytes() []byte {
 type HexInt string
 
 func (i HexInt) ParseInt(bits int) (int64, error) {
+	if len(i) == 0 {
+		return 0, nil
+	}
 	return intconv.ParseInt(string(i), bits)
 }
 
 func (i HexInt) Value() int64 {
-	v, err := intconv.ParseInt(string(i), 64)
+	v, err := i.Int64()
 	if err != nil {
 		return 0
 	}
@@ -31,7 +34,7 @@ func (i HexInt) Value() int64 {
 }
 
 func (i HexInt) Int64() (int64, error) {
-	return intconv.ParseInt(string(i), 64)
+	return i.ParseInt(64)
 }
 
 func (i HexInt) BigInt() (*big.Int, error) {
@@ -41,6 +44,12 @@ func (i HexInt) BigInt() (*big.Int, error) {
 	} else {
 		return bi, nil
 	}
+}
+
+type HexBool string
+
+func (b HexBool) Bool() (bool, error) {
+	return common.ParseHexBool(string(b))
 }
 
 type Address string

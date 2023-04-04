@@ -18,6 +18,7 @@ package test
 
 import (
 	"github.com/icon-project/goloop/common/db"
+	"github.com/icon-project/goloop/consensus"
 	"github.com/icon-project/goloop/module"
 )
 
@@ -31,8 +32,16 @@ func UseConfig(cf2 *FixtureConfig) FixtureOption {
 
 func UseDB(dbase db.Database) FixtureOption {
 	return UseConfig(&FixtureConfig{
-		Dbase: func() db.Database{
+		Dbase: func() db.Database {
 			return dbase
+		},
+	})
+}
+
+func UseWAL(wal consensus.WALManager) FixtureOption {
+	return UseConfig(&FixtureConfig{
+		WAL: func() consensus.WALManager {
+			return wal
 		},
 	})
 }
@@ -40,17 +49,28 @@ func UseDB(dbase db.Database) FixtureOption {
 // AddValidatorNodes option makes n validators and the first validator becomes
 // default node
 func AddValidatorNodes(n int) FixtureOption {
-	return UseConfig(&FixtureConfig{ AddValidatorNodes: n })
+	return UseConfig(&FixtureConfig{AddValidatorNodes: n})
 }
 
 func UseGenesis(gs string) FixtureOption {
-	return UseConfig(&FixtureConfig{ Genesis: gs })
+	return UseConfig(&FixtureConfig{Genesis: gs})
+}
+
+func UseGenesisStorage(gs module.GenesisStorage) FixtureOption {
+	return UseConfig(&FixtureConfig{
+		Genesis:        string(gs.Genesis()),
+		GenesisStorage: gs,
+	})
 }
 
 func UseWallet(w module.Wallet) FixtureOption {
-	return UseConfig(&FixtureConfig{ Wallet: w })
+	return UseConfig(&FixtureConfig{Wallet: w})
 }
 
 func AddDefaultNode(v bool) FixtureOption {
-	return UseConfig(&FixtureConfig{ AddDefaultNode: &v })
+	return UseConfig(&FixtureConfig{AddDefaultNode: &v})
+}
+
+func UseBMFactory(f func(ctx *NodeContext) module.BlockManager) FixtureOption {
+	return UseConfig(&FixtureConfig{NewBM: f})
 }

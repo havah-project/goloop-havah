@@ -17,9 +17,18 @@
 package test
 
 import (
+	"bytes"
+	"sync"
+
+	"github.com/icon-project/goloop/btp"
 	"github.com/icon-project/goloop/chain/base"
+	"github.com/icon-project/goloop/common"
+	"github.com/icon-project/goloop/common/codec"
+	"github.com/icon-project/goloop/common/containerdb"
 	"github.com/icon-project/goloop/common/db"
+	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/log"
+	"github.com/icon-project/goloop/common/merkle"
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service"
 	"github.com/icon-project/goloop/service/contract"
@@ -27,6 +36,7 @@ import (
 	"github.com/icon-project/goloop/service/scoredb"
 	"github.com/icon-project/goloop/service/state"
 	"github.com/icon-project/goloop/service/transaction"
+	"github.com/icon-project/goloop/service/txresult"
 )
 
 type ServiceManager struct {
@@ -38,9 +48,11 @@ type ServiceManager struct {
 	em               eeproxy.Manager
 	chain            module.Chain
 	tsc              *service.TxTimestampChecker
+	mu               sync.Mutex
 	emptyTXs         module.TransactionList
 	nextBlockVersion int
 	pool             []module.Transaction
+	txWaiters        []func()
 }
 
 func NewServiceManager(
@@ -68,8 +80,23 @@ func (sm *ServiceManager) TransactionFromBytes(b []byte, blockVersion int) (modu
 }
 
 func (sm *ServiceManager) ProposeTransition(parent module.Transition, bi module.BlockInfo, csi module.ConsensusInfo) (module.Transition, error) {
-	txs := transaction.NewTransactionListFromSlice(sm.dbase, sm.pool)
-	sm.pool = nil
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+
+	bk, err := sm.dbase.GetBucket(db.TransactionLocatorByHash)
+	if err != nil {
+		return nil, err
+	}
+	var filtered []module.Transaction
+	for _, t := range sm.pool {
+		bs, err := bk.Get(t.ID())
+		if bs != nil && err == nil {
+			continue
+		}
+		filtered = append(filtered, t)
+	}
+	txs := transaction.NewTransactionListFromSlice(sm.dbase, filtered)
+	sm.pool = filtered
 	return service.NewTransition(
 		parent,
 		sm.emptyTXs,
@@ -121,11 +148,35 @@ func (sm *ServiceManager) CreateSyncTransition(transition module.Transition, res
 }
 
 func (sm *ServiceManager) Finalize(transition module.Transition, opt int) error {
-	return service.FinalizeTransition(transition, opt, false)
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+
+	res := service.FinalizeTransition(transition, opt, false)
+	bk, err := sm.dbase.GetBucket(db.TransactionLocatorByHash)
+	if err != nil {
+		return err
+	}
+	var filtered []module.Transaction
+	for _, t := range sm.pool {
+		bs, err := bk.Get(t.ID())
+		if bs != nil && err == nil {
+			continue
+		}
+		filtered = append(filtered, t)
+	}
+	sm.pool = filtered
+	return res
 }
 
 func (sm *ServiceManager) WaitForTransaction(parent module.Transition, bi module.BlockInfo, cb func()) bool {
-	panic("implement me")
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+
+	if len(sm.pool) > 0 {
+		return false
+	}
+	sm.txWaiters = append(sm.txWaiters, cb)
+	return true
 }
 
 func (sm *ServiceManager) GetChainID(result []byte) (int64, error) {
@@ -191,6 +242,18 @@ func (sm *ServiceManager) GetNextBlockVersion(result []byte) int {
 	return v
 }
 
+func (sm *ServiceManager) getSystemByteStoreState(result []byte) (containerdb.BytesStoreState, error) {
+	ws, err := service.NewWorldSnapshot(sm.dbase, sm.plt, result, nil)
+	if err != nil {
+		return nil, err
+	}
+	ass := ws.GetAccountSnapshot(state.SystemID)
+	if ass == nil {
+		return containerdb.EmptyBytesStoreState, nil
+	}
+	return scoredb.NewStateStoreWith(ass), nil
+}
+
 func (sm *ServiceManager) ImportResult(result []byte, vh []byte, src db.Database) error {
 	panic("implement me")
 }
@@ -204,7 +267,19 @@ func (sm *ServiceManager) TransactionListFromHash(hash []byte) module.Transactio
 }
 
 func (sm *ServiceManager) ReceiptListFromResult(result []byte, g module.TransactionGroup) (module.ReceiptList, error) {
-	panic("implement me")
+	tr := new(transitionResult)
+	if len(result) > 0 {
+		if _, err := codec.UnmarshalFromBytes(result, tr); err != nil {
+			return nil, err
+		}
+	}
+	if g == module.TransactionGroupNormal {
+		return txresult.NewReceiptListFromHash(sm.dbase, tr.NormalReceiptHash), nil
+	} else if g == module.TransactionGroupPatch {
+		return txresult.NewReceiptListFromHash(sm.dbase, tr.PatchReceiptHash), nil
+	} else {
+		return nil, errors.Errorf("unsupported transaction group")
+	}
 }
 
 func (sm *ServiceManager) SendTransaction(result []byte, height int64, tx interface{}) ([]byte, error) {
@@ -212,7 +287,33 @@ func (sm *ServiceManager) SendTransaction(result []byte, height int64, tx interf
 	if err != nil {
 		return nil, err
 	}
+
+	locker := common.Lock(&sm.mu)
+	defer locker.Unlock()
+
+	bk, err := sm.dbase.GetBucket(db.TransactionLocatorByHash)
+	if err != nil {
+		return nil, err
+	}
+	bs, err := bk.Get(t.ID())
+	if bs != nil && err == nil {
+		return nil, errors.Errorf("Already committed TX %x", t.ID())
+	}
+
+	for _, pt := range sm.pool {
+		if bytes.Equal(pt.ID(), t.ID()) {
+			return nil, errors.Errorf("Already existing TX %x", t.ID())
+		}
+	}
 	sm.pool = append(sm.pool, t)
+	txWaiters := sm.txWaiters
+	sm.txWaiters = nil
+
+	locker.Unlock()
+
+	for _, cb := range txWaiters {
+		cb()
+	}
 	return t.ID(), nil
 }
 
@@ -240,9 +341,117 @@ func (sm *ServiceManager) SendTransactionAndWait(result []byte, height int64, tx
 }
 
 func (sm *ServiceManager) WaitTransactionResult(id []byte) (<-chan interface{}, error) {
-	panic("implement me")
+	return nil, service.ErrCommittedTransaction
+}
+
+type transitionResult struct {
+	StateHash         []byte
+	PatchReceiptHash  []byte
+	NormalReceiptHash []byte
+	ExtensionData     []byte
+	BTPData           []byte
+}
+
+func newTransitionResultFromBytes(bs []byte) (*transitionResult, error) {
+	tresult := new(transitionResult)
+	if len(bs) > 0 {
+		if _, err := codec.UnmarshalFromBytes(bs, tresult); err != nil {
+			return nil, err
+		}
+	}
+	return tresult, nil
 }
 
 func (sm *ServiceManager) ExportResult(result []byte, vh []byte, dst db.Database) error {
-	panic("implement me")
+	r, err := newTransitionResultFromBytes(result)
+	if err != nil {
+		return err
+	}
+	e := merkle.PrepareCopyContext(sm.dbase, dst)
+	txresult.NewReceiptListWithBuilder(e.Builder(), r.NormalReceiptHash)
+	txresult.NewReceiptListWithBuilder(e.Builder(), r.PatchReceiptHash)
+	ess := sm.plt.NewExtensionWithBuilder(e.Builder(), r.ExtensionData)
+	state.NewWorldSnapshotWithBuilder(e.Builder(), r.StateHash, vh, ess, r.BTPData)
+	return e.Run()
+}
+
+func (sm *ServiceManager) BTPDigestFromResult(result []byte) (module.BTPDigest, error) {
+	dh, err := service.BTPDigestHashFromResult(result)
+	if err != nil {
+		return nil, err
+	}
+	bk, err := sm.dbase.GetBucket(db.BytesByHash)
+	if err != nil {
+		return nil, err
+	}
+	digestBytes, err := bk.Get(dh)
+	if err != nil {
+		return nil, err
+	}
+	digest, err := btp.NewDigestFromBytes(digestBytes)
+	if err != nil {
+		return nil, err
+	}
+	return digest, nil
+}
+
+func (sm *ServiceManager) BTPSectionFromResult(result []byte) (module.BTPSection, error) {
+	digest, err := sm.BTPDigestFromResult(result)
+	if err != nil {
+		return nil, err
+	}
+	store, err := sm.getSystemByteStoreState(result)
+	if err != nil {
+		return nil, err
+	}
+	btpContext := state.NewBTPContext(nil, store)
+	return btp.NewSection(digest, btpContext, sm.dbase)
+}
+
+func (sm *ServiceManager) BTPNetworkFromResult(result []byte, nid int64) (module.BTPNetwork, error) {
+	sbss, err := sm.getSystemByteStoreState(result)
+	if err != nil {
+		return nil, err
+	}
+	btpContext := state.NewBTPContext(nil, sbss)
+	nw, err := btpContext.GetNetwork(nid)
+	if err != nil {
+		return nil, err
+	}
+	return nw, nil
+}
+
+func (sm *ServiceManager) BTPNetworkTypeFromResult(result []byte, ntid int64) (module.BTPNetworkType, error) {
+	sbss, err := sm.getSystemByteStoreState(result)
+	if err != nil {
+		return nil, err
+	}
+	btpContext := state.NewBTPContext(nil, sbss)
+	nt, err := btpContext.GetNetworkType(ntid)
+	if err != nil {
+		return nil, err
+	}
+	return nt, nil
+}
+
+func (sm *ServiceManager) BTPNetworkTypeIDsFromResult(result []byte) ([]int64, error) {
+	sbss, err := sm.getSystemByteStoreState(result)
+	if err != nil {
+		return nil, err
+	}
+	btpContext := state.NewBTPContext(nil, sbss)
+	ntids, err := btpContext.GetNetworkTypeIDs()
+	if err != nil {
+		return nil, err
+	}
+	return ntids, nil
+}
+
+func (sm *ServiceManager) NextProofContextMapFromResult(result []byte) (module.BTPProofContextMap, error) {
+	sbss, err := sm.getSystemByteStoreState(result)
+	if err != nil {
+		return nil, err
+	}
+	btpContext := state.NewBTPContext(nil, sbss)
+	return btp.NewProofContextMap(btpContext)
 }

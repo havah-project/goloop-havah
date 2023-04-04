@@ -32,7 +32,6 @@ type blockGenerator struct {
 	t  *testing.T
 	sm *testServiceManager
 	bm module.BlockManager
-	n  int64
 }
 
 func newBlockGenerator(t *testing.T, gtx *testTransaction) *blockGenerator {
@@ -132,13 +131,6 @@ func (br *blockResult) assertError(t *testing.T) {
 	assert.NotNil(t, br.err, "return error")
 	assert.Nil(t, br.cberr, "cb error")
 	assert.False(t, br.cbCalled, "cb called")
-}
-
-func (br *blockResult) assertCBError(t *testing.T) {
-	assert.Nil(t, br.blk, "block")
-	assert.Nil(t, br.err, "return error")
-	assert.NotNil(t, br.cberr, "cb error")
-	assert.True(t, br.cbCalled, "cb called")
 }
 
 type cbResult struct {
@@ -320,7 +312,7 @@ func TestBlockManager_Import_BadTimestamp(t *testing.T) {
 	blk := s.bg.getBlock(2)
 	assert.NotNil(t, blk)
 	blk.(*blockV2).timestamp = blk.(*blockV2).timestamp + 10
-	blk.(*blockV2)._id = nil
+	blk.(*blockV2)._id.UnsafePurge()
 	r = getReaderForBlock(t, blk)
 	br = importSync(s.bm, r)
 	// TODO: check if the observed error is the expected error
@@ -340,20 +332,26 @@ func TestBlockManager_Import_NonAscendingTimestamp(t *testing.T) {
 	blk := s.bg.getBlock(2)
 	assert.NotNil(t, blk)
 	votes := newCommitVoteSetWithTimestamp(true, 10)
+	oriVotes := blk.(*blockV2).votes
 	blk.(*blockV2).votes = votes
+	oriTimestamp := blk.(*blockV2).timestamp
 	blk.(*blockV2).timestamp = votes.Timestamp()
-	blk.(*blockV2)._id = nil
+	oriID := blk.(*blockV2)._id
+	blk.(*blockV2)._id.UnsafePurge()
 	r = getReaderForBlock(t, blk)
+	prevHash := blk.ID()
+	blk.(*blockV2).votes = oriVotes
+	blk.(*blockV2).timestamp = oriTimestamp
+	blk.(*blockV2)._id = oriID
 	br = importSync(s.bm, r)
 	br.assertOK(t)
 	assert.NoError(t, s.bm.Finalize(br.blk))
 
 	// height 3 - do not change timestamp (3 -> 3)
-	prevHash := blk.ID()
 	blk = s.bg.getBlock(3)
 	assert.NotNil(t, blk)
 	blk.(*blockV2).prevID = prevHash
-	blk.(*blockV2)._id = nil
+	blk.(*blockV2)._id.UnsafePurge()
 	r = getReaderForBlock(t, blk)
 	br = importSync(s.bm, r)
 	// TODO: check if the observed error is the expected error

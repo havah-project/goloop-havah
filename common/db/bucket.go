@@ -62,6 +62,10 @@ const (
 
 	// ChainProperty is general key value map for chain property.
 	ChainProperty BucketID = "C"
+
+	// ListByMerkleRootBase is the base for the bucket that maps list
+	// from network type dependent merkle root(list)
+	ListByMerkleRootBase BucketID = "L"
 )
 
 // internalKey returns key prefixed with the bucket's id.
@@ -70,14 +74,6 @@ func internalKey(id BucketID, key []byte) []byte {
 	copy(buf, id)
 	copy(buf[len(id):], key)
 	return buf
-}
-
-// nonNilBytes returns empty []byte if bz is nil
-func nonNilBytes(bz []byte) []byte {
-	if bz == nil {
-		return []byte{}
-	}
-	return bz
 }
 
 func DoGet(bk Bucket, key []byte) ([]byte, error) {

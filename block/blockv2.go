@@ -5,26 +5,22 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"sync"
 
 	"github.com/icon-project/goloop/chain/base"
+	"github.com/icon-project/goloop/common/atomic"
 	"github.com/icon-project/goloop/common/codec"
 	"github.com/icon-project/goloop/common/crypto"
 	"github.com/icon-project/goloop/common/db"
 	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/log"
-	"github.com/icon-project/goloop/common/merkle"
 	"github.com/icon-project/goloop/module"
-	"github.com/icon-project/goloop/service/state"
-	"github.com/icon-project/goloop/service/transaction"
-	"github.com/icon-project/goloop/service/txresult"
 )
 
 var v2Codec = codec.BC
 
 const V2String = "2.0"
 
-type blockV2HeaderFormat struct {
+type V2HeaderFormat struct {
 	Version                int
 	Height                 int64
 	Timestamp              int64
@@ -36,20 +32,113 @@ type blockV2HeaderFormat struct {
 	NormalTransactionsHash []byte
 	LogsBloom              []byte
 	Result                 []byte
+	NSFilter               []byte
 }
 
-type blockV2BodyFormat struct {
+func (bh *V2HeaderFormat) RLPEncodeSelf(e codec.Encoder) error {
+	if bh.NSFilter == nil {
+		return e.EncodeListOf(
+			bh.Version,
+			bh.Height,
+			bh.Timestamp,
+			bh.Proposer,
+			bh.PrevID,
+			bh.VotesHash,
+			bh.NextValidatorsHash,
+			bh.PatchTransactionsHash,
+			bh.NormalTransactionsHash,
+			bh.LogsBloom,
+			bh.Result,
+		)
+	}
+	return e.EncodeListOf(
+		bh.Version,
+		bh.Height,
+		bh.Timestamp,
+		bh.Proposer,
+		bh.PrevID,
+		bh.VotesHash,
+		bh.NextValidatorsHash,
+		bh.PatchTransactionsHash,
+		bh.NormalTransactionsHash,
+		bh.LogsBloom,
+		bh.Result,
+		bh.NSFilter,
+	)
+}
+
+func (bh *V2HeaderFormat) RLPDecodeSelf(d codec.Decoder) error {
+	d2, err := d.DecodeList()
+	if err != nil {
+		return err
+	}
+	cnt, err := d2.DecodeMulti(
+		&bh.Version,
+		&bh.Height,
+		&bh.Timestamp,
+		&bh.Proposer,
+		&bh.PrevID,
+		&bh.VotesHash,
+		&bh.NextValidatorsHash,
+		&bh.PatchTransactionsHash,
+		&bh.NormalTransactionsHash,
+		&bh.LogsBloom,
+		&bh.Result,
+		&bh.NSFilter,
+	)
+	if cnt == 11 && err == io.EOF {
+		bh.NSFilter = nil
+		return nil
+	}
+	return err
+}
+
+type V2BodyFormat struct {
 	PatchTransactions  [][]byte
 	NormalTransactions [][]byte
 	Votes              []byte
+	BTPDigest          []byte
 }
 
-type blockV2Format struct {
-	blockV2HeaderFormat
-	blockV2BodyFormat
+func (bb *V2BodyFormat) RLPEncodeSelf(e codec.Encoder) error {
+	if bb.BTPDigest == nil {
+		return e.EncodeListOf(
+			bb.PatchTransactions,
+			bb.NormalTransactions,
+			bb.Votes,
+		)
+	}
+	return e.EncodeListOf(
+		bb.PatchTransactions,
+		bb.NormalTransactions,
+		bb.Votes,
+		bb.BTPDigest,
+	)
 }
 
-type blockV2Immut struct {
+func (bb *V2BodyFormat) RLPDecodeSelf(d codec.Decoder) error {
+	d2, err := d.DecodeList()
+	if err != nil {
+		return err
+	}
+	cnt, err := d2.DecodeMulti(
+		&bb.PatchTransactions,
+		&bb.NormalTransactions,
+		&bb.Votes,
+		&bb.BTPDigest,
+	)
+	if cnt == 3 && err == io.EOF {
+		bb.BTPDigest = nil
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type blockV2 struct {
+	// immutables
 	height             int64
 	timestamp          int64
 	proposer           module.Address
@@ -61,17 +150,14 @@ type blockV2Immut struct {
 	nextValidatorsHash []byte
 	_nextValidators    module.ValidatorList
 	votes              module.CommitVoteSet
-}
+	nsFilter           module.BitSetFilter
+	sm                 ServiceManager
 
-type blockV2Mut struct {
-	_id []byte
-}
-
-type blockV2 struct {
-	blockV2Immut
-
-	mu sync.Mutex
-	blockV2Mut
+	// caches
+	_id         atomic.Cache[[]byte]
+	_btpSection atomic.Cache[module.BTPSection]
+	_btpDigest  atomic.Cache[module.BTPDigest]
+	_nextPCM    atomic.Cache[module.BTPProofContextMap]
 }
 
 func (b *blockV2) Version() int {
@@ -79,14 +165,10 @@ func (b *blockV2) Version() int {
 }
 
 func (b *blockV2) ID() []byte {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	if b._id == nil {
+	return b._id.Get(func() []byte {
 		bs := v2Codec.MustMarshalToBytes(b._headerFormat())
-		b._id = crypto.SHA3Sum256(bs)
-	}
-	return b._id
+		return crypto.SHA3Sum256(bs)
+	})
 }
 
 func (b *blockV2) Height() int64 {
@@ -152,12 +234,12 @@ func (b *blockV2) Marshal(w io.Writer) error {
 	return b.MarshalBody(w)
 }
 
-func (b *blockV2) _headerFormat() *blockV2HeaderFormat {
+func (b *blockV2) _headerFormat() *V2HeaderFormat {
 	var proposerBS []byte
 	if b.proposer != nil {
 		proposerBS = b.proposer.Bytes()
 	}
-	return &blockV2HeaderFormat{
+	return &V2HeaderFormat{
 		Version:                b.Version(),
 		Height:                 b.height,
 		Timestamp:              b.timestamp,
@@ -169,6 +251,7 @@ func (b *blockV2) _headerFormat() *blockV2HeaderFormat {
 		NormalTransactionsHash: b.normalTransactions.Hash(),
 		LogsBloom:              b.logsBloom.CompressedBytes(),
 		Result:                 b.result,
+		NSFilter:               b.nsFilter.Bytes(),
 	}
 }
 
@@ -203,7 +286,7 @@ func bssFromTransactionList(l module.TransactionList) ([][]byte, error) {
 	return res, nil
 }
 
-func (b *blockV2) _bodyFormat() (*blockV2BodyFormat, error) {
+func (b *blockV2) _bodyFormat() (*V2BodyFormat, error) {
 	ptBss, err := bssFromTransactionList(b.patchTransactions)
 	if err != nil {
 		return nil, err
@@ -212,22 +295,22 @@ func (b *blockV2) _bodyFormat() (*blockV2BodyFormat, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &blockV2BodyFormat{
+	bd, err := b.BTPDigest()
+	if err != nil {
+		return nil, err
+	}
+	return &V2BodyFormat{
 		PatchTransactions:  ptBss,
 		NormalTransactions: ntBss,
 		Votes:              b.votes.Bytes(),
+		BTPDigest:          bd.Bytes(),
 	}, nil
 }
 
-func (b *blockV2) NewBlock(vl module.ValidatorList) module.Block {
-	if !bytes.Equal(b.nextValidatorsHash, vl.Hash()) {
-		return nil
-	}
-	blk := blockV2{
-		blockV2Immut: b.blockV2Immut,
-		blockV2Mut:   b.blockV2Mut,
-	}
-	blk._nextValidators = vl
+func (b *blockV2) NewBlock(tr module.Transition) module.Block {
+	blk := *b
+	blk._nextValidators = tr.NextValidators()
+	blk._btpSection.Set(tr.BTPSection())
 	return &blk
 }
 
@@ -284,51 +367,56 @@ func (b *blockV2) Copy() module.Block {
 	return b
 }
 
-type blockBuilder struct {
-	vld   module.CommitVoteSetDecoder
-	block *blockV2
+func (b *blockV2) NetworkSectionFilter() module.BitSetFilter {
+	return b.nsFilter
 }
 
-func (b *blockBuilder) OnData(value []byte, builder merkle.Builder) error {
-	header := new(blockV2HeaderFormat)
-	err := v2Codec.Unmarshal(bytes.NewReader(value), header)
+func (b *blockV2) BTPDigest() (module.BTPDigest, error) {
+	return b._btpDigest.TryGet(func() (module.BTPDigest, error) {
+		bs, err := b.BTPSection()
+		if err != nil {
+			return nil, err
+		}
+		return bs.Digest(), nil
+	})
+}
+
+func (b *blockV2) BTPSection() (module.BTPSection, error) {
+	return b._btpSection.TryGet(func() (module.BTPSection, error) {
+		return b.sm.BTPSectionFromResult(b.result)
+	})
+}
+
+func (b *blockV2) NextProofContextMap() (module.BTPProofContextMap, error) {
+	return b._nextPCM.TryGet(func() (module.BTPProofContextMap, error) {
+		return b.sm.NextProofContextMapFromResult(b.result)
+	})
+}
+
+func (b *blockV2) NTSHashEntryList() (module.NTSHashEntryList, error) {
+	return b.BTPDigest()
+}
+
+func NewBlockReaderFromFormat(hf *V2HeaderFormat, bf *V2BodyFormat) io.Reader {
+	var buf bytes.Buffer
+	err := v2Codec.Marshal(&buf, hf)
 	if err != nil {
-		return err
+		log.Panicf("fail to marshal: %+v", err)
 	}
-	b.block.height = header.Height
-	b.block.timestamp = header.Timestamp
-	if addr, err := newProposer(header.Proposer); err != nil {
-		return err
-	} else {
-		b.block.proposer = addr
+	err = v2Codec.Marshal(&buf, bf)
+	if err != nil {
+		log.Panicf("fail to marshal: %+v", err)
 	}
-	b.block.prevID = header.PrevID
-	b.block.logsBloom = txresult.NewLogsBloomFromCompressed(header.LogsBloom)
-	b.block.patchTransactions = transaction.NewTransactionListWithBuilder(builder, header.PatchTransactionsHash)
-	b.block.normalTransactions = transaction.NewTransactionListWithBuilder(builder, header.NormalTransactionsHash)
-	b.block.nextValidatorsHash = header.NextValidatorsHash
-	b.block.result = header.Result
-	if vs, err := state.NewValidatorSnapshotWithBuilder(builder, header.NextValidatorsHash); err != nil {
-		return err
-	} else {
-		b.block._nextValidators = vs
-	}
-	builder.RequestData(db.BytesByHash, header.VotesHash, voteSetBuilder{b})
-	return nil
+	return &buf
 }
 
-type voteSetBuilder struct {
-	builder *blockBuilder
-}
-
-func (b voteSetBuilder) OnData(value []byte, builder merkle.Builder) error {
-	b.builder.block.votes = b.builder.vld(value)
-	return nil
-}
-
-func newBlockWithBuilder(builder merkle.Builder, vld module.CommitVoteSetDecoder, hash []byte) module.Block {
-	blk := new(blockV2)
-	blk._id = hash
-	builder.RequestData(db.BytesByHash, hash, &blockBuilder{block: blk, vld: vld})
-	return blk
+func FormatFromBlock(blk module.Block) (*V2HeaderFormat, *V2BodyFormat, error) {
+	if v2, ok := blk.(*blockV2); ok {
+		bodyFmt, err := v2._bodyFormat()
+		if err != nil {
+			return nil, nil, err
+		}
+		return v2._headerFormat(), bodyFmt, nil
+	}
+	return nil, nil, errors.Errorf("not block v2 height=%d version=%d", blk.Height(), blk.Version())
 }

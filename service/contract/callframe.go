@@ -19,34 +19,36 @@ type eventLog struct {
 }
 
 type callFrame struct {
-	parent    *callFrame
-	fid       int
-	eid       int
-	code      string
-	isQuery   bool
-	snapshot  state.WorldSnapshot
-	handler   ContractHandler
-	log       *trace.Logger
-	stepUsed  big.Int
-	stepLimit *big.Int
-	eventLogs list.List
-	code2EID  map[string]int
-	logsMap   map[string]CustomLogs
-	feePayers FeePayerInfo
+	parent      *callFrame
+	fid         int
+	eid         int
+	code        string
+	isReadOnly  bool
+	snapshot    state.WorldSnapshot
+	handler     ContractHandler
+	log         *trace.Logger
+	stepUsed    big.Int
+	stepLimit   *big.Int
+	eventLogs   list.List
+	btpMessages list.List
+	code2EID    map[string]int
+	logsMap     map[string]CustomLogs
+	feePayers   FeePayerInfo
 }
 
-func NewFrame(p *callFrame, h ContractHandler, l *big.Int, q bool, logger *trace.Logger) *callFrame {
+func NewFrame(p *callFrame, h ContractHandler, l *big.Int, ro bool, logger *trace.Logger) *callFrame {
 	frame := &callFrame{
-		parent:    p,
-		isQuery:   (p != nil && p.isQuery) || q,
-		handler:   h,
-		stepLimit: l,
-		code2EID:  make(map[string]int),
-		eid:       unknownEID,
-		fid:       baseFID,
-		log:       logger,
+		parent:     p,
+		isReadOnly: (p != nil && p.isReadOnly) || ro,
+		handler:    h,
+		stepLimit:  l,
+		code2EID:   make(map[string]int),
+		eid:        unknownEID,
+		fid:        baseFID,
+		log:        logger,
 	}
 	frame.eventLogs.Init()
+	frame.btpMessages.Init()
 	return frame
 }
 
@@ -76,12 +78,8 @@ func (f *callFrame) getStepAvailable() *big.Int {
 	return tmp.Sub(f.stepLimit, &f.stepUsed)
 }
 
-func (f *callFrame) getStepLimit() *big.Int {
-	return f.stepLimit
-}
-
 func (f *callFrame) addLog(addr module.Address, indexed, data [][]byte) {
-	if f.isQuery {
+	if f.isReadOnly {
 		return
 	}
 	e := new(eventLog)
@@ -107,12 +105,31 @@ func (f *callFrame) getEventLogs(r txresult.Receipt) {
 	}
 }
 
-func (f *callFrame) enterQueryMode(cc *callContext) {
-	if !f.isQuery {
+func (f *callFrame) addBTPMessage(nid int64, message []byte) {
+	if f.isReadOnly {
+		return
+	}
+	bm := state.NewBTPMsg(nid, message)
+	f.btpMessages.PushBack(bm)
+}
+
+func (f *callFrame) applyBTPMessagesOf(frame *callFrame) {
+	if f != nil {
+		f.btpMessages.PushBackList(&frame.btpMessages)
+	}
+}
+
+func (f *callFrame) getBTPMessages(r txresult.Receipt) {
+	r.AddBTPMessages(f.btpMessages)
+}
+
+func (f *callFrame) enterReadOnlyMode(cc *callContext) {
+	if !f.isReadOnly {
 		cc.Reset(f.snapshot)
 		f.snapshot = nil
 		f.eventLogs.Init()
-		f.isQuery = true
+		f.btpMessages.Init()
+		f.isReadOnly = true
 	}
 }
 

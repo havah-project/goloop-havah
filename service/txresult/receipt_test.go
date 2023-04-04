@@ -37,6 +37,9 @@ func testReceiptJSONByRev(t *testing.T, rev module.Revision) {
 		t.Errorf("Fail on ToJSON err=%+v", err)
 	}
 	jb, err := json.MarshalIndent(jso, "", "    ")
+	if err != nil {
+		t.Errorf("FAIL to json.MarshalIndent() err=%+v", err)
+	}
 
 	fmt.Printf("JSON: %s\n", jb)
 
@@ -69,6 +72,7 @@ func Test_EventLog_BytesEncoding(t *testing.T) {
 
 	evj := ev.ToJSON(module.JSONVersion3)
 	evs, err := json.Marshal(evj)
+	assert.NoError(t, err)
 	t.Logf("JSON:%s", evs)
 
 	bs, err := codec.MarshalToBytes(&ev)
@@ -83,6 +87,7 @@ func Test_EventLog_BytesEncoding(t *testing.T) {
 	evj = ev2.ToJSON(module.JSONVersion3)
 	assert.NoError(t, err)
 	evs2, err := json.Marshal(evj)
+	assert.NoError(t, err)
 	t.Logf("JSON:%s", evs2)
 
 	assert.Equal(t, evs, evs2)
@@ -223,4 +228,29 @@ func TestReceipt_Fee(t *testing.T) {
 		assert.Equal(t, fee, r.Fee())
 		assert.Equal(t, feeByEOA, r.FeeByEOA())
 	})
+}
+
+func TestDecomposeEventSignature(t *testing.T) {
+	type args struct {
+		s string
+	}
+	tests := []struct {
+		name  string
+		args  args
+		want  string
+		want1 []string
+	}{
+		{"Nothing", args{""}, "", nil},
+		{"NoParenthesis", args{"EventName"}, "", nil},
+		{"NoParam", args{"EventXY()"}, "EventXY", []string{}},
+		{"1Param", args{"EventXYZ(Address)"}, "EventXYZ", []string{"Address"}},
+		{"3Param", args{"EventSIB(str,int,bytes)"}, "EventSIB", []string{"str", "int", "bytes"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1 := DecomposeEventSignature(tt.args.s)
+			assert.Equalf(t, tt.want, got, "DecomposeEventSignature(%v)", tt.args.s)
+			assert.Equalf(t, tt.want1, got1, "DecomposeEventSignature(%v)", tt.args.s)
+		})
+	}
 }

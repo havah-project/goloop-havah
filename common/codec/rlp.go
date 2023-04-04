@@ -2,8 +2,6 @@ package codec
 
 import (
 	"bytes"
-	"encoding/binary"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"reflect"
@@ -15,19 +13,65 @@ import (
 var rlpCodecObject rlpCodec
 var RLP = bytesWrapper{&rlpCodecObject}
 
+// MaxSizeForBytes is size limit for bytes buffer.
+// msgpack decoder already has limit to 1 MB
+const MaxSizeForBytes = 1e6
+
 type rlpCodec struct {
 }
 
 type rlpReader struct {
 	reader io.Reader
+	maxSB  int // maxSB is max size of bytes buffer on ReadBytes() or ReadRaw()
 }
 
 func sizeToBytes(s int) []byte {
 	return intconv.SizeToBytes(uint64(s))
 }
 
-func bytesToSize(bs []byte) int {
-	return int(intconv.BytesToSize(bs))
+func bytesToSize(bs []byte) (int, error) {
+	if value, ok := intconv.SafeBytesToSize(bs); !ok {
+		return 0, cerrors.Wrapf(ErrInvalidFormat, "InvalidSizeFormat(bs=%#x)", bs)
+	} else {
+		return value, nil
+	}
+}
+
+func minSize(sz1, sz2 int) int {
+	if sz1 < sz2 {
+		return sz1
+	} else {
+		return sz2
+	}
+}
+
+type limitReader struct {
+	reader io.Reader
+	offset int64
+	limit  int64
+}
+
+func (l *limitReader) Read(p []byte) (n int, err error) {
+	avail := l.limit - l.offset
+	if avail <= 0 {
+		return 0, io.EOF
+	}
+	if int64(len(p)) > avail {
+		p = p[:avail]
+	}
+	n, err = l.reader.Read(p)
+	if err == io.EOF {
+		err = ErrInvalidFormat
+	}
+	l.offset += int64(n)
+	return
+}
+
+func LimitReader(r io.Reader, n int64) io.Reader {
+	return &limitReader{
+		reader: r,
+		limit:  n,
+	}
 }
 
 func (r *rlpReader) skipN(sz int) error {
@@ -44,7 +88,7 @@ func (r *rlpReader) readSize(buffer []byte) (int, error) {
 	if err := r.readAll(buffer); err != nil {
 		return 0, err
 	}
-	return bytesToSize(buffer), nil
+	return bytesToSize(buffer)
 }
 
 func (r *rlpReader) readAll(buffer []byte) error {
@@ -110,7 +154,8 @@ func (r *rlpReader) readList() (Reader, error) {
 	case tag <= 0xF7:
 		size := tag - 0xC0
 		return &rlpReader{
-			reader: io.LimitReader(r.reader, int64(size)),
+			reader: LimitReader(r.reader, int64(size)),
+			maxSB:  minSize(r.maxSB, size),
 		}, nil
 	default:
 		sz := tag - 0xF7
@@ -122,7 +167,8 @@ func (r *rlpReader) readList() (Reader, error) {
 			return nil, ErrNilValue
 		}
 		return &rlpReader{
-			reader: io.LimitReader(r.reader, int64(sz2)),
+			reader: LimitReader(r.reader, int64(sz2)),
+			maxSB:  minSize(r.maxSB, sz2),
 		}, nil
 	}
 }
@@ -157,6 +203,9 @@ func (r *rlpReader) readBytes() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
+		if sz2 > r.maxSB {
+			return nil, cerrors.Wrapf(ErrInvalidFormat, "InvalidSize(%d>%d)", sz2, r.maxSB)
+		}
 		buffer := make([]byte, sz2)
 		if err := r.readAll(buffer); err != nil {
 			return nil, err
@@ -177,29 +226,85 @@ func (r *rlpReader) readBytes() ([]byte, error) {
 	}
 }
 
+func (r *rlpReader) readUintValue(v reflect.Value) error {
+	bs, err := r.readBytes()
+	if err != nil {
+		return err
+	}
+	value, ok := intconv.SafeBytesToUint64(bs)
+	if !ok {
+		return cerrors.Wrapf(ErrInvalidFormat, "UintOverflow(bs=%#x)", bs)
+	}
+	switch v.Kind() {
+	case reflect.Bool:
+		if value == 0 {
+			v.SetBool(false)
+		} else if value == 1 {
+			v.SetBool(true)
+		} else {
+			return cerrors.Wrapf(ErrInvalidFormat, "UintOverflow(bs=%#x,type=bool)", bs)
+		}
+		return nil
+	case reflect.Uint:
+		if value != uint64(uint(value)) {
+			return cerrors.Wrapf(ErrInvalidFormat, "UintOverflow(bs=%#x,type=uint)", bs)
+		}
+	case reflect.Uint8:
+		if value != uint64(uint8(value)) {
+			return cerrors.Wrapf(ErrInvalidFormat, "UintOverflow(bs=%#x,type=uint8)", bs)
+		}
+	case reflect.Uint16:
+		if value != uint64(uint16(value)) {
+			return cerrors.Wrapf(ErrInvalidFormat, "UintOverflow(bs=%#x,type=uint16)", bs)
+		}
+	case reflect.Uint32:
+		if value != uint64(uint32(value)) {
+			return cerrors.Wrapf(ErrInvalidFormat, "UintOverflow(bs=%#x,type=uint32)", bs)
+		}
+	}
+	v.SetUint(value)
+	return nil
+}
+
+func (r *rlpReader) readIntValue(v reflect.Value) error {
+	bs, err := r.readBytes()
+	if err != nil {
+		return err
+	}
+	value, ok := intconv.SafeBytesToInt64(bs)
+	if !ok {
+		return cerrors.Wrapf(ErrInvalidFormat, "Int64Overflow(bs=%#x)", bs)
+	}
+	switch v.Kind() {
+	case reflect.Int:
+		if value != int64(int(value)) {
+			return cerrors.Wrapf(ErrInvalidFormat, "IntOverflow(bs=%#x,type=int)", bs)
+		}
+	case reflect.Int8:
+		if value != int64(int8(value)) {
+			return cerrors.Wrapf(ErrInvalidFormat, "IntOverflow(bs=%#x,type=int8)", bs)
+		}
+	case reflect.Int16:
+		if value != int64(int16(value)) {
+			return cerrors.Wrapf(ErrInvalidFormat, "IntOverflow(bs=%#x,type=int16)", bs)
+		}
+	case reflect.Int32:
+		if value != int64(int32(value)) {
+			return cerrors.Wrapf(ErrInvalidFormat, "IntOverflow(bs=%#x,type=int32)", bs)
+		}
+	}
+	v.SetInt(value)
+	return nil
+}
+
 func (r *rlpReader) ReadValue(v reflect.Value) error {
 	switch v.Kind() {
 	case reflect.Bool:
-		bs, err := r.readBytes()
-		if err != nil {
-			return err
-		}
-		v.SetBool(intconv.BytesToUint64(bs) != 0)
-		return nil
+		fallthrough
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		bs, err := r.readBytes()
-		if err != nil {
-			return err
-		}
-		v.SetUint(intconv.BytesToUint64(bs))
-		return nil
+		return r.readUintValue(v)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		bs, err := r.readBytes()
-		if err != nil {
-			return err
-		}
-		v.SetInt(intconv.BytesToInt64(bs))
-		return nil
+		return r.readIntValue(v)
 	case reflect.String:
 		bs, err := r.readBytes()
 		if err != nil {
@@ -221,6 +326,9 @@ func (r *rlpReader) ReadBytes() ([]byte, error) {
 }
 
 func (r *rlpReader) readMore(org []byte, size int) ([]byte, error) {
+	if size+len(org) > r.maxSB {
+		return nil, cerrors.Wrapf(ErrInvalidFormat, "IllegalFormat(%d>%d)", size+len(org), r.maxSB)
+	}
 	buffer := make([]byte, len(org)+size)
 	copy(buffer, org)
 	if err := r.readAll(buffer[len(org):]); err != nil {
@@ -259,6 +367,10 @@ func (r *rlpReader) ReadRaw() ([]byte, error) {
 		}
 		return r.readMore(header[0:1+sz], sz2)
 	}
+}
+
+func (r *rlpReader) SetMaxBytes(sz int) {
+	r.maxSB = sz
 }
 
 type rlpParent struct {
@@ -442,6 +554,7 @@ func (c *rlpCodec) Name() string {
 func (c *rlpCodec) NewDecoder(r io.Reader) DecodeAndCloser {
 	return NewDecoder(&rlpReader{
 		reader: r,
+		maxSB:  MaxSizeForBytes,
 	})
 }
 
@@ -449,48 +562,4 @@ func (c *rlpCodec) NewEncoder(w io.Writer) EncodeAndCloser {
 	return NewEncoder(&rlpWriter{
 		writer: w,
 	})
-}
-
-func DumpRLP(indent string, data []byte) string {
-	p := 0
-	var res string
-	for p < len(data) {
-		switch q := data[p]; {
-		case q < 0x80:
-			res += fmt.Sprintf("%sbytes(0x%x:%d) : %x\n", indent, 1, 1, data[p:p+1])
-			p = p + 1
-		case q <= 0xb7:
-			l := int(q - 0x80)
-			res += fmt.Sprintf("%sbytes(0x%x:%d) : %x\n", indent, l, l, data[p+1:p+1+l])
-			p = p + 1 + l
-		case q <= 0xbf:
-			ll := int(q - 0xb7)
-			buf := make([]byte, 8)
-			lBytes := data[p+1 : p+1+ll]
-			copy(buf[8-ll:], lBytes)
-			l := int(binary.BigEndian.Uint64(buf))
-			res += fmt.Sprintf("%sbytes(0x%x:%d) : %x\n", indent, l, l, data[p+1+ll:p+1+ll+l])
-			p = p + 1 + ll + l
-		case q <= 0xf7:
-			l := int(q - 0xc0)
-			res += fmt.Sprintf("%slist(0x%x:%d) [\n", indent, l, l)
-			res += DumpRLP(indent+"  ", data[p+1:p+1+l])
-			res += fmt.Sprintf("%s]\n", indent)
-			p = p + 1 + l
-		case q == 0xf8 && data[p+1] == 0:
-			res += fmt.Sprintf("%slist(0x0:0) [] nil?\n", indent)
-			p = p + 2
-		default:
-			ll := int(q - 0xf7)
-			buf := make([]byte, 8)
-			lBytes := data[p+1 : p+1+ll]
-			copy(buf[8-ll:], lBytes)
-			l := int(binary.BigEndian.Uint64(buf))
-			res += fmt.Sprintf("%slist(0x%x:%d) [\n", indent, l, l)
-			res += DumpRLP(indent+"  ", data[p+1+ll:p+1+ll+l])
-			res += fmt.Sprintf("%s]\n", indent)
-			p = p + 1 + ll + l
-		}
-	}
-	return res
 }

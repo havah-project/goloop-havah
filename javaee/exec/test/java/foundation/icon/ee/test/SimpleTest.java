@@ -1,5 +1,6 @@
 package foundation.icon.ee.test;
 
+import foundation.icon.ee.ipc.Connection;
 import foundation.icon.ee.logger.EELogger;
 import foundation.icon.ee.score.TransactionExecutor;
 import foundation.icon.ee.tooling.deploy.OptimizedJarBuilder;
@@ -12,6 +13,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInfo;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class SimpleTest {
     protected ServiceManager sm;
@@ -26,11 +29,10 @@ public class SimpleTest {
     @BeforeEach
     public void setUp() {
         var pipes = Pipe.createPair();
-        sm = new ServiceManager(pipes[0]);
+        sm = newServiceManager(pipes[0]);
         Thread th = new Thread(() -> {
             try {
-                var conf = new AvmConfiguration();
-                conf.testMode = true;
+                var conf = newAvmConfiguration();
                 var te = TransactionExecutor.newInstance(pipes[1],
                         "",
                         null,
@@ -44,13 +46,23 @@ public class SimpleTest {
         th.start();
     }
 
+    public ServiceManager newServiceManager(Connection conn) {
+        return new ServiceManager(conn, false);
+    }
+
+    public AvmConfiguration newAvmConfiguration() {
+        var conf = new AvmConfiguration();
+        conf.testMode = true;
+        conf.preserveDebuggability = true;
+        return conf;
+    }
+
     public void createAndAcceptNewJAVAEE() {
         var pipes = Pipe.createPair();
         sm.accept(pipes[0]);
         Thread th = new Thread(() -> {
             try {
-                var conf = new AvmConfiguration();
-                conf.testMode = true;
+                var conf = newAvmConfiguration();
                 var te = TransactionExecutor.newInstance(pipes[1],
                         "",
                         null,
@@ -81,5 +93,11 @@ public class SimpleTest {
                 preopt, true)
                 .withUnreachableMethodRemover()
                 .withRenamer().withLog(System.out).getOptimizedBytes();
+    }
+
+    public Path getResourcePath(String name) {
+        String cls = this.getClass().getName().replace('.', '/');
+        String pkg = cls.substring(0, cls.lastIndexOf('/')+1);
+        return Paths.get("test", "resources", pkg, name);
     }
 }

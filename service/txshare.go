@@ -242,7 +242,7 @@ func (ts *TransactionShare) handleTxRequest() {
 		}
 	}
 	if next {
-		delay := handleTxRequestIntervalBase - time.Now().Sub(current)
+		delay := handleTxRequestIntervalBase - time.Since(current)
 		ts.handlerTimer.Reset(durationMax(delay, handleTxRequestIntervalMin))
 	}
 }
@@ -257,7 +257,7 @@ func (ts *TransactionShare) sendTxRequest() {
 		ts.log.Debugf("sendTxRequest(bits=%d)", bloom.Bits)
 		var msg msgTransactionRequest
 		msg.SetBloom(bloom)
-		if err := ts.ph.Broadcast(protoRequestTransaction, msg.Bytes(), module.BROADCAST_CHILDREN); err != nil {
+		if err := ts.ph.Broadcast(protoRequestTransaction, msg.Bytes(), module.BroadcastChildren); err != nil {
 			if network.NotAvailableError.Equals(err) {
 				ts.emptyHandlers = true
 				enabled = false

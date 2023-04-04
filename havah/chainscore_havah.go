@@ -361,3 +361,140 @@ func (s *chainScore) Ex_getLost() (*big.Int, error) {
 	}
 	return es.GetLost()
 }
+
+func (s *chainScore) Ex_setBlockVoteCheckParameters(period, allowance *common.HexInt) error {
+	if err := s.checkGovernance(true); err != nil {
+		return err
+	}
+	es, _, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return err
+	}
+	return es.SetBlockVoteCheckParameters(period.Int64(), allowance.Int64())
+}
+
+func (s *chainScore) Ex_getBlockVoteCheckParameters() (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetBlockVoteCheckParameters(ctx)
+}
+
+func (s *chainScore) Ex_registerValidator(
+	owner module.Address, nodePublicKey []byte, grade, name string) error {
+	if err := s.checkGovernance(true); err != nil {
+		return err
+	}
+	es, _, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return err
+	}
+	return es.RegisterValidator(owner, nodePublicKey, grade, name)
+}
+
+func (s *chainScore) Ex_unregisterValidator(owner module.Address) error {
+	if err := s.checkGovernance(true); err != nil {
+		return err
+	}
+	es, _, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return err
+	}
+	return es.UnregisterValidator(owner)
+}
+
+func (s *chainScore) Ex_getNetworkStatus() (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetNetworkStatus(ctx)
+}
+
+func (s *chainScore) Ex_setValidatorInfo(values []map[string]interface{}) error {
+	if err := s.tryChargeCall(); err != nil {
+		return err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return err
+	}
+
+	for _, pair := range values {
+		s.log.Debugf("key=%s value=%s", pair["key"].(string), pair["value"].(string))
+	}
+	return es.SetValidatorInfo(ctx, values)
+}
+
+func (s *chainScore) Ex_enableValidator(owner module.Address) error {
+	if err := s.tryChargeCall(); err != nil {
+		return err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return err
+	}
+	return es.EnableValidator(ctx, owner)
+}
+
+func (s *chainScore) Ex_getValidatorInfo(owner module.Address) (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetValidatorInfo(ctx, owner)
+}
+
+func (s *chainScore) Ex_getValidatorStatus(owner module.Address) (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetValidatorStatus(ctx, owner)
+}
+
+func (s *chainScore) Ex_setActiveValidatorCount(count *common.HexInt) error {
+	if err := s.checkGovernance(true); err != nil {
+		return err
+	}
+	es, _, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return err
+	}
+	return es.SetActiveValidatorCount(count.Int64())
+}
+
+func (s *chainScore) Ex_getActiveValidatorCount() (int64, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return 0, err
+	}
+	es, _, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return 0, err
+	}
+	return es.GetValidatorCount()
+}
+
+func (s *chainScore) Ex_getValidatorsOf(grade string) (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetValidatorsOf(ctx, grade)
+}

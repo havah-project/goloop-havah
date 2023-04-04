@@ -106,11 +106,6 @@ type syncer struct {
 	startTime      time.Time
 }
 
-type Request struct {
-	reqID uint32
-	pi    module.ProtocolInfo
-}
-
 type Callback interface {
 	onResult(status errCode, p *peer)
 	onNodeData(p *peer, status errCode, t syncType, data [][]byte)
@@ -192,7 +187,7 @@ func (s *syncer) _onNodeData(builder merkle.Builder, reqValue map[string]bool, d
 	for _, d := range data {
 		key := crypto.SHA3Sum256(d)
 		if reqValue[string(key)] == true {
-			if err := builder.OnData(d); err != nil {
+			if err := builder.OnData(db.BytesByHash, d); err != nil {
 				s.log.Infof("Failed to OnData to builder data(%#x), err(%+v)\n", d, err)
 			}
 			delete(reqValue, string(key))
@@ -489,7 +484,7 @@ func (s *syncer) ForceSync() (*Result, error) {
 	s.cb(s, true)
 	defer func() {
 		s.cb(s, false)
-		syncDuration := time.Now().Sub(startTime)
+		syncDuration := time.Since(startTime)
 		elapsedMS := float64(syncDuration/time.Microsecond) / 1000
 		s.log.Infof("ForceSync : Elapsed: %9.3f ms\n", elapsedMS)
 	}()
@@ -520,7 +515,8 @@ func (s *syncer) ForceSync() (*Result, error) {
 	builder := s.newMerkleBuilder()
 	s.builder[syncWorldState.toIndex()] = builder
 	s.reqValue[syncWorldState.toIndex()] = make(map[string]bool)
-	if wss, err := state.NewWorldSnapshotWithBuilder(builder, s.ah, s.vlh, ess); err == nil {
+	// TODO need to sync BTP Data (with new syncer?)
+	if wss, err := state.NewWorldSnapshotWithBuilder(builder, s.ah, s.vlh, ess, nil); err == nil {
 		s.wss = wss
 	} else {
 		return nil, err
@@ -565,7 +561,7 @@ func (s *syncer) Finalize() error {
 			}
 		}
 	}
-	syncDuration := time.Now().Sub(s.startTime)
+	syncDuration := time.Since(s.startTime)
 	elapsedMS := float64(syncDuration/time.Microsecond) / 1000
 	s.log.Infof("Finalize : Elapsed: %9.3f ms\n", elapsedMS)
 	return nil

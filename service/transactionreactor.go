@@ -30,7 +30,6 @@ type TransactionReactor struct {
 	nm         module.NetworkManager
 	membership module.ProtocolHandler
 	tm         *TransactionManager
-	tsc        *TxTimestampChecker
 	log        log.Logger
 	ts         *TransactionShare
 }
@@ -76,13 +75,9 @@ func (r *TransactionReactor) OnReceive(subProtocol module.ProtocolInfo, buf []by
 
 func (r *TransactionReactor) PropagateTransaction(tx transaction.Transaction) error {
 	if r != nil && r.membership != nil {
-		return r.membership.Multicast(protoPropagateTransaction, tx.Bytes(), module.ROLE_VALIDATOR)
+		return r.membership.Multicast(protoPropagateTransaction, tx.Bytes(), module.RoleValidator)
 	}
 	return nil
-}
-
-func (r *TransactionReactor) OnFailure(err error, pi module.ProtocolInfo, b []byte) {
-	// Nothing to do now.
 }
 
 func (r *TransactionReactor) OnJoin(id module.PeerID) {

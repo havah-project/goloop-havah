@@ -172,6 +172,7 @@ func (tp *TransactionPool) Candidate(wc state.WorldContext, maxBytes int, maxCou
 					tx.ID(), tx.From().String(), err)
 			}
 			if !transaction.NotEnoughBalanceError.Equals(err) || e.ts == 0 {
+				tp.tim.AddDroppedTX(tx.ID(), tx.Timestamp())
 				dropped = append(dropped, e)
 			}
 			continue
@@ -190,7 +191,7 @@ func (tp *TransactionPool) Candidate(wc state.WorldContext, maxBytes int, maxCou
 	}
 
 	tp.log.Infof("TransactionPool.Candidate collected=%d removed=%d poolsize=%d duration=%s",
-		len(txs), len(dropped), poolSize, time.Now().Sub(startTS))
+		len(txs), len(dropped), poolSize, time.Since(startTS))
 
 	return txs, txSize
 }

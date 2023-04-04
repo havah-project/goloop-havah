@@ -2,10 +2,9 @@ package merkle
 
 import (
 	"container/list"
+	"errors"
 
-	"github.com/icon-project/goloop/common/crypto"
 	"github.com/icon-project/goloop/common/db"
-	"github.com/icon-project/goloop/common/errors"
 )
 
 type DataRequester interface {
@@ -19,13 +18,22 @@ type RequestIterator interface {
 }
 
 type Builder interface {
-	OnData(value []byte) error
+	OnData(bid db.BucketID, value []byte) error
 	UnresolvedCount() int
+	ResolvedCount() int
 	Requests() RequestIterator
 	RequestData(id db.BucketID, key []byte, requester DataRequester)
 	Database() db.Database
 	Flush(write bool) error
 }
+
+var (
+	// ErrNoHasher will be returned if supplied BucketID doesn't have valid
+	// hash function for verifying the received data.
+	ErrNoHasher = errors.New("NoHasher")
+	// ErrNoRequester will be returned if there is nobody who want the data.
+	ErrNoRequester = errors.New("NoRequester")
+)
 
 type request struct {
 	key        []byte
@@ -33,11 +41,14 @@ type request struct {
 	requesters []DataRequester
 }
 
+type requestMap map[string]*list.Element
+
 type merkleBuilder struct {
 	store      db.Database
 	requests   *list.List
-	requestMap map[string]*list.Element
+	hasherMap  map[string]requestMap
 	onDataMark *list.Element
+	resolved   int
 }
 
 type requestIterator struct {
@@ -75,10 +86,16 @@ func (b *merkleBuilder) Requests() RequestIterator {
 	}
 }
 
-func (b *merkleBuilder) OnData(value []byte) error {
-	key := crypto.SHA3Sum256(value)
+func (b *merkleBuilder) OnData(bid db.BucketID, value []byte) error {
+	hasher := bid.Hasher()
+	if hasher == nil {
+		return ErrNoHasher
+	}
+
+	reqMap := b.hasherMap[hasher.Name()]
+	key := hasher.Hash(value)
 	reqID := string(key)
-	if e, ok := b.requestMap[reqID]; ok {
+	if e, ok := reqMap[reqID]; ok {
 		req := e.Value.(*request)
 		b.onDataMark = e
 		defer func() {
@@ -97,27 +114,40 @@ func (b *merkleBuilder) OnData(value []byte) error {
 				return err
 			}
 		}
+		b.resolved += 1
 		b.requests.Remove(e)
-		delete(b.requestMap, reqID)
+		delete(reqMap, reqID)
 		return nil
 	} else {
-		return errors.New("IllegalArguments")
+		return ErrNoRequester
 	}
 }
 
-func (b *merkleBuilder) RequestData(id db.BucketID, key []byte, requester DataRequester) {
+func (b *merkleBuilder) RequestData(bid db.BucketID, key []byte, requester DataRequester) {
 	if key == nil {
 		return
 	}
+
+	hasher := bid.Hasher()
+	if hasher == nil {
+		return
+	}
+
+	hasherName := hasher.Name()
+	if _, present := b.hasherMap[hasherName]; !present {
+		b.hasherMap[hasherName] = make(requestMap)
+	}
+
+	reqMap := b.hasherMap[hasherName]
 	reqID := string(key)
-	if e, ok := b.requestMap[reqID]; ok {
+	if e, ok := reqMap[reqID]; ok {
 		req := e.Value.(*request)
-		req.bucketIDs = append(req.bucketIDs, id)
+		req.bucketIDs = append(req.bucketIDs, bid)
 		req.requesters = append(req.requesters, requester)
 	} else {
 		req := &request{
 			key:        key,
-			bucketIDs:  []db.BucketID{id},
+			bucketIDs:  []db.BucketID{bid},
 			requesters: []DataRequester{requester},
 		}
 		if b.onDataMark != nil {
@@ -126,12 +156,16 @@ func (b *merkleBuilder) RequestData(id db.BucketID, key []byte, requester DataRe
 		} else {
 			e = b.requests.PushBack(req)
 		}
-		b.requestMap[reqID] = e
+		reqMap[reqID] = e
 	}
 }
 
 func (b *merkleBuilder) UnresolvedCount() int {
 	return b.requests.Len()
+}
+
+func (b *merkleBuilder) ResolvedCount() int {
+	return b.resolved
 }
 
 func (b *merkleBuilder) Flush(write bool) error {
@@ -152,9 +186,9 @@ func NewBuilder(dbase db.Database) Builder {
 
 func NewBuilderWithRawDatabase(dbase db.Database) Builder {
 	builder := &merkleBuilder{
-		store:      dbase,
-		requests:   list.New(),
-		requestMap: make(map[string]*list.Element),
+		store:     dbase,
+		requests:  list.New(),
+		hasherMap: make(map[string]requestMap),
 	}
 	return builder
 }

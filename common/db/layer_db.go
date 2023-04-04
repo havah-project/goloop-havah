@@ -2,8 +2,6 @@ package db
 
 import (
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
 type layerBucket struct {
@@ -37,10 +35,6 @@ func (bk *layerBucket) Has(key []byte) (bool, error) {
 }
 
 func (bk *layerBucket) Set(key []byte, value []byte) error {
-	if value == nil {
-		return errors.New("IllegalArgument")
-	}
-
 	bk.lock.Lock()
 	defer bk.lock.Unlock()
 
@@ -157,6 +151,10 @@ func (ldb *layerDB) WithFlags(flags Flags) Context {
 	return &layerDBContext{ldb, flags}
 }
 
+func (ldb *layerDB) Unwrap() Database {
+	return ldb.real
+}
+
 func NewLayerDB(database Database) LayerDB {
 	ldb := &layerDB{
 		real:    database,
@@ -166,5 +164,16 @@ func NewLayerDB(database Database) LayerDB {
 		return &layerDBContext{ldb, ctx.Flags()}
 	} else {
 		return ldb
+	}
+}
+
+func Unwrap(database Database) Database {
+	type unwrapper interface {
+		Unwrap() Database
+	}
+	if layeredDB, ok := database.(unwrapper); ok {
+		return layeredDB.Unwrap()
+	} else {
+		return database
 	}
 }

@@ -21,6 +21,8 @@ const (
 	SigLostWithdrawn = "LostWithdrawn(Address,int)"
 	// TermStarted(termSeq int, planetCount int, rewardPerActivePlanet int)
 	SigTermStarted = "TermStarted(int,int,int)"
+	// Decentralized(activeValidatorCount int)
+	SigDecentralized = "Decentralized(int)"
 )
 
 func onRewardOfferedEvent(
@@ -117,6 +119,16 @@ func onTermStartedEvent(cc hvhmodule.CallContext, termSeq int64, planetCount, re
 			intconv.Int64ToBytes(termSeq),
 			intconv.BigIntToBytes(planetCount),
 			intconv.BigIntToBytes(rewardPerActivePlanet),
+		},
+	)
+}
+
+func onDecentralizedEvent(cc hvhmodule.CallContext, activeValidatorCount int64) {
+	cc.OnEvent(
+		state.SystemAddress,
+		[][]byte{[]byte(SigDecentralized)},
+		[][]byte{
+			intconv.Int64ToBytes(activeValidatorCount),
 		},
 	)
 }

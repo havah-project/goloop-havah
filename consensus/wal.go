@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/icon-project/goloop/common"
@@ -130,12 +129,12 @@ func readWALInfo(id string) (*walInfo, error) {
 		}
 	}
 
-	nFiles := maxIndex - minIndex + 1
+	nFiles := int64(maxIndex) - int64(minIndex) + 1
 	if nFiles < 0 {
 		nFiles = 0
 	}
 	fileSizes := make([]int64, nFiles)
-	for i := uint64(0); i < nFiles; i++ {
+	for i := uint64(0); i < uint64(nFiles); i++ {
 		fileSizes[i] = fileSizeFor[i+minIndex]
 	}
 
@@ -211,15 +210,6 @@ func (w *walWriter) WriteBytes(payload []byte) (int, error) {
 		w.eldestUnsyncData = &now
 	}
 	return n, err
-}
-
-func WALWriteObject(w WALWriter, v interface{}) error {
-	bs, err := msgCodec.MarshalToBytes(v)
-	if err != nil {
-		return err
-	}
-	_, err = w.WriteBytes(bs)
-	return err
 }
 
 func (w *walWriter) Sync() error {
@@ -351,7 +341,6 @@ func (w *walWriter) doHousekeeping() {
 }
 
 type walReader struct {
-	mutex       sync.Mutex
 	files       []*os.File
 	reader      io.Reader
 	validOffset int64
@@ -416,14 +405,6 @@ func (w *walReader) ReadBytes() ([]byte, error) {
 
 	w.validOffset += int64(headerLen + payloadLen)
 	return payload, nil
-}
-
-func WALReadObject(w WALReader, v interface{}) ([]byte, error) {
-	bs, err := w.ReadBytes()
-	if err != nil {
-		return nil, err
-	}
-	return msgCodec.UnmarshalFromBytes(bs, v)
 }
 
 func (w *walReader) Close() error {

@@ -17,7 +17,7 @@ func (t *transition) executeTxsSequential(l module.TransactionList, ctx contract
 	cnt := 0
 
 	for i := l.Iterator(); i.Has(); i.Next() {
-		if t.step == stepCanceled {
+		if t.canceled() {
 			return ErrTransitionInterrupted
 		}
 		txi, _, err := i.Get()
@@ -83,7 +83,7 @@ func (t *transition) executeTxsSequential(l module.TransactionList, ctx contract
 		}
 
 		traceLogger.OnTransactionEnd(cnt, txo.ID(), txInfo.From, ctx.Treasury(), ctx.Revision(), rctBuf[cnt])
-		duration := time.Now().Sub(ts)
+		duration := time.Since(ts)
 		t.log.Tracef("END   TX <0x%x> duration=%s", txo.ID(), duration)
 		cnt++
 	}

@@ -1,6 +1,8 @@
 package hvhstate
 
 import (
+	"encoding/hex"
+	"fmt"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -8,10 +10,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/icon-project/goloop/common"
+	"github.com/icon-project/goloop/common/crypto"
 	"github.com/icon-project/goloop/common/db"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/havah/hvhutils"
 	"github.com/icon-project/goloop/module"
+	"github.com/icon-project/goloop/service/state"
 )
 
 func newDummyState() *State {
@@ -621,4 +625,667 @@ func TestState_UnregisterPlanet(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, lost.Sign() > 0)
 	assert.Zero(t, expLost.Cmp(lost))
+}
+
+func TestState_RegisterValidator(t *testing.T) {
+	owner := newDummyAddress(1, false)
+	name := "name-01"
+	_, pubKey := crypto.GenerateKeyPair()
+	state := newDummyState()
+
+	err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	assert.NoError(t, err)
+
+	err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	assert.Error(t, err)
+
+}
+
+func TestState_UnregisterValidator(t *testing.T) {
+	owner := newDummyAddress(1, false)
+	name := "name-01"
+	_, pubKey := crypto.GenerateKeyPair()
+	state := newDummyState()
+
+	err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	assert.NoError(t, err)
+
+	vi, err := state.GetValidatorInfo(owner)
+	assert.NoError(t, err)
+	assert.True(t, vi.Owner().Equal(owner))
+
+	vs, err := state.GetValidatorStatus(owner)
+	assert.NoError(t, err)
+	assert.False(t, vs.Disabled())
+	assert.False(t, vs.Disqualified())
+
+	invalidOwner := newDummyAddress(2, false)
+	err = state.UnregisterValidator(invalidOwner)
+	assert.Error(t, err)
+
+	err = state.UnregisterValidator(owner)
+	assert.NoError(t, err)
+
+	vs, err = state.GetValidatorStatus(owner)
+	assert.True(t, vs.Disqualified())
+}
+
+func TestState_SetValidatorInfo(t *testing.T) {
+	owner := newDummyAddress(1, false)
+	name := "name-01"
+	_, pubKey := crypto.GenerateKeyPair()
+	state := newDummyState()
+
+	err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	assert.NoError(t, err)
+
+	newName := "newName"
+	newUrl := "http://www.example.com/details.json"
+	_, newPubKey := crypto.GenerateKeyPair()
+	newNodePublicKey := "0x" + hex.EncodeToString(newPubKey.SerializeCompressed())
+	values := make(map[string]string)
+	values["name"] = newName
+	values["url"] = newUrl
+	values["nodePublicKey"] = newNodePublicKey
+
+	err = state.SetValidatorInfo(owner, values)
+	assert.NoError(t, err)
+
+	vi, err := state.GetValidatorInfo(owner)
+	assert.NoError(t, err)
+	assert.Equal(t, newName, vi.Name())
+	assert.Equal(t, newUrl, vi.Url())
+	assert.True(t, newPubKey.Equal(vi.PublicKey()))
+}
+
+func TestState_EnableValidator(t *testing.T) {
+	owner := newDummyAddress(1, false)
+	name := "name-01"
+	_, pubKey := crypto.GenerateKeyPair()
+	state := newDummyState()
+
+	err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	assert.NoError(t, err)
+
+	vs, err := state.GetValidatorStatus(owner)
+	enableCount := vs.EnableCount()
+	assert.NoError(t, err)
+	assert.Equal(t, hvhmodule.MaxEnableCount, enableCount)
+
+	// Called by an invalid owner
+	NoOwner := newDummyAddress(2, false)
+	err = state.EnableValidator(NoOwner, false)
+	assert.Error(t, err)
+	assert.Equal(t, enableCount, vs.EnableCount())
+
+	// Case where calling EnableValidator() to an enabled validator
+	err = state.EnableValidator(owner, false)
+	assert.NoError(t, err)
+	assert.Equal(t, hvhmodule.MaxEnableCount, vs.EnableCount())
+
+	for i := 1; i <= hvhmodule.MaxEnableCount; i++ {
+		assert.NoError(t, state.DisableValidator(owner))
+		vs, err = state.GetValidatorStatus(owner)
+		assert.NoError(t, err)
+		assert.True(t, vs.Disabled())
+
+		err = state.EnableValidator(owner, false)
+		assert.NoError(t, err)
+
+		vs, err = state.GetValidatorStatus(owner)
+		assert.NoError(t, err)
+		assert.Equal(t, hvhmodule.MaxEnableCount-i, vs.EnableCount())
+		assert.True(t, vs.Enabled())
+	}
+
+	assert.NoError(t, state.DisableValidator(owner))
+	vs, err = state.GetValidatorStatus(owner)
+	assert.NoError(t, err)
+	assert.True(t, vs.Disabled())
+
+	err = state.EnableValidator(owner, false)
+	assert.Error(t, err)
+
+	vs, err = state.GetValidatorStatus(owner)
+	assert.NoError(t, err)
+	assert.True(t, vs.Disabled())
+	assert.Zero(t, vs.EnableCount())
+}
+
+func TestState_SetValidatorCount(t *testing.T) {
+	state := newDummyState()
+	count := state.GetActiveValidatorCount()
+	assert.Zero(t, count)
+
+	newCount := int64(10)
+	err := state.SetActiveValidatorCount(newCount)
+	assert.NoError(t, err)
+	count = state.GetActiveValidatorCount()
+	assert.Equal(t, newCount, count)
+
+	assert.Error(t, state.SetActiveValidatorCount(0))
+	count = state.GetActiveValidatorCount()
+	assert.Equal(t, newCount, count)
+}
+
+func TestState_IsDecentralizationPossible(t *testing.T) {
+	var err error
+	state := newDummyState()
+
+	// Decentralization is not possible if revision is less than hvhmodule.RevisionDecentralization
+	for rev := 0; rev < hvhmodule.RevisionDecentralization; rev++ {
+		assert.False(t, state.IsDecentralizationPossible(rev))
+	}
+
+	rev := hvhmodule.RevisionDecentralization
+
+	validatorCount := state.GetActiveValidatorCount()
+	assert.Zero(t, validatorCount)
+
+	validatorCount = 10
+	err = state.SetActiveValidatorCount(validatorCount)
+	assert.NoError(t, err)
+	assert.False(t, state.IsDecentralizationPossible(rev))
+
+	for i := 0; i < int(validatorCount); i++ {
+		name := fmt.Sprintf("name-%02d", i)
+		owner := newDummyAddress(i+1, false)
+		_, pubKey := crypto.GenerateKeyPair()
+		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+		assert.NoError(t, err)
+	}
+
+	assert.True(t, state.IsDecentralizationPossible(rev))
+}
+
+func TestState_GetValidatorsOf(t *testing.T) {
+	var err error
+	var validators []module.Address
+	mainCount := 7
+	subCount := 5
+	validatorCount := mainCount + subCount
+	mainOwners := make([]module.Address, 0, mainCount)
+	subOwners := make([]module.Address, 0, subCount)
+
+	state := newDummyState()
+
+	for i := 0; i < mainCount; i++ {
+		name := fmt.Sprintf("name-%02d", i)
+		owner := newDummyAddress(i+1, false)
+		_, pubKey := crypto.GenerateKeyPair()
+
+		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeMain, name)
+		assert.NoError(t, err)
+
+		mainOwners = append(mainOwners, owner)
+	}
+	for i := mainCount; i < validatorCount; i++ {
+		name := fmt.Sprintf("name-%02d", i)
+		owner := newDummyAddress(i+1, false)
+		_, pubKey := crypto.GenerateKeyPair()
+
+		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+		assert.NoError(t, err)
+
+		subOwners = append(subOwners, owner)
+	}
+
+	allOwners := make([]module.Address, 0, mainCount+subCount)
+	allOwners = append(allOwners, mainOwners...)
+	allOwners = append(allOwners, subOwners...)
+	ownersOf := [][]module.Address{subOwners, mainOwners, allOwners}
+
+	for _, gFilter := range []GradeFilter{GradeFilterSub, GradeFilterMain, GradeFilterAll} {
+		owners := ownersOf[gFilter]
+		validators, err = state.GetValidatorsOf(gFilter)
+		assert.NoError(t, err)
+		assert.Equal(t, len(owners), len(validators))
+		for i, v := range validators {
+			assert.True(t, v.Equal(owners[i]))
+		}
+	}
+
+	// Unregister a main validator
+	idx := 1
+	ownerToRemove := mainOwners[idx]
+	assert.NoError(t, state.UnregisterValidator(ownerToRemove))
+	mainOwners = append(mainOwners[:idx], mainOwners[idx+1:]...)
+	assert.Equal(t, mainCount-1, len(mainOwners))
+
+	validators, err = state.GetValidatorsOf(GradeFilterMain)
+	assert.NoError(t, err)
+	assert.Equal(t, len(mainOwners), len(validators))
+	for i := 0; i < len(validators); i++ {
+		assert.False(t, validators[i].Equal(ownerToRemove))
+	}
+
+	// Unregister a sub validator
+	idx = 1
+	ownerToRemove = subOwners[1]
+	assert.NoError(t, state.UnregisterValidator(ownerToRemove))
+	subOwners = append(subOwners[:idx], subOwners[idx+1:]...)
+	assert.Equal(t, subCount-1, len(subOwners))
+
+	validators, err = state.GetValidatorsOf(GradeFilterSub)
+	assert.NoError(t, err)
+	assert.Equal(t, subCount-1, len(validators))
+	for i := 0; i < len(validators); i++ {
+		assert.False(t, validators[i].Equal(ownerToRemove))
+	}
+
+	// Unregister all main validators
+	for _, owner := range mainOwners {
+		assert.NoError(t, state.UnregisterValidator(owner))
+	}
+	validators, err = state.GetValidatorsOf(GradeFilterMain)
+	assert.NoError(t, err)
+	assert.Zero(t, len(validators))
+
+	// Unregister all sub validators
+	for _, owner := range subOwners {
+		assert.NoError(t, state.UnregisterValidator(owner))
+	}
+	validators, err = state.GetValidatorsOf(GradeFilterSub)
+	assert.NoError(t, err)
+	assert.Zero(t, len(validators))
+
+	validators, err = state.GetValidatorsOf(GradeFilterAll)
+	assert.NoError(t, err)
+	assert.Zero(t, len(validators))
+}
+
+func TestState_OnBlockVote(t *testing.T) {
+	var err error
+	var grade Grade
+	var vi *ValidatorInfo
+	var vs *ValidatorStatus
+	var owner module.Address
+
+	mainCount := 7
+	subCount := 3
+	validatorCount := mainCount + subCount
+
+	state := newDummyState()
+	assert.NoError(t, state.SetDecentralized())
+	assert.NoError(t, state.RenewNetworkStatusOnTermStart())
+
+	validators := make([]module.Address, validatorCount)
+
+	for i := 0; i < validatorCount; i++ {
+		name := fmt.Sprintf("name-%02d", i)
+		owner = newDummyAddress(i+1, false)
+		_, pubKey := crypto.GenerateKeyPair()
+
+		if i < mainCount {
+			grade = GradeMain
+		} else {
+			grade = GradeSub
+		}
+
+		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), grade, name)
+		assert.NoError(t, err)
+
+		vi, err = state.GetValidatorInfo(owner)
+		assert.NoError(t, err)
+		validators[i] = vi.Address()
+	}
+
+	var penalized bool
+	for _, v := range validators {
+		penalized, err = state.OnBlockVote(v, true)
+		assert.NoError(t, err)
+		assert.False(t, penalized)
+
+		owner, err = state.GetOwnerByNode(v)
+		assert.NoError(t, err)
+
+		vs, err = state.GetValidatorStatus(owner)
+		assert.NoError(t, err)
+		assert.Zero(t, vs.NonVotes())
+		assert.True(t, vs.Enabled())
+		assert.Equal(t, hvhmodule.MaxEnableCount, vs.EnableCount())
+	}
+
+	node := validators[0]
+	size := int(hvhmodule.NonVoteAllowance) + 1
+	owner, err = state.GetOwnerByNode(node)
+	assert.NoError(t, err)
+	for i := 0; i < size; i++ {
+		penalized, err = state.OnBlockVote(node, false)
+		assert.NoError(t, err)
+		assert.False(t, penalized)
+
+		vs, err = state.GetValidatorStatus(owner)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(i + 1), vs.NonVotes())
+		assert.True(t, vs.Enabled())
+		assert.Equal(t, hvhmodule.MaxEnableCount, vs.EnableCount())
+	}
+
+	node = validators[mainCount]
+	size = int(hvhmodule.NonVoteAllowance) + 1
+	owner, err = state.GetOwnerByNode(node)
+	assert.NoError(t, err)
+	for i := 0; i < size; i++ {
+		expectedPenalized := i == size - 1
+
+		penalized, err = state.OnBlockVote(node, false)
+		assert.NoError(t, err)
+		assert.Equal(t, expectedPenalized, penalized)
+
+		vs, err = state.GetValidatorStatus(owner)
+		assert.NoError(t, err)
+		assert.Equal(t, int64(i + 1), vs.NonVotes())
+		assert.Equal(t, !expectedPenalized, vs.Enabled())
+		assert.Equal(t, hvhmodule.MaxEnableCount, vs.EnableCount())
+	}
+}
+
+func TestState_GetMainValidators(t *testing.T) {
+	var err error
+	state := newDummyState()
+	size := 7
+	owners := make([]module.Address, size)
+	expValidators := make([]module.Address, size)
+
+	for i := 0; i < size; i++ {
+		name := fmt.Sprintf("name-%02d", i)
+		owner := newDummyAddress(i+1, false)
+		_, pubKey := crypto.GenerateKeyPair()
+
+		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeMain, name)
+		assert.NoError(t, err)
+
+		expValidators[i] = common.NewAccountAddressFromPublicKey(pubKey)
+		owners[i] = owner
+	}
+
+	validators, err := state.GetMainValidators()
+	assert.NoError(t, err)
+	assert.Equal(t, size, len(validators))
+
+	for i := 0; i < size; i++ {
+		assert.True(t, validators[i].Equal(expValidators[i]))
+	}
+
+	idx := size / 2
+	err = state.UnregisterValidator(owners[idx])
+	assert.NoError(t, err)
+
+	validators, err = state.GetMainValidators()
+	assert.NoError(t, err)
+	assert.Equal(t, size - 1, len(validators))
+
+	addrMap := make(map[string]struct{})
+	for _, v := range validators {
+		addrMap[ToKey(v)] = struct{}{}
+	}
+
+	expValidators = append(expValidators[:idx], expValidators[idx+1:]...)
+	for _, ev := range expValidators {
+		_, found := addrMap[ToKey(ev)]
+		assert.True(t, found)
+	}
+}
+
+type dummyValidatorState struct {
+	state.ValidatorState
+	validators   []module.Address
+	validatorMap map[string]int
+}
+
+func (vs *dummyValidatorState) IndexOf(addr module.Address) int {
+	if vs.validatorMap == nil {
+		vs.validatorMap = make(map[string]int)
+		for i, v := range vs.validators {
+			vs.validatorMap[ToKey(v)] = i
+		}
+	}
+	if idx, ok := vs.validatorMap[ToKey(addr)]; ok {
+		return idx
+	} else {
+		return -1
+	}
+}
+
+func (vs *dummyValidatorState) Get(i int) (module.Validator, bool) {
+	if i >= 0 && i < vs.Len() {
+		addr := vs.validators[i]
+		v, _ := state.ValidatorFromAddress(addr)
+		return v, true
+	}
+	return nil, false
+}
+
+func (vs *dummyValidatorState) Len() int {
+	return len(vs.validators)
+}
+
+func newDummyValidatorState(validators []module.Address) state.ValidatorState {
+	return &dummyValidatorState{
+		validators: validators,
+	}
+}
+
+func TestState_GetNextActiveValidatorsAndChangeIndex(t *testing.T) {
+	var err error
+	state := newDummyState()
+	size := 7
+	owners := make([]module.Address, size)
+	expValidators := make([]module.Address, size)
+
+	for i := 0; i < size; i++ {
+		name := fmt.Sprintf("name-%02d", i+1)
+		owner := newDummyAddress(i+1, false)
+		_, pubKey := crypto.GenerateKeyPair()
+
+		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+		assert.NoError(t, err)
+
+		expValidators[i] = common.NewAccountAddressFromPublicKey(pubKey)
+		owners[i] = owner
+	}
+
+	type arg struct {
+		count, expLen, expSVIndex int
+	}
+	args := []arg{
+		{count: -1, expLen: 0, expSVIndex: 0},
+		{count: 0, expLen: 0, expSVIndex: 0},
+		{count: 1, expLen: 1, expSVIndex: 4},
+		{count: 2, expLen: 2, expSVIndex: 6},
+		{count: 2, expLen: 2, expSVIndex: 4},
+	}
+
+	validators, err := state.GetNextActiveValidatorsAndChangeIndex(nil, size)
+	assert.NoError(t, err)
+	assert.Equal(t, size, len(validators))
+	for i := 0; i < size; i++ {
+		assert.True(t, expValidators[i].Equal(validators[i]))
+	}
+	assert.Zero(t, state.GetSubValidatorsIndex())
+
+	activeValidators := newDummyValidatorState(expValidators[:3])
+	for i, test := range args {
+		name := fmt.Sprintf("no-disabled-%d", i)
+		t.Run(name, func(t *testing.T) {
+			validators, err = state.GetNextActiveValidatorsAndChangeIndex(activeValidators, test.count)
+			if test.count >= 0 {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+			assert.Equal(t, test.expLen, len(validators))
+			assert.Equal(t, test.expSVIndex, int(state.GetSubValidatorsIndex()))
+			for _, v := range validators {
+				assert.True(t, activeValidators.IndexOf(v) < 0)
+				owner, err := state.GetOwnerByNode(v)
+				assert.NoError(t, err)
+				vs, err := state.GetValidatorStatus(owner)
+				assert.NoError(t, err)
+				assert.True(t, vs.Enabled())
+			}
+		})
+	}
+
+	args = []arg{
+		{count: 3, expLen: 3, expSVIndex: 4},
+		{count: 1, expLen: 1, expSVIndex: 6},
+	}
+	owner, _ := state.GetOwnerByNode(expValidators[4])
+	assert.NoError(t, state.DisableValidator(owner))
+	for i, test := range args {
+		name := fmt.Sprintf("one-disabled-%d", i)
+		t.Run(name, func(t *testing.T) {
+			validators, err = state.GetNextActiveValidatorsAndChangeIndex(activeValidators, test.count)
+			assert.NoError(t, err)
+			assert.Equal(t, test.expLen, len(validators))
+			assert.Equal(t, test.expSVIndex, int(state.GetSubValidatorsIndex()))
+			for _, v := range validators {
+				assert.True(t, activeValidators.IndexOf(v) < 0)
+				owner, _ = state.GetOwnerByNode(v)
+				vs, _ := state.GetValidatorStatus(owner)
+				assert.True(t, vs.Enabled())
+			}
+		})
+	}
+
+	assert.Equal(t, 6, int(state.GetSubValidatorsIndex()))
+	args = []arg{
+		{count: 1, expLen: 1, expSVIndex: 4},
+	}
+	owner, _ = state.GetOwnerByNode(expValidators[4])
+	assert.NoError(t, state.UnregisterValidator(owner))
+	// sub_validators: |0|1|2|3|5|6|
+	for i, test := range args {
+		name := fmt.Sprintf("one-unregistered-%d", i)
+		t.Run(name, func(t *testing.T) {
+			validators, err = state.GetNextActiveValidatorsAndChangeIndex(activeValidators, test.count)
+			assert.NoError(t, err)
+			assert.Equal(t, test.expLen, len(validators))
+			assert.Equal(t, test.expSVIndex, int(state.GetSubValidatorsIndex()))
+			for _, v := range validators {
+				assert.True(t, activeValidators.IndexOf(v) < 0)
+				owner, _ = state.GetOwnerByNode(v)
+				vs, _ := state.GetValidatorStatus(owner)
+				assert.True(t, vs.Enabled())
+			}
+		})
+	}
+}
+
+func TestState_SetBlockVoteCheckParameters(t *testing.T) {
+	state := newDummyState()
+	assert.Equal(t, hvhmodule.BlockVoteCheckPeriod, state.GetBlockVoteCheckPeriod())
+	assert.Equal(t, hvhmodule.NonVoteAllowance, state.GetNonVoteAllowance())
+
+	tests := []struct{
+		period int64
+		allowance int64
+		success bool
+	}{
+		{0, 0, true},
+		{0, 100, true},
+		{100, 0, true},
+		{100, 70, true},
+		{200, 80, true},
+		{-10, 80, false},
+		{10, -80, false},
+		{-100, -80, false},
+	}
+
+	for i, test := range tests {
+		period := test.period
+		allowance := test.allowance
+		success := test.success
+		name := fmt.Sprintf("test%02d_%d_%d_%t", i, period, allowance, success)
+		t.Run(name, func(t *testing.T){
+			oPeriod := state.GetBlockVoteCheckPeriod()
+			oAllowance := state.GetNonVoteAllowance()
+
+			err := state.SetBlockVoteCheckParameters(period, allowance)
+			assert.Equal(t, success, err == nil)
+			if success {
+				assert.Equal(t, period, state.GetBlockVoteCheckPeriod())
+				assert.Equal(t, allowance, state.GetNonVoteAllowance())
+			} else {
+				assert.Equal(t, oPeriod, state.GetBlockVoteCheckPeriod())
+				assert.Equal(t, oAllowance, state.GetNonVoteAllowance())
+			}
+		})
+	}
+}
+
+func TestState_SetNetworkStatus(t *testing.T) {
+	state := newDummyState()
+	emptyNS := NewNetworkStatus()
+	ns, err := state.GetNetworkStatus()
+	assert.NoError(t, err)
+	assert.True(t, ns.Equal(emptyNS))
+
+	ns.SetDecentralized()
+	assert.NoError(t, ns.SetActiveValidatorCount(25))
+	assert.NoError(t, ns.SetNonVoteAllowance(100))
+	assert.NoError(t, ns.SetBlockVoteCheckPeriod(100))
+	assert.NoError(t, state.SetNetworkStatus(ns))
+
+	ns2, err := state.GetNetworkStatus()
+	assert.NoError(t, err)
+	assert.True(t, ns != ns2)
+	assert.True(t, ns2.Equal(ns))
+}
+
+func TestState_IsItTimeToCheckBlockVote(t *testing.T) {
+	state := newDummyState()
+	tests := []struct{
+		blockIndex int64
+		mode NetMode
+		period int64
+		allowance int64
+		result bool
+	}{
+		{0, NetModeInit, 0, 0, false},
+		{0, NetModeDecentralized, 0, 5, false},
+		{0, NetModeInit, 10, 5, false},
+		{7, NetModeDecentralized, 10, 5, false},
+		{0, NetModeDecentralized, 10, 0, true},
+		{10, NetModeDecentralized, 10, 0, true},
+		{20, NetModeDecentralized, 20, 3, true},
+		{40, NetModeDecentralized, 20, 3, true},
+	}
+
+	ns, _ := state.GetNetworkStatus()
+	for i, test := range tests {
+		name := fmt.Sprintf("name-%02d", i)
+		t.Run(name, func(t *testing.T){
+			ns.SetMode(test.mode)
+			assert.NoError(t, ns.SetBlockVoteCheckPeriod(test.period))
+			assert.NoError(t, ns.SetNonVoteAllowance(test.allowance))
+			assert.NoError(t, state.SetNetworkStatus(ns))
+			assert.Equal(t, test.result, state.IsItTimeToCheckBlockVote(test.blockIndex))
+		})
+	}
+}
+
+func TestState_RenewNetworkStatusOnTermStart(t *testing.T) {
+	state := newDummyState()
+	period := int64(10)
+	allowance := int64(3)
+	avCount := int64(10)
+
+	oldNs, _ := state.GetNetworkStatus()
+	assert.False(t, oldNs.IsDecentralized())
+
+	assert.NoError(t, state.SetBlockVoteCheckParameters(period, allowance))
+	assert.NoError(t, state.SetActiveValidatorCount(avCount))
+	assert.NoError(t, state.RenewNetworkStatusOnTermStart())
+	ns, _ := state.GetNetworkStatus()
+	assert.True(t, ns.Equal(oldNs))
+
+	ns.SetDecentralized()
+	assert.NoError(t, state.SetNetworkStatus(ns))
+
+	assert.NoError(t, state.RenewNetworkStatusOnTermStart())
+	ns, _ = state.GetNetworkStatus()
+	assert.False(t, ns.Equal(oldNs))
 }

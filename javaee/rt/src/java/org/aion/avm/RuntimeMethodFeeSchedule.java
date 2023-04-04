@@ -290,6 +290,9 @@ public class RuntimeMethodFeeSchedule {
     public static final int BlockchainRuntime_avm_verifySignature_per_bytes = 50;
     public static final int BlockchainRuntime_avm_recoverKey = RT_METHOD_FEE_LEVEL_6;
     public static final int BlockchainRuntime_avm_recoverKey_per_bytes = 50;
+    public static final int BlockchainRuntime_avm_aggregate = RT_METHOD_FEE_LEVEL_6;
+    public static final int BlockchainRuntime_avm_aggregate_per_bytes = 20;
+
     public static final int BlockchainRuntime_avm_getAddressFromKey = RT_METHOD_FEE_LEVEL_5;
     public static final int BlockchainRuntime_avm_getFeeSharingProportion = RT_METHOD_FEE_LEVEL_1;
     public static final int BlockchainRuntime_avm_setFeeSharingProportion = RT_METHOD_FEE_LEVEL_1;
@@ -543,6 +546,7 @@ public class RuntimeMethodFeeSchedule {
     public static final int Enum_avm_equals = RT_METHOD_FEE_LEVEL_1; // totalCost - 225; //maximum cost of multiple blocks;
     public static final int Enum_avm_clone = RT_METHOD_FEE_LEVEL_2; // totalCost - 263; // byte code cost - 163; invoked methods cost - 100;
     public static final int Enum_avm_valueOf = RT_METHOD_FEE_LEVEL_4; // totalCost - 3516; //maximum cost of multiple blocks; // byte code cost - 753; invoked methods cost - 2763;
+    public static final int Enum_avm_compareTo = RT_METHOD_FEE_LEVEL_2;
 
     public static final int Byte_avm_toString = RT_METHOD_FEE_LEVEL_2; // totalCost - 122;
     public static final int Byte_avm_valueOf = RT_METHOD_FEE_LEVEL_1; // totalCost - 270;

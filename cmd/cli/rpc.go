@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
 	"github.com/icon-project/goloop/client"
@@ -42,7 +43,7 @@ func RpcPersistentPreRunE(vc *viper.Viper, rpcClient *client.ClientV3) func(cmd 
 				if err != nil {
 					return err
 				}
-				return JsonPrettyCopyAndClose(os.Stdout, b)
+				return JsonPrettyCopyAndClose(os.Stderr, b)
 			}
 		}
 		return nil
@@ -55,6 +56,56 @@ func readFile(s string) ([]byte, error) {
 	} else {
 		return ioutil.ReadFile(s)
 	}
+}
+
+func readJSONObject(s string) (map[string]interface{}, error) {
+	if len(s) == 0 {
+		return nil, nil
+	}
+	var bs []byte
+	var err error
+	if strings.HasPrefix(s, "@") {
+		bs, err = ioutil.ReadFile(s[1:])
+	} else if strings.HasPrefix(s, "-") {
+		bs, err = ioutil.ReadAll(os.Stdin)
+	} else {
+		bs = []byte(s)
+	}
+	if err != nil {
+		return nil, err
+	}
+	var params map[string]interface{}
+	err = json.Unmarshal(bs, &params)
+	if err != nil {
+		return nil, err
+	} else {
+		return params, nil
+	}
+}
+
+// getParamsFromFlags process "params" string flag and "param" stringToString flag
+// for parameter handling.
+func getParamsFromFlags(flags *pflag.FlagSet) (interface{}, error){
+	var params interface{}
+	if pp, err := flags.GetString("params"); err == nil && len(pp) > 0 {
+		if parsed, err := readJSONObject(pp) ; err != nil {
+			return nil, err
+		} else if parsed != nil {
+			params = parsed
+		}
+	}
+	if dataParams, err := flags.GetStringToString("param"); err == nil && len(dataParams) > 0 {
+		if params != nil {
+			pm := params.(map[string]interface{})
+			for k, v := range dataParams {
+				pm[k] = v
+			}
+			params = pm
+		} else {
+			params = dataParams
+		}
+	}
+	return params, nil
 }
 
 func AddRpcRequiredFlags(c *cobra.Command) {
@@ -256,7 +307,9 @@ func NewRpcCmd(parentCmd *cobra.Command, parentVc *viper.Viper) (*cobra.Command,
 			if dataMethod := cmd.Flag("method").Value.String(); dataMethod != "" {
 				dataM["method"] = dataMethod
 			}
-			if dataParams, err := cmd.Flags().GetStringToString("param"); err == nil && len(dataParams) > 0 {
+			if dataParams, err := getParamsFromFlags(cmd.Flags()) ; err != nil {
+				return err
+			} else if dataParams != nil {
 				dataM["params"] = dataParams
 			}
 			if len(dataM) > 0 {
@@ -279,6 +332,8 @@ func NewRpcCmd(parentCmd *cobra.Command, parentVc *viper.Viper) (*cobra.Command,
 	callFlags.Int("height", -1, "BlockHeight")
 	callFlags.String("method", "",
 		"Name of the function to invoke in SCORE, if '--raw' used, will overwrite")
+	callFlags.StringToString("params", nil,
+		"raw json string or '@<json file>' or '-' for stdin for parameter JSON. it overrides raw one ")
 	callFlags.StringToString("param", nil,
 		"key=value, Function parameters, if '--raw' used, will overwrite")
 	callFlags.String("raw", "", "call with 'data' using raw json file or json-string")
@@ -423,7 +478,140 @@ func NewRpcCmd(parentCmd *cobra.Command, parentVc *viper.Viper) (*cobra.Command,
 	rootCmd.AddCommand(scoreStatusCmd)
 	flags = scoreStatusCmd.Flags()
 	flags.Int("height", -1, "BlockHeight")
+
+	rootCmd.AddCommand(
+		&cobra.Command{
+			Use:   "btpnetwork ID [HEIGHT]",
+			Short: "GetBTPNetworkInfo",
+			Args:  ArgsWithDefaultErrorFunc(cobra.RangeArgs(1, 2)),
+			RunE: func(cmd *cobra.Command, args []string) error {
+				p, err := newBTPQueryParam(args)
+				if err != nil {
+					return err
+				}
+				r, err := rpcClient.GetBTPNetworkInfo(p)
+				if err != nil {
+					return err
+				}
+				return JsonPrettyPrintln(os.Stdout, r)
+			},
+		},
+		&cobra.Command{
+			Use:   "btpnetworktype ID [HEIGHT]",
+			Short: "GetBTPNetworkTypeInfo",
+			Args:  ArgsWithDefaultErrorFunc(cobra.RangeArgs(1, 2)),
+			RunE: func(cmd *cobra.Command, args []string) error {
+				p, err := newBTPQueryParam(args)
+				if err != nil {
+					return err
+				}
+				r, err := rpcClient.GetBTPNetworkTypeInfo(p)
+				if err != nil {
+					return err
+				}
+				return JsonPrettyPrintln(os.Stdout, r)
+			},
+		},
+		&cobra.Command{
+			Use:   "btpmessages NETWORK_ID HEIGHT",
+			Short: "GetBTPMessages",
+			Args:  ArgsWithDefaultErrorFunc(cobra.ExactArgs(2)),
+			RunE: func(cmd *cobra.Command, args []string) error {
+				p, err := newBTPMessagesParam(args)
+				if err != nil {
+					return err
+				}
+				r, err := rpcClient.GetBTPMessages(p)
+				if err != nil {
+					return err
+				}
+				return JsonPrettyPrintln(os.Stdout, r)
+			},
+		},
+		&cobra.Command{
+			Use:   "btpheader NETWORK_ID HEIGHT",
+			Short: "GetBTPHeader",
+			Args:  ArgsWithDefaultErrorFunc(cobra.ExactArgs(2)),
+			RunE: func(cmd *cobra.Command, args []string) error {
+				p, err := newBTPMessagesParam(args)
+				if err != nil {
+					return err
+				}
+				r, err := rpcClient.GetBTPHeader(p)
+				if err != nil {
+					return err
+				}
+				return JsonPrettyPrintln(os.Stdout, r)
+			},
+		},
+		&cobra.Command{
+			Use:   "btpproof NETWORK_ID HEIGHT",
+			Short: "GetBTPProof",
+			Args:  ArgsWithDefaultErrorFunc(cobra.ExactArgs(2)),
+			RunE: func(cmd *cobra.Command, args []string) error {
+				p, err := newBTPMessagesParam(args)
+				if err != nil {
+					return err
+				}
+				r, err := rpcClient.GetBTPProof(p)
+				if err != nil {
+					return err
+				}
+				return JsonPrettyPrintln(os.Stdout, r)
+			},
+		},
+		&cobra.Command{
+			Use:   "btpsource",
+			Short: "GetBTPSourceInformation",
+			Args:  ArgsWithDefaultErrorFunc(cobra.ExactArgs(0)),
+			RunE: func(cmd *cobra.Command, args []string) error {
+				r, err := rpcClient.GetBTPSourceInformation()
+				if err != nil {
+					return err
+				}
+				return JsonPrettyPrintln(os.Stdout, r)
+			},
+		})
 	return rootCmd, vc
+}
+
+func newHexIntByString(s string) (i jsonrpc.HexInt, err error) {
+	var n int64
+	if n, err = intconv.ParseInt(s, 64); err != nil {
+		return
+	}
+	i = jsonrpc.HexInt(intconv.FormatInt(n))
+	return
+}
+
+func newBTPQueryParam(args []string) (p *v3.BTPQueryParam, err error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("invalid args")
+	}
+	p = &v3.BTPQueryParam{}
+	if p.Id, err = newHexIntByString(args[0]); err != nil {
+		return nil, err
+	}
+	if len(args) > 1 {
+		if p.Height, err = newHexIntByString(args[1]); err != nil {
+			return nil, err
+		}
+	}
+	return p, nil
+}
+
+func newBTPMessagesParam(args []string) (p *v3.BTPMessagesParam, err error) {
+	if len(args) < 2 {
+		return nil, fmt.Errorf("invalid args")
+	}
+	p = &v3.BTPMessagesParam{}
+	if p.NetworkId, err = newHexIntByString(args[0]); err != nil {
+		return nil, err
+	}
+	if p.Height, err = newHexIntByString(args[1]); err != nil {
+		return nil, err
+	}
+	return p, nil
 }
 
 func NewSendTxCmd(parentCmd *cobra.Command, parentVc *viper.Viper) *cobra.Command {
@@ -781,7 +969,9 @@ func NewSendTxCmd(parentCmd *cobra.Command, parentVc *viper.Viper) *cobra.Comman
 			if dataMethod := cmd.Flag("method").Value.String(); dataMethod != "" {
 				dataM["method"] = dataMethod
 			}
-			if dataParams, err := cmd.Flags().GetStringToString("param"); err == nil && len(dataParams) > 0 {
+			if dataParams, err := getParamsFromFlags(cmd.Flags()) ; err != nil {
+				return err
+			} else if dataParams != nil {
 				dataM["params"] = dataParams
 			}
 			if len(dataM) > 0 {
@@ -808,6 +998,8 @@ func NewSendTxCmd(parentCmd *cobra.Command, parentVc *viper.Viper) *cobra.Comman
 	callFlags.String("to", "", "ToAddress")
 	callFlags.String("method", "",
 		"Name of the function to invoke in SCORE, if '--raw' used, will overwrite")
+	callFlags.String("params", "",
+		"raw json string or '@<json file>' or '-' for stdin for parameter JSON, it overrides raw one")
 	callFlags.StringToString("param", nil,
 		"key=value, Function parameters, if '--raw' used, will overwrite")
 	callFlags.String("value", "", "Value of transfer")
@@ -853,7 +1045,9 @@ func NewSendTxCmd(parentCmd *cobra.Command, parentVc *viper.Viper) *cobra.Comman
 				}
 			}
 			dataM["content"] = "0x" + hex.EncodeToString(b)
-			if dataParams, err := cmd.Flags().GetStringToString("param"); err == nil && len(dataParams) > 0 {
+			if dataParams, err := getParamsFromFlags(cmd.Flags()); err != nil {
+				return err
+			} else if dataParams != nil {
 				dataM["params"] = dataParams
 			}
 			if len(dataM) > 0 {
@@ -872,6 +1066,8 @@ func NewSendTxCmd(parentCmd *cobra.Command, parentVc *viper.Viper) *cobra.Comman
 	deployFlags.String("to", "cx0000000000000000000000000000000000000000", "ToAddress")
 	deployFlags.String("content_type", "application/zip",
 		"Mime-type of the content")
+	deployFlags.String("params", "",
+		"raw json string or '@<json file>' or '-' for stdin for parameter JSON")
 	deployFlags.StringToString("param", nil,
 		"key=value, Function parameters will be delivered to on_install() or on_update()")
 	MarkAnnotationHidden(deployFlags, "content-type")
@@ -895,6 +1091,12 @@ func NewMonitorCmd(parentCmd *cobra.Command, parentVc *viper.Viper) *cobra.Comma
 				return err
 			}
 			param := &server.BlockRequest{Height: common.HexInt64{Value: height}}
+			if includeLogs, err := cmd.Flags().GetBool("logs"); err != nil {
+				return err
+			} else if includeLogs {
+				param.Logs = common.HexBool{Value: includeLogs}
+			}
+
 			fs, err := cmd.Flags().GetStringArray("filter")
 			if err != nil {
 				return err
@@ -929,6 +1131,7 @@ func NewMonitorCmd(parentCmd *cobra.Command, parentVc *viper.Viper) *cobra.Comma
 	monitorBlockFlags := monitorBlockCmd.Flags()
 	monitorBlockFlags.StringArray("filter", nil,
 		"EventFilter raw json file or json string")
+	monitorBlockFlags.Bool("logs", false, "Includes logs")
 
 	monitorEventCmd := &cobra.Command{
 		Use:   "event HEIGHT",
@@ -963,6 +1166,11 @@ func NewMonitorCmd(parentCmd *cobra.Command, parentVc *viper.Viper) *cobra.Comma
 					return err
 				}
 				param.Height = common.HexInt64{Value: height}
+			}
+			if includeLogs, err := cmd.Flags().GetBool("logs"); err != nil {
+				return err
+			} else if includeLogs {
+				param.Logs = common.HexBool{Value: includeLogs}
 			}
 
 			if sig := cmd.Flag("event").Value.String(); sig != "" {
@@ -1001,5 +1209,50 @@ func NewMonitorCmd(parentCmd *cobra.Command, parentVc *viper.Viper) *cobra.Comma
 	monitorEventFlags.StringSlice("indexed", nil, "Indexed Arguments of Event, comma-separated string")
 	monitorEventFlags.StringSlice("data", nil, "Not indexed Arguments of Event, comma-separated string")
 	monitorEventFlags.String("raw", "", "EventFilter raw json file or json-string")
+	monitorEventFlags.Bool("logs", false, "Includes logs")
+
+	monitorBTPCmd := &cobra.Command{
+		Use:   "btp HEIGHT",
+		Short: "MonitorBTP",
+		Args:  ArgsWithDefaultErrorFunc(cobra.ExactArgs(1)),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			param := &server.BTPRequest{}
+			if len(args) > 0 {
+				height, err := intconv.ParseInt(args[0], 64)
+				if err != nil {
+					return err
+				}
+				param.Height = common.HexInt64{Value: height}
+			}
+
+			if nid := cmd.Flag("networkId").Value.String(); nid != "" {
+				networkId, err := intconv.ParseInt(nid, 64)
+				if err != nil {
+					return err
+				}
+				param.NetworkId = common.HexInt64{Value: networkId}
+			}
+			if includeProof, err := cmd.Flags().GetBool("proof_flag"); err != nil {
+				return err
+			} else {
+				param.ProofFlag = common.HexBool{Value: includeProof}
+			}
+
+			OnInterrupt(rpcClient.Cleanup)
+			err := rpcClient.MonitorBtp(param, func(v *server.BTPNotification) {
+				JsonPrettyPrintln(os.Stdout, v)
+			}, nil)
+			if err != nil {
+				return err
+			}
+			return nil
+		},
+	}
+	rootCmd.AddCommand(monitorBTPCmd)
+	monitorBTPFlags := monitorBTPCmd.Flags()
+	monitorBTPFlags.String("networkId", "",
+		"BTP Network ID")
+	monitorBTPFlags.Bool("proof_flag", false, "Includes proof")
+
 	return rootCmd
 }

@@ -2,7 +2,6 @@ package network
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"hash"
@@ -48,9 +47,10 @@ type Packet struct {
 type packetDestInfo uint16
 
 const (
-	p2pDestAny       = 0x00
-	p2pDestPeerGroup = 0x08
-	p2pDestPeer      = 0xFF
+	p2pDestAny  = 0x00
+	p2pDestSeed = byte(module.RoleSeed)
+	p2pDestRoot = byte(module.RoleValidator)
+	p2pDestPeer = 0xFF
 )
 
 func newPacketDestInfo(dest byte, ttl byte) packetDestInfo {
@@ -329,25 +329,9 @@ type PacketReader struct {
 	hash hash.Hash64
 }
 
-// NewReader returns a new Reader whose buffer has the default size.
+// NewPacketReader returns a new PacketReader whose buffer has the default size.
 func NewPacketReader(rd io.Reader) *PacketReader {
 	return &PacketReader{Reader: bufio.NewReaderSize(rd, DefaultPacketBufferSize), rd: rd}
-}
-
-func (pr *PacketReader) _read(n int) ([]byte, error) {
-	b := make([]byte, n)
-	rn := 0
-	for {
-		tn, err := pr.Reader.Read(b[rn:])
-		if err != nil {
-			return nil, err
-		}
-		rn += tn
-		if rn >= n {
-			break
-		}
-	}
-	return b, nil
 }
 
 func (pr *PacketReader) Reset(rd io.Reader) {
@@ -367,7 +351,8 @@ func (pr *PacketReader) ReadPacket() (pkt *Packet, e error) {
 
 type PacketWriter struct {
 	*bufio.Writer
-	wr io.Writer
+	wr  io.Writer
+	mtx sync.Mutex
 }
 
 func NewPacketWriter(w io.Writer) *PacketWriter {
@@ -375,6 +360,9 @@ func NewPacketWriter(w io.Writer) *PacketWriter {
 }
 
 func (pw *PacketWriter) Reset(wr io.Writer) {
+	pw.mtx.Lock()
+	defer pw.mtx.Unlock()
+
 	pw.wr = wr
 	pw.Writer.Reset(pw.wr)
 }
@@ -383,6 +371,9 @@ func (pw *PacketWriter) WritePacket(pkt *Packet) error {
 	_, err := pkt.WriteTo(pw)
 	if err != nil {
 		return err
+	}
+	if pw.Buffered() > 0 {
+		return pw.Flush()
 	}
 	return nil
 }
@@ -404,6 +395,9 @@ func (pw *PacketWriter) Write(b []byte) (int, error) {
 }
 
 func (pw *PacketWriter) Flush() error {
+	pw.mtx.Lock()
+	defer pw.mtx.Unlock()
+
 	re := 0
 	for {
 		err := pw.Writer.Flush()
@@ -415,56 +409,4 @@ func (pw *PacketWriter) Flush() error {
 			return err
 		}
 	}
-}
-
-type PacketReadWriter struct {
-	b    *bytes.Buffer
-	rd   *PacketReader
-	wr   *PacketWriter
-	rpkt *Packet
-	wpkt *Packet
-	mtx  sync.RWMutex
-}
-
-func NewPacketReadWriter() *PacketReadWriter {
-	b := bytes.NewBuffer(make([]byte, DefaultPacketBufferSize))
-	b.Reset()
-	return &PacketReadWriter{b: b, rd: NewPacketReader(b), wr: NewPacketWriter(b)}
-}
-
-func (prw *PacketReadWriter) WritePacket(pkt *Packet) error {
-	defer prw.mtx.Unlock()
-	prw.mtx.Lock()
-	if err := prw.wr.WritePacket(pkt); err != nil {
-		return err
-	}
-	if err := prw.wr.Flush(); err != nil {
-		return err
-	}
-	prw.wpkt = pkt
-	return nil
-}
-
-func (prw *PacketReadWriter) ReadPacket() (*Packet, error) {
-	defer prw.mtx.RUnlock()
-	prw.mtx.RLock()
-	if prw.rpkt == nil {
-		//(pkt *Packet, h footer.Hash64, e error)
-		pkt, err := prw.rd.ReadPacket()
-		if err != nil {
-			return nil, err
-		}
-		prw.rpkt = pkt
-	}
-	return prw.rpkt, nil
-}
-
-func (prw *PacketReadWriter) Reset(rd io.Reader, wr io.Writer) {
-	defer prw.mtx.Unlock()
-	prw.mtx.Lock()
-	prw.b.Reset()
-	prw.rd.Reset(rd)
-	prw.wr.Reset(wr)
-	prw.rpkt = nil
-	prw.wpkt = nil
 }

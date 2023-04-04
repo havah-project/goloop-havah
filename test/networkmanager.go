@@ -30,9 +30,10 @@ var nmMu sync.Mutex
 
 type NetworkManager struct {
 	module.NetworkManager
-	t   *testing.T
-	id  module.PeerID
-	rCh chan packetEntry
+	t      *testing.T
+	id     module.PeerID
+	rCh    chan packetEntry
+	stopCh chan struct{}
 
 	// mutable data
 	peers    []Peer
@@ -52,23 +53,30 @@ func indexOf(pl []Peer, id module.PeerID) int {
 func NewNetworkManager(t *testing.T, a module.Address) *NetworkManager {
 	const chLen = 1024
 	n := &NetworkManager{
-		t:     t,
-		roles: make(map[string]module.Role),
-		id:    network.NewPeerIDFromAddress(a),
-		rCh:   make(chan packetEntry, chLen),
+		t:      t,
+		roles:  make(map[string]module.Role),
+		id:     network.NewPeerIDFromAddress(a),
+		rCh:    make(chan packetEntry, chLen),
+		stopCh: make(chan struct{}),
 	}
 	go n.handlePacketLoop()
 	return n
 }
 
 func (n *NetworkManager) handlePacketLoop() {
-	for p := range n.rCh {
-		n.handlePacket(p.pk, p.cb)
+forLoop:
+	for {
+		select {
+		case <-n.stopCh:
+			break forLoop
+		case p := <-n.rCh:
+			n.handlePacket(p.pk, p.cb)
+		}
 	}
 }
 
 func (n *NetworkManager) Close() {
-	close(n.rCh)
+	n.stopCh <- struct{}{}
 }
 
 func (n *NetworkManager) attach(p Peer) {
@@ -196,6 +204,12 @@ func (n *NetworkManager) SetRole(version int64, role module.Role, peers ...modul
 
 func (n *NetworkManager) NewPeerFor(mpi module.ProtocolInfo) (*SimplePeer, *SimplePeerHandler) {
 	p := NewPeer(n.t).Connect(n)
+	h := p.RegisterProto(mpi)
+	return p, h
+}
+
+func (n *NetworkManager) NewPeerForWithAddress(mpi module.ProtocolInfo, w module.Wallet) (*SimplePeer, *SimplePeerHandler) {
+	p := NewPeerWithAddress(n.t, w).Connect(n)
 	h := p.RegisterProto(mpi)
 	return p, h
 }

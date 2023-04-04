@@ -39,6 +39,8 @@ const (
 	RocksDBBackend BackendType = "rocksdb"
 )
 
+var ErrAlreadyClosed = errors.New("AlreadyClosed")
+
 func init() {
 	dbCreator := func(name string, dir string) (Database, error) {
 		return NewRocksDB(name, dir)
@@ -47,7 +49,7 @@ func init() {
 }
 
 type RocksDB struct {
-	lock    sync.Mutex
+	lock    sync.RWMutex
 	buckets map[BucketID]*RocksBucket
 
 	db *C.rocksdb_t
@@ -78,7 +80,7 @@ func NewRocksDB(name string, dir string) (*RocksDB, error) {
 		C.rocksdb_free(unsafe.Pointer(cErr))
 		log.Traceln("fail to rocksdb_list_column_families", errMsg)
 
-		//ignore and try open
+		// ignore and try open
 		cErr = nil
 		hdl = C.rocksdb_open(opts, cName, &cErr)
 		if cErr != nil {
@@ -143,16 +145,27 @@ func NewRocksDB(name string, dir string) (*RocksDB, error) {
 }
 
 func (db *RocksDB) Close() error {
+	db.lock.Lock()
+	defer db.lock.Unlock()
+
+	if db.db == nil {
+		return ErrAlreadyClosed
+	}
 	for _, bk := range db.buckets {
 		C.rocksdb_column_family_handle_destroy(bk.cf)
 	}
 	C.rocksdb_close(db.db)
+	db.db = nil
 	return nil
 }
 
 func (db *RocksDB) GetBucket(id BucketID) (Bucket, error) {
 	db.lock.Lock()
 	defer db.lock.Unlock()
+
+	if db.db == nil {
+		return nil, ErrAlreadyClosed
+	}
 
 	if bk, ok := db.buckets[id]; ok {
 		return bk, nil
@@ -178,11 +191,25 @@ func (db *RocksDB) GetBucket(id BucketID) (Bucket, error) {
 	return bk, nil
 }
 
+func unsafePointerOf(p []byte) unsafe.Pointer {
+	if len(p) == 0 {
+		return nil
+	} else {
+		return unsafe.Pointer(&p[0])
+	}
+}
+
 func (db *RocksDB) getValue(cf *C.rocksdb_column_family_handle_t, k []byte) ([]byte, error) {
+	db.lock.RLock()
+	defer db.lock.RUnlock()
+
+	if db.db == nil {
+		return nil, ErrAlreadyClosed
+	}
 	var (
 		cErr    *C.char
 		cValLen C.size_t
-		cKey    = (*C.char)(unsafe.Pointer(&k[0]))
+		cKey    = (*C.char)(unsafePointerOf(k))
 	)
 	cValue := C.rocksdb_get_cf(db.db, db.ro, cf, cKey, C.size_t(len(k)), &cValLen, &cErr)
 	if cErr != nil {
@@ -202,10 +229,16 @@ func (db *RocksDB) getValue(cf *C.rocksdb_column_family_handle_t, k []byte) ([]b
 }
 
 func (db *RocksDB) hasValue(cf *C.rocksdb_column_family_handle_t, k []byte) (bool, error) {
+	db.lock.RLock()
+	defer db.lock.RUnlock()
+
+	if db.db == nil {
+		return false, ErrAlreadyClosed
+	}
 	var (
 		cErr    *C.char
 		cValLen C.size_t
-		cKey    = (*C.char)(unsafe.Pointer(&k[0]))
+		cKey    = (*C.char)(unsafePointerOf(k))
 	)
 	cValue := C.rocksdb_get_cf(db.db, db.ro, cf, cKey, C.size_t(len(k)), &cValLen, &cErr)
 	if cErr != nil {
@@ -217,14 +250,17 @@ func (db *RocksDB) hasValue(cf *C.rocksdb_column_family_handle_t, k []byte) (boo
 }
 
 func (db *RocksDB) setValue(cf *C.rocksdb_column_family_handle_t, k, v []byte) error {
+	db.lock.RLock()
+	defer db.lock.RUnlock()
+
+	if db.db == nil {
+		return ErrAlreadyClosed
+	}
 	var (
 		cErr   *C.char
-		cKey   = (*C.char)(unsafe.Pointer(&k[0]))
-		cValue *C.char
+		cKey   = (*C.char)(unsafePointerOf(k))
+		cValue = (*C.char)(unsafePointerOf(v))
 	)
-	if len(v) > 0 {
-		cValue = (*C.char)(unsafe.Pointer(&v[0]))
-	}
 	C.rocksdb_put_cf(db.db, db.wo, cf, cKey, C.size_t(len(k)), cValue, C.size_t(len(v)), &cErr)
 	if cErr != nil {
 		defer C.rocksdb_free(unsafe.Pointer(cErr))
@@ -234,9 +270,15 @@ func (db *RocksDB) setValue(cf *C.rocksdb_column_family_handle_t, k, v []byte) e
 }
 
 func (db *RocksDB) deleteValue(cf *C.rocksdb_column_family_handle_t, k []byte) error {
+	db.lock.RLock()
+	defer db.lock.RUnlock()
+
+	if db.db == nil {
+		return ErrAlreadyClosed
+	}
 	var (
 		cErr *C.char
-		cKey = (*C.char)(unsafe.Pointer(&k[0]))
+		cKey = (*C.char)(unsafePointerOf(k))
 	)
 	C.rocksdb_delete_cf(db.db, db.wo, cf, cKey, C.size_t(len(k)), &cErr)
 	if cErr != nil {

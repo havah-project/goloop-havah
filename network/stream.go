@@ -4,10 +4,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/codec"
+	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/module"
 )
 
@@ -107,10 +106,6 @@ func (r *streamReactor) OnReceive(pi module.ProtocolInfo, b []byte, id module.Pe
 	}
 
 	return r.userReactor.OnReceive(pi, payload, id)
-}
-
-func (r *streamReactor) OnFailure(err error, pi module.ProtocolInfo, b []byte) {
-	panic("cannot happen")
 }
 
 func (r *streamReactor) OnJoin(id module.PeerID) {

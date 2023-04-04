@@ -17,8 +17,6 @@ import (
 	"github.com/icon-project/goloop/server/metric"
 )
 
-const isLoggingPacket = false
-
 type Peer struct {
 	//
 	conn         net.Conn
@@ -26,7 +24,6 @@ type Peer struct {
 	writer       *PacketWriter
 	q            *PriorityQueue
 	onPacket     packetCbFunc
-	onError      errorCbFunc
 	onClose      closeCbFunc
 	cbMtx        sync.RWMutex
 	timestamp    time.Time
@@ -74,11 +71,10 @@ type Peer struct {
 }
 
 type packetCbFunc func(pkt *Packet, p *Peer)
-type errorCbFunc func(err error, p *Peer, pkt *Packet)
 type closeCbFunc func(p *Peer)
 
-func newPeer(conn net.Conn, cbFunc packetCbFunc, in bool, dial NetAddress, l log.Logger) *Peer {
-	p := &Peer{
+func newPeer(conn net.Conn, in bool, dial NetAddress, l log.Logger) *Peer {
+	return &Peer{
 		conn:        conn,
 		reader:      NewPacketReader(conn),
 		writer:      NewPacketWriter(conn),
@@ -89,17 +85,12 @@ func newPeer(conn net.Conn, cbFunc packetCbFunc, in bool, dial NetAddress, l log
 		close:       make(chan error),
 		closeReason: make([]string, 0),
 		closeErr:    make([]error, 0),
-		onError:     defaultOnError,
-		onClose:     defaultOnClose,
 		children:    NewNetAddressSet(),
 		nephews:     NewNetAddressSet(),
 		attr:        make(map[string]interface{}),
 		dial:        dial,
+		logger:      l,
 	}
-	p.logger = l.WithFields(log.Fields{"peer": p.ID()})
-	p.setPacketCbFunc(cbFunc)
-
-	return p
 }
 
 func (p *Peer) ResetConn(conn net.Conn) {
@@ -141,8 +132,8 @@ func (p *Peer) setID(id module.PeerID) {
 }
 
 func (p *Peer) ID() module.PeerID {
-	p.netAddressMtx.Lock()
-	defer p.netAddressMtx.Unlock()
+	p.idMtx.Lock()
+	defer p.idMtx.Unlock()
 	return p.id
 }
 
@@ -188,20 +179,6 @@ func (p *Peer) getPacketCbFunc() packetCbFunc {
 	defer p.cbMtx.RUnlock()
 
 	return p.onPacket
-}
-
-func (p *Peer) setErrorCbFunc(cbFunc errorCbFunc) {
-	p.cbMtx.Lock()
-	defer p.cbMtx.Unlock()
-
-	p.onError = cbFunc
-}
-
-func (p *Peer) getErrorCbFunc() errorCbFunc {
-	p.cbMtx.RLock()
-	defer p.cbMtx.RUnlock()
-
-	return p.onError
 }
 
 func (p *Peer) setCloseCbFunc(cbFunc closeCbFunc) {
@@ -296,8 +273,6 @@ func (p *Peer) _close() (err error) {
 		close(p.close)
 		if cbFunc := p.getCloseCbFunc(); cbFunc != nil {
 			cbFunc(p)
-		} else {
-			defaultOnClose(p)
 		}
 	}
 	return
@@ -404,15 +379,11 @@ func (p *Peer) receiveRoutine() {
 		pkt, err := p.reader.ReadPacket()
 		if err != nil {
 			r := p.isTemporaryError(err)
-			p.logger.Tracef("Peer.receiveRoutine Error isTemporary:{%v} error:{%+v} peer:%s", r, err, p.String())
+			p.logger.Tracef("Peer.receiveRoutine Error isTemporary:{%v} error:{%+v} peer:%s pkt:%s",
+				r, err, p, pkt)
 			if !r {
 				p.CloseByError(err)
 				return
-			}
-			if cbFunc := p.getErrorCbFunc(); cbFunc != nil {
-				cbFunc(err, p, pkt)
-			} else {
-				defaultOnError(err, p, pkt)
 			}
 			continue
 		}
@@ -420,10 +391,6 @@ func (p *Peer) receiveRoutine() {
 		pkt.sender = p.ID()
 		p.pool.Put(pkt.hashOfPacket)
 		p.getMetric().OnRecv(pkt.dest, pkt.ttl, pkt.extendInfo.hint(), pkt.protocol.Uint16(), pkt.lengthOfPayload)
-		//TODO peer.packet_dump
-		if isLoggingPacket {
-			log.Println(p.ID(), "Peer", "receiveRoutine", p.ConnType(), p.ConnString(), pkt)
-		}
 		if cbFunc := p.getPacketCbFunc(); cbFunc != nil {
 			cbFunc(pkt, p)
 		} else {
@@ -440,17 +407,13 @@ func (p *Peer) sendDirect(pkt *Packet) error {
 		return err
 	} else if err := p.writer.WritePacket(pkt); err != nil {
 		return err
-	} else if err := p.writer.Flush(); err != nil {
-		return err
 	}
 	return nil
 }
 
 func (p *Peer) sendRoutine() {
-	// defer func() {
-	// 	log.Println("Peer.sendRoutine end", p.String())
-	// }()
 	secondTick := time.NewTicker(time.Second)
+	defer secondTick.Stop()
 Loop:
 	for {
 		select {
@@ -465,13 +428,10 @@ Loop:
 				pkt := ctx.Value(p2pContextKeyPacket).(*Packet)
 				if err := p.sendDirect(pkt); err != nil {
 					r := p.isTemporaryError(err)
-					p.logger.Tracef("Peer.sendRoutine Error isTemporary:{%v} error:{%+v} peer:%s", r, err, p.String())
+					p.logger.Tracef("Peer.sendRoutine Error isTemporary:{%v} error:{%+v} peer:%s pkt:%s",
+						r, err, p, pkt)
 					p.CloseByError(err)
 					return
-				}
-				//TODO peer.packet_dump
-				if isLoggingPacket {
-					log.Println(p.ID(), "Peer", "sendRoutine", p.ConnType(), p.ConnString(), pkt)
 				}
 				p.pool.Put(pkt.hashOfPacket)
 				p.getMetric().OnSend(pkt.dest, pkt.ttl, pkt.extendInfo.hint(), pkt.protocol.Uint16(), pkt.lengthOfPayload)
@@ -504,7 +464,6 @@ func (p *Peer) send(ctx context.Context) error {
 	c := ctx.Value(p2pContextKeyCounter).(*Counter)
 	c.peer++
 	pkt := ctx.Value(p2pContextKeyPacket).(*Packet)
-	//TODO dequeue 전에 peer.send가 호출되면 duplication check가 되지 않음.
 	if p.isDuplicatedToSend(pkt) {
 		c.duplicate++
 		return ErrDuplicatedPacket
@@ -592,6 +551,14 @@ func (p *Peer) EqualsAttr(k string, v interface{}) bool {
 	return ok && ov == v
 }
 
+func (p *Peer) GetAndHandleAttr(k string, h func(v interface{}, exists bool) bool) (interface{}, bool) {
+	p.attrMtx.Lock()
+	defer p.attrMtx.Unlock()
+	v, exists := p.attr[k]
+	r := h(v, exists)
+	return v, r
+}
+
 type NetAddress string
 
 func (na NetAddress) Validate() error {
@@ -620,7 +587,7 @@ func NewPeerRTT() *PeerRTT {
 	return &PeerRTT{}
 }
 
-func (r *PeerRTT) Start() time.Time {
+func (r *PeerRTT) Start() {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 
@@ -630,10 +597,9 @@ func (r *PeerRTT) Start() time.Time {
 		r.t = nil
 	}
 	r.st = time.Now()
-	return r.st
 }
 
-func (r *PeerRTT) StartWithAfterFunc(to time.Duration, f func()) time.Time {
+func (r *PeerRTT) StartWithAfterFunc(to time.Duration, f func()) {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 
@@ -645,10 +611,9 @@ func (r *PeerRTT) StartWithAfterFunc(to time.Duration, f func()) time.Time {
 	r.t = time.AfterFunc(to, f)
 
 	r.st = time.Now()
-	return r.st
 }
 
-func (r *PeerRTT) Stop() time.Time {
+func (r *PeerRTT) Stop() time.Duration {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
 
@@ -668,7 +633,7 @@ func (r *PeerRTT) Stop() time.Time {
 	} else {
 		r.avg = r.last
 	}
-	return r.et
+	return r.last
 }
 
 func (r *PeerRTT) Last(d time.Duration) float64 {
@@ -687,6 +652,12 @@ func (r *PeerRTT) Avg(d time.Duration) float64 {
 	return fv
 }
 
+func (r *PeerRTT) Value() (time.Duration, time.Duration) {
+	r.mtx.RLock()
+	defer r.mtx.RUnlock()
+	return r.last, r.avg
+}
+
 func (r *PeerRTT) String() string {
 	r.mtx.RLock()
 	defer r.mtx.RUnlock()
@@ -695,10 +666,9 @@ func (r *PeerRTT) String() string {
 }
 
 const (
-	p2pRoleNone     = 0x00
-	p2pRoleSeed     = 0x01
-	p2pRoleRoot     = 0x02
-	p2pRoleRootSeed = 0x03
+	p2pRoleNone = PeerRoleFlag(module.RoleNormal)
+	p2pRoleSeed = PeerRoleFlag(module.RoleSeed)
+	p2pRoleRoot = PeerRoleFlag(module.RoleValidator)
 )
 
 //PeerRoleFlag as BitFlag MSB[_,_,_,_,_,_,Root,Seed]LSB
@@ -716,12 +686,22 @@ func (pr *PeerRoleFlag) UnSetFlag(o PeerRoleFlag) {
 func (pr *PeerRoleFlag) ToRoles() []module.Role {
 	roles := make([]module.Role, 0)
 	if pr.Has(p2pRoleSeed) {
-		roles = append(roles, module.ROLE_SEED)
+		roles = append(roles, module.RoleSeed)
 	}
 	if pr.Has(p2pRoleRoot) {
-		roles = append(roles, module.ROLE_VALIDATOR)
+		roles = append(roles, module.RoleValidator)
 	}
 	return roles
+}
+
+func NewPeerRoleFlag(roles ...module.Role) PeerRoleFlag {
+	var prf PeerRoleFlag
+	for _, role := range roles {
+		if role < module.RoleReserved {
+			prf.SetFlag(PeerRoleFlag(role))
+		}
+	}
+	return prf
 }
 
 const (
@@ -732,6 +712,7 @@ const (
 	p2pConnTypeNephew
 	p2pConnTypeFriend
 	p2pConnTypeOther
+	p2pConnTypeReserved
 )
 
 var (
@@ -744,8 +725,12 @@ var (
 		"Friend",
 		"Other",
 	}
-	defaultOnError = func(err error, p *Peer, pkt *Packet) { p.CloseByError(err) }
-	defaultOnClose = func(p *Peer) {}
+	joinPeerConnectionTypes = []PeerConnectionType{
+		p2pConnTypeNone,
+		p2pConnTypeParent, p2pConnTypeUncle,
+		p2pConnTypeChildren, p2pConnTypeNephew,
+		p2pConnTypeOther, p2pConnTypeFriend,
+	}
 )
 
 type PeerConnectionType byte

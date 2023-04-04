@@ -60,7 +60,7 @@ func (b *tBlock) NextValidators() module.ValidatorList {
 }
 
 func (b *tBlock) Votes() module.CommitVoteSet {
-	return &tCommitVoteSet{b: b.Prev}
+	return newTCommitVoteSet(b.Prev)
 }
 
 func (b *tBlock) MarshalHeader(w io.Writer) error {
@@ -96,6 +96,10 @@ func (vs *tCommitVoteSet) VerifyBlock(block module.BlockData, validators module.
 
 func (vs *tCommitVoteSet) Bytes() []byte {
 	return vs.b
+}
+
+func (vs *tCommitVoteSet) VoteRound() int32 {
+	return 0
 }
 
 type tBlockManager struct {
@@ -160,12 +164,6 @@ type tReceiveEvent struct {
 	id module.PeerID
 }
 
-type tFailureEvent struct {
-	err error
-	pi  module.ProtocolInfo
-	b   []byte
-}
-
 type tJoinEvent struct {
 	id module.PeerID
 }
@@ -181,10 +179,6 @@ func newTReactor() *tReactor {
 func (r *tReactor) OnReceive(pi module.ProtocolInfo, b []byte, id module.PeerID) (bool, error) {
 	r.ch <- tReceiveEvent{pi, b, id}
 	return false, nil
-}
-
-func (r *tReactor) OnFailure(err error, pi module.ProtocolInfo, b []byte) {
-	r.ch <- tFailureEvent{err, pi, b}
 }
 
 func (r *tReactor) OnJoin(id module.PeerID) {

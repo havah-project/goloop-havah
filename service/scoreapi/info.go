@@ -27,6 +27,9 @@ func (info *Info) RLPDecodeSelf(d codec.Decoder) error {
 	if err := d.Decode(&info.methods); err != nil {
 		return err
 	}
+	if info.methods == nil {
+		return codec.ErrNilValue
+	}
 	info.buildMethodMap()
 	return nil
 }
@@ -49,14 +52,6 @@ func (info *Info) buildMethodMap() {
 		}
 	}
 	info.methodMap = m
-}
-
-func (info *Info) SetBytes(bs []byte) error {
-	_, err := codec.UnmarshalFromBytes(bs, &info.methods)
-	if err != nil {
-		info.buildMethodMap()
-	}
-	return err
 }
 
 func (info *Info) GetMethod(name string) *Method {
@@ -129,35 +124,6 @@ func (info *Info) Equal(info2 *Info) bool {
 	bs1, _ := info.Bytes()
 	bs2, _ := info2.Bytes()
 	return bytes.Equal(bs1, bs2)
-}
-
-type MethodIterator interface {
-	Has() bool
-	Next()
-	Get() *Method
-}
-
-type methodIterator struct {
-	methods []*Method
-	index   int
-}
-
-func (m *methodIterator) Has() bool {
-	return m.index < len(m.methods)
-}
-
-func (m *methodIterator) Next() {
-	if m.index < len(m.methods) {
-		m.index += 1
-	}
-}
-
-func (m *methodIterator) Get() *Method {
-	return m.methods[m.index]
-}
-
-func (info *Info) MethodIterator() MethodIterator {
-	return &methodIterator{methods: info.methods, index: 0}
 }
 
 func NewInfo(methods []*Method) *Info {
