@@ -1299,3 +1299,41 @@ func TestState_RenewNetworkStatusOnTermStart(t *testing.T) {
 	ns, _ = state.GetNetworkStatus()
 	assert.False(t, ns.Equal(oldNs))
 }
+
+func TestState_GetOwnerByNode(t *testing.T) {
+	size := 5
+	owners := newDummyAddresses(1, false, size)
+	nodes := newDummyAddresses(100, false, size)
+	s := newDummyState()
+
+	// Register node address: (node : owner)
+	for i := 0; i < size; i++ {
+		err := s.registerNodeAddress(nodes[i], owners[i])
+		assert.NoError(t, err)
+	}
+
+	// Well registered
+	for i, node := range nodes {
+		owner, err := s.GetOwnerByNode(node)
+		assert.NoError(t, err)
+		assert.True(t, owner.Equal(owners[i]))
+	}
+
+	// Change node address: (owner : owner)
+	for _, owner := range owners {
+		node := owner
+		err := s.registerNodeAddress(node, owner)
+		assert.NoError(t, err)
+
+		owner, err = s.GetOwnerByNode(node)
+		assert.NoError(t, err)
+		assert.True(t, owner.Equal(node))
+	}
+
+	// Failed if a duplicate node address is used
+	for i, node := range nodes {
+		err := s.registerNodeAddress(node, owners[i])
+		assert.Error(t, err)
+		assert.False(t, node.Equal(owners[i]))
+	}
+}

@@ -25,6 +25,15 @@ func newDummyAddress(id int, contract bool) module.Address {
 	return common.MustNewAddress(bs)
 }
 
+func newDummyAddresses(startId int, contract bool, size int) []module.Address {
+	addrs := make([]module.Address, size)
+	for i := 0; i < size; i++ {
+		id := startId + i
+		addrs[i] = newDummyAddress(id, contract)
+	}
+	return addrs
+}
+
 func newDummyValidatorInfo(id int, grade Grade) *ValidatorInfo {
 	owner := newDummyAddress(id, false)
 	name := fmt.Sprintf("name-%02d", id)
