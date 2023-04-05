@@ -1,9 +1,7 @@
 package hvhstate
 
 import (
-	"encoding/hex"
 	"math/big"
-	"strings"
 
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/containerdb"
@@ -1076,6 +1074,7 @@ func (s *State) RenewNetworkStatusOnTermStart() error {
 }
 
 func (s *State) SetValidatorInfo(owner module.Address, values map[string]string) error {
+	s.logger.Debugf("SetValidatorInfo() start: owner=%s values=%v", owner, values)
 	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
 	vi, err := s.getValidatorInfo(db, owner)
 	if err != nil {
@@ -1092,29 +1091,39 @@ func (s *State) SetValidatorInfo(owner module.Address, values map[string]string)
 			if err = vi.SetUrl(value); err != nil {
 				return err
 			}
-		case "nodePublicKey":
-			if strings.HasPrefix(value, "0x") && len(value) > 2 {
-				var publicKey []byte
-				if publicKey, err = hex.DecodeString(value[2:]); err == nil {
-					if err = vi.SetPublicKey(publicKey); err == nil {
-						if err = s.registerNodeAddress(vi.Address(), owner); err != nil {
-							return err
-						}
-					} else {
-						return err
-					}
-				} else {
-					return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %v", value)
-				}
-			} else {
-				return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %v", value)
-			}
 		default:
+			// "nodePublicKey" is handled outside of this method
 			return scoreresult.InvalidParameterError.Errorf("Unsupported key: key=%s value=%s", key, value)
 		}
 	}
 
+	s.logger.Debugf("SetValidatorInfo() end: owner=%s values=%v", owner, values)
 	return db.Set(ToKey(owner), vi.Bytes())
+}
+
+func (s *State) SetNodePublicKey(owner module.Address, publicKey []byte) (module.Address, module.Address, error) {
+	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
+	vi, err := s.getValidatorInfo(db, owner)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	oldNode := vi.Address()
+	err = vi.SetPublicKey(publicKey)
+	if err != nil {
+		return nil, nil, scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %x", publicKey)
+	}
+
+	newNode := vi.Address()
+	if !oldNode.Equal(newNode) {
+		if err = s.registerNodeAddress(newNode, owner); err != nil {
+			return nil, nil, err
+		}
+		if err = db.Set(ToKey(owner), vi.Bytes()); err != nil {
+			return nil, nil, err
+		}
+	}
+	return oldNode, newNode, nil
 }
 
 func (s *State) GetValidatorInfo(owner module.Address) (*ValidatorInfo, error) {

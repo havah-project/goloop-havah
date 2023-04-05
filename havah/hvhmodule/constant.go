@@ -129,8 +129,8 @@ const (
 const (
 	BlockVoteCheckPeriod int64 = 30
 	NonVoteAllowance     int64 = 20
-	MaxValidatorNameLen        = 50
-	MaxValidatorUrlLen         = 100
+	MaxValidatorNameLen        = 100
+	MaxValidatorUrlLen         = 200
 	MaxEnableCount             = 3
 )
 

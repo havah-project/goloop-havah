@@ -17,8 +17,10 @@
 package hvh
 
 import (
+	"encoding/hex"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/codec"
@@ -666,14 +668,69 @@ func (es *ExtensionStateImpl) GetNetworkStatus(cc hvhmodule.CallContext) (map[st
 	return jso, err
 }
 
-func (es *ExtensionStateImpl) SetValidatorInfo(cc hvhmodule.CallContext, values []map[string]interface{}) error {
-	m := make(map[string]string, len(values))
-	for _, kvPair := range values {
-		key := kvPair["key"].(string)
-		value := kvPair["value"].(string)
-		m[key] = value
+func (es *ExtensionStateImpl) SetValidatorInfo(cc hvhmodule.CallContext, m map[string]string) error {
+	from := cc.From()
+	if from == nil || from.IsContract() {
+		return scoreresult.InvalidParameterError.Errorf("Invalid argument: from=%s", from)
 	}
-	return es.state.SetValidatorInfo(cc.From(), m)
+
+	value, ok := m["nodePublicKey"]
+	if ok {
+		delete(m, "nodePublicKey")
+		if err := es.setNodePublicKey(cc, value); err != nil {
+			return err
+		}
+	}
+
+	if len(m) == 0 {
+		return nil
+	}
+	return es.state.SetValidatorInfo(from, m)
+}
+
+func (es *ExtensionStateImpl) setNodePublicKey(cc hvhmodule.CallContext, value string) error {
+	if !strings.HasPrefix(value, "0x") || len(value) < 3 {
+		return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %s", value)
+	}
+
+	var err error
+	var publicKey []byte
+	if publicKey, err = hex.DecodeString(value[2:]); err != nil {
+		return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %s", value)
+	}
+
+	oldNode, newNode, err := es.state.SetNodePublicKey(cc.From(), publicKey)
+	if err != nil {
+		return err
+	}
+	return replaceActiveValidatorAddress(cc, oldNode, newNode)
+}
+
+func replaceActiveValidatorAddress(
+	cc hvhmodule.CallContext, oldNode, newNode module.Address) error {
+	if oldNode.Equal(newNode) {
+		// No need to replace, because old node is the same as new one
+		return nil
+	}
+	validatorState := cc.GetValidatorState()
+	idx := validatorState.IndexOf(oldNode)
+	if idx < 0 {
+		// oldNode is not an active validator
+		return nil
+	}
+
+	size := validatorState.Len()
+	validators := make([]module.Validator, size)
+	for i := 0; i < size; i++ {
+		validators[i], _ = validatorState.Get(i)
+	}
+
+	var err error
+	validators[idx], err = state.ValidatorFromAddress(newNode)
+	if err != nil {
+		return err
+	}
+	return validatorState.Set(validators)
 }
 
 func (es *ExtensionStateImpl) EnableValidator(cc hvhmodule.CallContext, owner module.Address) error {

@@ -418,7 +418,7 @@ func (s *chainScore) Ex_getNetworkStatus() (map[string]interface{}, error) {
 	return es.GetNetworkStatus(ctx)
 }
 
-func (s *chainScore) Ex_setValidatorInfo(values []map[string]interface{}) error {
+func (s *chainScore) Ex_setValidatorInfo(values []interface{}) error {
 	if err := s.tryChargeCall(); err != nil {
 		return err
 	}
@@ -427,10 +427,21 @@ func (s *chainScore) Ex_setValidatorInfo(values []map[string]interface{}) error 
 		return err
 	}
 
-	for _, pair := range values {
-		s.log.Debugf("key=%s value=%s", pair["key"].(string), pair["value"].(string))
+	m := make(map[string]string)
+	for _, v := range values {
+		pair, ok := v.(map[string]interface{})
+		if !ok {
+			return scoreresult.InvalidParameterError.New("Invalid argument")
+		}
+		key := pair["key"].(string)
+		m[key] = pair["value"].(string)
 	}
-	return es.SetValidatorInfo(ctx, values)
+
+	size := len(m)
+	if size == 0 || size != len(values) {
+		return scoreresult.InvalidParameterError.New("Invalid argument")
+	}
+	return es.SetValidatorInfo(ctx, m)
 }
 
 func (s *chainScore) Ex_enableValidator(owner module.Address) error {
