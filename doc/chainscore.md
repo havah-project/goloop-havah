@@ -2330,3 +2330,26 @@ HAVAH records the following eventLogs:
 | termSequence          | T_INT      | false   | Sequence of a term starting with 0                     |
 | planetCount           | T_INT      | false   | Number of active planets at the beginning of each term |
 | rewardPerActivePlanet | T_INT      | false   | Estimated reward per active planet each term           |
+
+### Decentralized(int)
+
+* Logged only once at the beginning of decentralization
+* Located in base transaction result
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+* Since `revision 4` 
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "Decentralized(int)"
+  ],
+  "data":[
+    "0xa"
+  ]
+}
+```
+
+| Key                  | VALUE Type | Indexed | Description                         |
+|:---------------------|:-----------|:--------|:------------------------------------|
+| activeValidatorCount | T_INT      | false   | Maximum number of active validators |
