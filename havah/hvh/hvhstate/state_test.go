@@ -1008,11 +1008,12 @@ func TestState_GetMainValidators(t *testing.T) {
 		owners[i] = owner
 	}
 
-	validators, err := state.GetMainValidators()
+	count := 5
+	validators, err := state.GetMainValidators(count)
 	assert.NoError(t, err)
-	assert.Equal(t, size, len(validators))
+	assert.Equal(t, count, len(validators))
 
-	for i := 0; i < size; i++ {
+	for i := 0; i < count; i++ {
 		assert.True(t, validators[i].Equal(expValidators[i]))
 	}
 
@@ -1020,9 +1021,10 @@ func TestState_GetMainValidators(t *testing.T) {
 	_, err = state.UnregisterValidator(owners[idx])
 	assert.NoError(t, err)
 
-	validators, err = state.GetMainValidators()
+	count = 10
+	validators, err = state.GetMainValidators(count)
 	assert.NoError(t, err)
-	assert.Equal(t, size - 1, len(validators))
+	assert.Equal(t, size-1, len(validators))
 
 	addrMap := make(map[string]struct{})
 	for _, v := range validators {

@@ -1206,12 +1206,19 @@ func (s *State) DisableValidator(owner module.Address) error {
 	return db.Set(ToKey(owner), vs.Bytes())
 }
 
-func (s *State) GetMainValidators() ([]module.Address, error) {
+func (s *State) GetMainValidators(count int) ([]module.Address, error) {
+	if count < 0 {
+		return nil, scoreresult.InvalidParameterError.Errorf("Invalid count: %d", count)
+	}
+	if count == 0 {
+		return nil, nil
+	}
+
 	mvDB := s.getArrayDB(hvhmodule.ArrayMainValidators)
 	viDB := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
 
 	size := mvDB.Size()
-	validators := make([]module.Address, size)
+	validators := make([]module.Address, 0, size)
 
 	for i := 0; i < size; i++ {
 		owner := mvDB.Get(i).Address()
@@ -1221,7 +1228,10 @@ func (s *State) GetMainValidators() ([]module.Address, error) {
 				err, hvhmodule.StatusInvalidState,
 				"Mismatch between mainValidators and validatorInfo")
 		}
-		validators[i] = vi.Address()
+		validators = append(validators, vi.Address())
+		if len(validators) == count {
+			break
+		}
 	}
 
 	return validators, nil

@@ -15,7 +15,7 @@ func (es *ExtensionStateImpl) initValidatorSet(cc hvhmodule.CallContext) error {
 	validatorCount := int(es.state.GetActiveValidatorCount())
 
 	// addrs contains validator node addresses
-	addrs, err := es.state.GetMainValidators()
+	addrs, err := es.state.GetMainValidators(validatorCount)
 	if err != nil {
 		return err
 	}
@@ -63,8 +63,7 @@ func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
 	}
 
 	// Penalized validators not found
-	penalizedCount := len(validatorsToRemove)
-	if penalizedCount == 0 {
+	if len(validatorsToRemove) == 0 {
 		// No penalized validators
 		return nil
 	}
