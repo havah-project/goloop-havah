@@ -38,7 +38,7 @@ func (es *ExtensionStateImpl) initValidatorSet(cc hvhmodule.CallContext) error {
 	for i, addr := range addrs {
 		validators[i], _ = state.ValidatorFromAddress(addr)
 	}
-	return cc.SetValidators(validators)
+	return cc.GetValidatorState().Set(validators)
 }
 
 func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
@@ -92,39 +92,54 @@ func (es *ExtensionStateImpl) replaceActiveValidators(
 		return nil
 	}
 
-	count := 0  // Number of removed validators
+	m := make(map[int]struct{})
 	validatorState := cc.GetValidatorState()
 	// Remove old validators
-	for _, validator := range validatorsToRemove {
-		if validatorState.Remove(validator) {
-			count++
+	for _, v := range validatorsToRemove {
+		if idx := validatorState.IndexOf(v.Address()); idx >= 0 {
+			m[idx] = struct{}{}
 		}
 	}
 
-	if count == 0 {
-		// No validator is removed
+	if len(m) == 0 {
+		// No validator to remove
 		es.logger.Debugf("replaceActiveValidators(): end")
 		return nil
 	}
 
 	// Get the new standby validators from sub validators
-	validatorsToAdd, err := es.state.GetNextActiveValidatorsAndChangeIndex(validatorState, count)
+	validatorsToAdd, err := es.state.GetNextActiveValidatorsAndChangeIndex(validatorState, len(m))
 	if err != nil {
 		return err
 	}
 
-	// Add new validators
+	size := validatorState.Len() - len(m) + len(validatorsToAdd)
+	validators := make([]module.Validator, 0, size)
+
+	j := 0
 	var validator module.Validator
-	for _, addr := range validatorsToAdd {
-		validator, err = state.ValidatorFromAddress(addr)
-		if err != nil {
-			return err
+	for i := 0; i < validatorState.Len(); i++ {
+		validator, _ = validatorState.Get(i)
+
+		// If this validator should be removed
+		if _, removed := m[i]; removed {
+			if j < len(validatorsToAdd) {
+				// If a new validator exists
+				if validator, err = state.ValidatorFromAddress(validatorsToAdd[j]); err == nil {
+					j++
+				} else {
+					return err
+				}
+			} else {
+				validator = nil
+			}
 		}
-		if err = validatorState.Add(validator); err != nil {
-			return err
+
+		if validator != nil {
+			validators = append(validators, validator)
 		}
 	}
 
 	es.logger.Debugf("replaceActiveValidators(): end: validatorsToAdd=%v", validatorsToAdd)
-	return nil
+	return validatorState.Set(validators)
 }

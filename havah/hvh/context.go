@@ -173,10 +173,6 @@ func (ctx *callContext) addTotalSupply(amount *big.Int) (*big.Int, error) {
 	return ts, varDB.Set(ts)
 }
 
-func (ctx *callContext) SetValidators(validators []module.Validator) error {
-	return ctx.GetValidatorState().Set(validators)
-}
-
 func (ctx *callContext) GetScoreOwner(score module.Address) (module.Address, error) {
 	if score == nil || !score.IsContract() {
 		return nil, scoreresult.InvalidParameterError.Errorf("Invalid score address")

@@ -18,7 +18,6 @@ type WorldContext interface {
 	Burn(amount *big.Int) (*big.Int, error)
 	Transfer(from module.Address, to module.Address, amount *big.Int, opType module.OpType) error
 	GetTotalSupply() *big.Int
-	SetValidators(validators []module.Validator) error
 	GetValidatorState() state.ValidatorState
 	StepPrice() *big.Int
 	GetScoreOwner(score module.Address) (module.Address, error)

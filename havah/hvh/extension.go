@@ -643,10 +643,7 @@ func (es *ExtensionStateImpl) UnregisterValidator(cc hvhmodule.CallContext, owne
 			// No need to change active validator set
 			return nil
 		}
-		validatorToRemove, ok := validatorState.Get(idx)
-		if !ok {
-			return nil
-		}
+		validatorToRemove, _ := validatorState.Get(idx)
 		return es.replaceActiveValidators(cc, []module.Validator{validatorToRemove})
 	}
 	return nil
