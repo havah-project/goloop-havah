@@ -2033,6 +2033,66 @@ None
 * `all` means all validators regardless of their grades
 * Unregistered validators are not contained in `validators` value
 
+### getValidatorsInfo(dataType string) dict
+
+* Returns the information on registered validators
+* The information contains the results of [getValidatorInfo](#getvalidatorinfoowner-address-dict) or [getValidatorStatus](#getvalidatorstatusowner-address-dict)
+* Since `revision 4`
+
+> Request
+
+```json
+{
+  "data": {
+    "method": "getValidatorsInfo",
+    "params": {
+      "dataType": "all"
+    }
+  }
+}
+```
+
+> Response
+
+```json
+{
+  "result": {
+    "height": "0x3e8",
+    "grade": "sub",
+    "validators": [
+      {
+        "enableCount": "0x3",
+        "flags": "0x0",
+        "grade": "main",
+        "name": "name-0",
+        "node": "hxa8df82e93e8a9cd5325e37289bcd0fbc0a8b4e5e",
+        "nodePublicKey": "0x0335a46022ed9c8e3ba0e82951d15062f63d15d778f6b3a400bfd183ce322b80a1",
+        "nonVotes": "0x0",
+        "owner": "hxb6dc91d57ef0c94a29a5e5f709db323853022093",
+        "url": "http://www.havah.com/details.json"
+      },
+    ]
+  }
+}
+```
+
+#### Parameters
+
+| Key      | VALUE Type | Required | Description             |
+|:---------|:-----------|:---------|:------------------------|
+| dataType | T_STRING   | true     | `info`, `status`, `all` |
+
+#### Returns
+
+| Key        | VALUE Type         | Required | Description                                  |
+|:-----------|:-------------------|:---------|:---------------------------------------------|
+| height     | T_INT              | true     | Block height of state                        |
+| validators | []T_VALIDATOR_INFO | true     | List of information of registered validators |
+
+> T_VALIDATOR_INFO
+ 
+* Contains results of [getValidatorInfo](#getvalidatorinfoowner-address-dict) or [getValidatorStatus](#getvalidatorstatusowner-address-dict) depending on `dataType`
+ 
 ## EventLogs
 
 HAVAH records the following eventLogs:
