@@ -40,6 +40,10 @@ func (es *ExtensionStateImpl) initValidatorSet(cc hvhmodule.CallContext) error {
 func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
 	ci := cc.ConsensusInfo()
 	if ci == nil {
+		if cc.ReadOnlyMode() {
+			// Skip to run handleBlockVote() because ConsensusInfo is nil on query call
+			return nil
+		}
 		return errors.InvalidStateError.Errorf("Invalid ConsensusInfo")
 	}
 

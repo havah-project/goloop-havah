@@ -35,4 +35,5 @@ type CallContext interface {
 	FrameLogger() *trace.Logger
 	IsBaseTxInvoked() bool
 	SetBaseTxInvoked()
+	ReadOnlyMode() bool
 }

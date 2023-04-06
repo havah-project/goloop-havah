@@ -264,6 +264,10 @@ func (ctx *callContext) SetBaseTxInvoked() {
 	ctx.isBaseTxInvoked = true
 }
 
+func (ctx *callContext) ReadOnlyMode() bool {
+	return ctx.CallContext.ReadOnlyMode()
+}
+
 func NewCallContext(cc contract.CallContext, from module.Address) hvhmodule.CallContext {
 	ctx := &callContext{
 		CallContext: cc,
