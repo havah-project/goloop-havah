@@ -674,29 +674,28 @@ func (es *ExtensionStateImpl) SetValidatorInfo(cc hvhmodule.CallContext, m map[s
 	value, ok := m["nodePublicKey"]
 	if ok {
 		delete(m, "nodePublicKey")
-		if err := es.setNodePublicKey(cc, value); err != nil {
+		if !strings.HasPrefix(value, "0x") || len(value) < 3 {
+			return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %s", value)
+		}
+
+		var err error
+		var pubKey []byte
+		if pubKey, err = hex.DecodeString(value[2:]); err != nil {
+			return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %s", value)
+		}
+		if err = es.SetNodePublicKey(cc, pubKey); err != nil {
 			return err
 		}
 	}
 
-	if len(m) == 0 {
-		return nil
+	if len(m) > 0 {
+		return es.state.SetValidatorInfo(from, m)
 	}
-	return es.state.SetValidatorInfo(from, m)
+	return nil
 }
 
-func (es *ExtensionStateImpl) setNodePublicKey(cc hvhmodule.CallContext, value string) error {
-	if !strings.HasPrefix(value, "0x") || len(value) < 3 {
-		return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %s", value)
-	}
-
-	var err error
-	var publicKey []byte
-	if publicKey, err = hex.DecodeString(value[2:]); err != nil {
-		return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %s", value)
-	}
-
-	oldNode, newNode, err := es.state.SetNodePublicKey(cc.From(), publicKey)
+func (es *ExtensionStateImpl) SetNodePublicKey(cc hvhmodule.CallContext, pubKey []byte) error {
+	oldNode, newNode, err := es.state.SetNodePublicKey(cc.From(), pubKey)
 	if err != nil {
 		return err
 	}

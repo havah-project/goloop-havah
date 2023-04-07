@@ -134,6 +134,11 @@ const (
 	MaxEnableCount             = 3
 )
 
+// BTP
+const (
+	BTPNetworkName = "havah"
+)
+
 // The following variables are read-only
 var (
 	BigIntZero               = new(big.Int)

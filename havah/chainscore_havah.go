@@ -444,6 +444,23 @@ func (s *chainScore) Ex_setValidatorInfo(values []interface{}) error {
 	return es.SetValidatorInfo(ctx, m)
 }
 
+func (s *chainScore) Ex_setNodePublicKey(pubKey []byte) error {
+	if err := s.tryChargeCall(); err != nil {
+		return err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return err
+	}
+	if err = es.SetNodePublicKey(ctx, pubKey); err != nil {
+		return err
+	}
+	if ctx.Revision().Value() >= hvhmodule.RevisionBTP2 {
+		return s.setBTPPublicKey(hvhmodule.BTPNetworkName, pubKey)
+	}
+	return nil
+}
+
 func (s *chainScore) Ex_enableValidator(owner module.Address) error {
 	if err := s.tryChargeCall(); err != nil {
 		return err
@@ -520,3 +537,4 @@ func (s *chainScore) Ex_getValidatorsInfo(dataType string) (map[string]interface
 	}
 	return es.GetValidatorsInfo(ctx, dataType)
 }
+

@@ -1101,7 +1101,7 @@ func (s *State) SetValidatorInfo(owner module.Address, values map[string]string)
 	return db.Set(ToKey(owner), vi.Bytes())
 }
 
-func (s *State) SetNodePublicKey(owner module.Address, publicKey []byte) (module.Address, module.Address, error) {
+func (s *State) SetNodePublicKey(owner module.Address, pubKey []byte) (module.Address, module.Address, error) {
 	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
 	vi, err := s.getValidatorInfo(db, owner)
 	if err != nil {
@@ -1109,9 +1109,9 @@ func (s *State) SetNodePublicKey(owner module.Address, publicKey []byte) (module
 	}
 
 	oldNode := vi.Address()
-	err = vi.SetPublicKey(publicKey)
+	err = vi.SetPublicKey(pubKey)
 	if err != nil {
-		return nil, nil, scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %x", publicKey)
+		return nil, nil, scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %x", pubKey)
 	}
 
 	newNode := vi.Address()

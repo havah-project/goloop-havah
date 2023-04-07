@@ -3,6 +3,7 @@ package havah
 import (
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/intconv"
+	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/scoreresult"
 	"github.com/icon-project/goloop/service/state"
@@ -120,6 +121,14 @@ func (s *chainScore) Ex_setBTPPublicKey(name string, pubKey []byte) error {
 	if s.from.IsContract() {
 		return scoreresult.New(module.StatusAccessDenied, "NoPermission")
 	}
+	if name == hvhmodule.BTPNetworkName {
+		return scoreresult.Errorf(
+			module.StatusInvalidParameter, "InvalidName(%s)", name)
+	}
+	return s.setBTPPublicKey(name, pubKey)
+}
+
+func (s *chainScore) setBTPPublicKey(name string, pubKey []byte) error {
 	if bs, err := s.getBTPState(); err != nil {
 		return err
 	} else {
