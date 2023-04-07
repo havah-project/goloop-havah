@@ -1839,6 +1839,36 @@ None
 
 * The json format of validator details will be described in a separate document.
 
+### setNodePublicKey(pubKey bytes)
+
+* Change an existing nodePublicKey to new one
+* Used nodePublicKeys are not allowed, including those of other owners
+* Called by validator owner
+* Since `revision 4`
+ 
+> Request
+
+```json
+{
+  "data": {
+    "method": "setNodePublicKey",
+    "params": {
+      "pubKey": "0x03921d018c1302f9be67e0aca8e583f8970af127e18727d68af4e7caa81c8eb2b1"
+    }
+  }
+}
+```
+
+#### Parameters
+
+| Key    | VALUE Type | Required | Description   |
+|:-------|:-----------|:---------|:--------------|
+| pubKey | T_BYTES    | true     | nodePublicKey |
+
+#### Returns
+
+`T_HASH` - txHash
+
 ### enableValidator(owner Address)
 
 * Enable a disabled validator indicated by owner, resetting its nonVotes to 0
