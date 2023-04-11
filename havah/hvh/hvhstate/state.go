@@ -1136,10 +1136,9 @@ func (s *State) getValidatorInfo(db *containerdb.DictDB, owner module.Address) (
 	v := db.Get(key)
 	if v == nil {
 		return nil, scoreresult.Errorf(
-			hvhmodule.StatusNotFound, "ValidatorInfo not found: %s", owner)
+			hvhmodule.StatusNotFound, "ValidatorInfoNotFound(%s)", owner)
 	}
-	vi, err := NewValidatorInfoFromBytes(v.Bytes())
-	return vi, err
+	return NewValidatorInfoFromBytes(v.Bytes())
 }
 
 func (s *State) GetValidatorStatus(owner module.Address) (*ValidatorStatus, error) {
