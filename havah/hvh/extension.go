@@ -650,19 +650,32 @@ func (es *ExtensionStateImpl) UnregisterValidator(cc hvhmodule.CallContext, owne
 }
 
 func (es *ExtensionStateImpl) GetNetworkStatus(cc hvhmodule.CallContext) (map[string]interface{}, error) {
-	var jso map[string]interface{}
 	height := cc.BlockHeight()
-	ns, err := es.state.GetNetworkStatus()
-	if err == nil {
-		issueStart := es.state.GetIssueStart()
-		termPeriod := es.state.GetTermPeriod()
-		if termStart, _, err := hvhstate.GetTermStartAndIndex(height, issueStart, termPeriod); err == nil {
-			jso = ns.ToJSON()
-			jso["height"] = height
-			jso["termStart"] = termStart
-		}
+	issueStart := es.state.GetIssueStart()
+	if issueStart == 0 {
+		return nil, scoreresult.Errorf(
+			hvhmodule.StatusNotReady, "TermNotReady(issueStart=0)")
 	}
-	return jso, err
+	ns, err := es.state.GetNetworkStatus()
+	if err != nil {
+		return nil, err
+	}
+	if !ns.IsDecentralized() {
+		return nil, scoreresult.Errorf(
+			hvhmodule.StatusNotReady, "NotYetDecentralized")
+	}
+
+	var termStart int64
+	var jso map[string]interface{}
+	termPeriod := es.state.GetTermPeriod()
+	termStart, _, err = hvhstate.GetTermStartAndIndex(height, issueStart, termPeriod)
+	if err != nil {
+		return nil, err
+	}
+	jso = ns.ToJSON()
+	jso["height"] = height
+	jso["termStart"] = termStart
+	return jso, nil
 }
 
 func (es *ExtensionStateImpl) SetValidatorInfo(cc hvhmodule.CallContext, m map[string]string) error {
