@@ -1156,26 +1156,16 @@ func (s *State) getValidatorStatus(db *containerdb.DictDB, owner module.Address)
 }
 
 func (s *State) EnableValidator(owner module.Address, calledByGov bool) error {
-	key := ToKey(owner)
 	db := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
-	v := db.Get(key)
-	if v == nil {
-		return scoreresult.Errorf(
-			hvhmodule.StatusNotFound, "ValidatorStatus not found: owner=%s", owner)
-	}
-	bs := v.Bytes()
-	if bs == nil || len(bs) == 0 {
-		return errors.InvalidStateError.Errorf("ValidatorStatus is broken: owner=%s", owner)
-	}
-	vs, err := NewValidatorStatusFromBytes(bs)
+	vs, err := s.getValidatorStatus(db, owner)
 	if err != nil {
-		return errors.InvalidStateError.Wrapf(err, "ValidatorStatus is broken: owner=%s", owner)
+		return err
 	}
 	if err = vs.Enable(calledByGov); err != nil {
 		return err
 	}
 	vs.ResetNonVotes()
-	return db.Set(key, vs.Bytes())
+	return db.Set(ToKey(owner), vs.Bytes())
 }
 
 // DisableValidator is called on imposing nonVotePenalty
