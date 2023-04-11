@@ -1,10 +1,12 @@
 package hvhstate
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
+	"github.com/icon-project/goloop/common/codec"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 )
 
@@ -56,6 +58,7 @@ func TestValidatorStatus_Disabled(t *testing.T) {
 }
 
 func TestValidatorStatus_Enable(t *testing.T) {
+	var err error
 	vs := NewValidatorStatus()
 	assert.False(t, vs.Disabled())
 
@@ -63,15 +66,22 @@ func TestValidatorStatus_Enable(t *testing.T) {
 		vs.SetDisabled()
 		assert.True(t, vs.Disabled())
 
-		err := vs.Enable(false)
+		err = vs.Enable(false)
 		assert.NoError(t, err)
 		assert.False(t, vs.Disabled())
 	}
+	assert.Zero(t, vs.EnableCount())
+
+	// Success case: enableCount=0, Enabled, Call Enable()
+	err = vs.Enable(false)
+	assert.NoError(t, err)
+	assert.Zero(t, vs.EnableCount())
+	assert.True(t, vs.Enabled())
 
 	vs.SetDisabled()
 	assert.True(t, vs.Disabled())
 
-	err := vs.Enable(false)
+	err = vs.Enable(false)
 	assert.Error(t, err)
 	assert.True(t, vs.Disabled())
 	assert.Zero(t, vs.EnableCount())
@@ -99,4 +109,32 @@ func TestValidatorStatus_Disqualified(t *testing.T) {
 	vs.SetDisqualified()
 	assert.True(t, vs.Disqualified())
 	assert.False(t, vs.Disabled())
+}
+
+func TestValidatorStatus_RLPDecodeSelf(t *testing.T) {
+	var err error
+
+	vs := NewValidatorStatus()
+	vs.IncrementNonVotes()
+	vs.SetDisabled()
+	err = vs.Enable(false)
+	assert.NoError(t, err)
+
+	buf := bytes.NewBuffer(nil)
+	e := codec.BC.NewEncoder(buf)
+
+	err = vs.RLPEncodeSelf(e)
+	assert.NoError(t, err)
+
+	assert.Zero(t, bytes.Compare(vs.Bytes(), buf.Bytes()))
+
+	d := codec.BC.NewDecoder(buf)
+	vs2 := NewValidatorStatus()
+	err = vs2.RLPDecodeSelf(d)
+	assert.NoError(t, err)
+
+	assert.True(t, vs2.Equal(vs))
+	assert.True(t, vs2.Enabled())
+	assert.Equal(t, int64(1), vs2.NonVotes())
+	assert.Equal(t, hvhmodule.MaxEnableCount-1, vs2.EnableCount())
 }

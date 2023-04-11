@@ -41,7 +41,10 @@ func (vs *ValidatorStatus) ResetNonVotes() {
 
 func (vs *ValidatorStatus) Enable(calledByGov bool) error {
 	if vs.Disqualified() {
-		return scoreresult.AccessDeniedError.New("Already unregistered")
+		return scoreresult.AccessDeniedError.New("AlreadyUnregistered")
+	}
+	if vs.Enabled() {
+		return nil
 	}
 
 	if calledByGov {
@@ -59,8 +62,7 @@ func (vs *ValidatorStatus) enableByGov() error {
 
 func (vs *ValidatorStatus) enableByOwner() error {
 	if vs.enabledCount >= hvhmodule.MaxEnableCount {
-		return scoreresult.AccessDeniedError.Errorf(
-			"MaxEnableCount exceeded: %d", vs.enabledCount)
+		return scoreresult.AccessDeniedError.New("NoEnableCountRemains")
 	}
 	return vs.enable()
 }
