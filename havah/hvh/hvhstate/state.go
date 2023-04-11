@@ -799,10 +799,10 @@ func (s *State) addLost(amount *big.Int) error {
 
 func (s *State) SetBlockVoteCheckParameters(period, allowance int64) error {
 	if period < 0 {
-		return scoreresult.InvalidParameterError.Errorf("Invalid BlockVoteCheckPeriod: %d", period)
+		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(period=%d)", period)
 	}
 	if allowance < 0 {
-		return scoreresult.InvalidParameterError.Errorf("Invalid NonVoteAllowance: %d", allowance)
+		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(allowance=%d)", allowance)
 	}
 
 	db := s.getVarDB(hvhmodule.VarBlockVoteCheckPeriod)
@@ -855,19 +855,19 @@ func (s *State) RegisterValidator(owner module.Address, nodePublicKey []byte, gr
 func (s *State) registerValidatorInfo(
 	owner module.Address, nodePublicKey []byte, grade Grade, name string) (*ValidatorInfo, error) {
 	if owner == nil {
-		return nil, scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid owner: %v", owner)
+		return nil, scoreresult.InvalidParameterError.Errorf("InvalidArgument(owner=%s)", owner)
 	}
 	if grade == GradeNone {
-		return nil, scoreresult.InvalidParameterError.Errorf("Invalid grade: %s", grade)
+		return nil, scoreresult.InvalidParameterError.Errorf("InvalidArgument(grade=%s)", grade)
 	}
 	if len(name) > hvhmodule.MaxValidatorNameLen {
-		return nil, scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Too long name: %s", name)
+		return nil, scoreresult.InvalidParameterError.Errorf("TooLongName(%s)", name)
 	}
 
 	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
 	if v := db.Get(ToKey(owner)); v != nil {
 		return nil, scoreresult.Errorf(
-			hvhmodule.StatusDuplicate, "ValidatorInfo already exists: %s", owner)
+			hvhmodule.StatusDuplicate, "ValidatorInfoAlreadyExists(%s)", owner)
 	}
 
 	vi, err := NewValidatorInfo(owner, nodePublicKey, grade, name)
@@ -881,7 +881,7 @@ func (s *State) registerValidatorStatus(owner module.Address) error {
 	db := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
 	if v := db.Get(ToKey(owner)); v != nil {
 		return scoreresult.Errorf(
-			hvhmodule.StatusDuplicate, "ValidatorStatus already exists: %s", owner)
+			hvhmodule.StatusDuplicate, "ValidatorStatusAlreadyExists(%s)", owner)
 	}
 	vs := NewValidatorStatus()
 	return db.Set(ToKey(owner), vs.Bytes())
@@ -894,7 +894,7 @@ func (s *State) registerNodeAddress(node, owner module.Address) error {
 	if v := db.Get(key); v != nil {
 		return scoreresult.Errorf(
 			hvhmodule.StatusDuplicate,
-			"NodeAddress already exists: owner=%s node=%s", owner, node)
+			"NodeAddressAlreadyExists(owner=%s,node=%s)", owner, node)
 	}
 	return db.Set(key, owner)
 }
@@ -909,23 +909,31 @@ func (s *State) getOwnerByNode(db *containerdb.DictDB, node module.Address) (mod
 	v := db.Get(key)
 	if v == nil {
 		return nil, scoreresult.Errorf(
-			hvhmodule.StatusNotFound, "NodeAddress not found: %s", node)
+			hvhmodule.StatusNotFound, "NodeAddressNotFound(%s)", node)
 	}
 	return v.Address(), nil
 }
 
 func (s *State) addToValidatorList(grade Grade, owner module.Address) error {
+	if grade != GradeSub && grade != GradeMain {
+		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(grade=%s)", grade)
+	}
 	db := s.getValidatorArrayDB(grade)
 	if db == nil {
-		return scoreresult.InvalidParameterError.Errorf("Invalid grade: %s", grade)
+		return scoreresult.Errorf(
+			hvhmodule.StatusNotFound, "ValidatorListNotFound(%s)", grade)
 	}
 	return db.Put(owner)
 }
 
 func (s *State) removeFromValidatorList(grade Grade, owner module.Address) error {
+	if grade != GradeSub && grade != GradeMain {
+		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(grade=%s)", grade)
+	}
 	db := s.getValidatorArrayDB(grade)
 	if db == nil {
-		return scoreresult.InvalidParameterError.Errorf("Invalid grade: %s", grade)
+		return scoreresult.Errorf(
+			hvhmodule.StatusNotFound, "ValidatorListNotFound(%s)", grade)
 	}
 
 	size := db.Size()
@@ -935,8 +943,8 @@ func (s *State) removeFromValidatorList(grade Grade, owner module.Address) error
 			return nil
 		}
 
-		newSize := size - 1
-		for i := 0; i < newSize; i++ {
+		size--
+		for i := 0; i < size; i++ {
 			if value := db.Get(i); value != nil {
 				if owner.Equal(value.Address()) {
 					return db.Set(i, addr)
@@ -945,8 +953,9 @@ func (s *State) removeFromValidatorList(grade Grade, owner module.Address) error
 		}
 	}
 
-	return errors.InvalidStateError.Errorf(
-		"Failed to removeFromValidatorList: grade=%s owner=%s validators=%d", grade, owner, size)
+	return scoreresult.Errorf(
+		hvhmodule.StatusNotFound,
+		"FailedToRemoveFromValidatorList(grade=%s,owner=%s,validators=%d)", grade, owner, size)
 }
 
 func (s *State) getValidatorArrayDB(grade Grade) *containerdb.ArrayDB {
@@ -960,12 +969,13 @@ func (s *State) getValidatorArrayDB(grade Grade) *containerdb.ArrayDB {
 	}
 }
 
+// UnregisterValidator returns nodeAddress of the unregistered validator
 func (s *State) UnregisterValidator(owner module.Address) (module.Address, error) {
 	s.logger.Debugf("UnregisterValidator() start: owner=%s", owner)
 	defer s.logger.Debugf("UnregisterValidator() end: owner=%s", owner)
 
 	if owner == nil || owner.IsContract() {
-		return nil, scoreresult.InvalidParameterError.Errorf("Invalid argument: owner=%s", owner)
+		return nil, scoreresult.InvalidParameterError.Errorf("InvalidArgument(%s)", owner)
 	}
 
 	vsDB := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
@@ -1017,6 +1027,9 @@ func (s *State) getNetworkStatus(db *containerdb.VarDB) (*NetworkStatus, error) 
 }
 
 func (s *State) SetNetworkStatus(ns *NetworkStatus) error {
+	if ns == nil {
+		return scoreresult.InvalidParameterError.New("InvalidArgument")
+	}
 	db := s.getVarDB(hvhmodule.VarNetworkStatus)
 	return db.Set(ns.Bytes())
 }
@@ -1068,9 +1081,9 @@ func (s *State) RenewNetworkStatusOnTermStart() error {
 	}
 
 	if dirty {
-		err = db.Set(ns.Bytes())
+		return db.Set(ns.Bytes())
 	}
-	return err
+	return nil
 }
 
 func (s *State) SetValidatorInfo(owner module.Address, values map[string]string) error {
@@ -1093,7 +1106,7 @@ func (s *State) SetValidatorInfo(owner module.Address, values map[string]string)
 			}
 		default:
 			// "nodePublicKey" is handled outside of this method
-			return scoreresult.InvalidParameterError.Errorf("Unsupported key: key=%s value=%s", key, value)
+			return scoreresult.InvalidParameterError.Errorf("InvalidArgument(%s)", key)
 		}
 	}
 
@@ -1111,17 +1124,19 @@ func (s *State) SetNodePublicKey(owner module.Address, pubKey []byte) (module.Ad
 	oldNode := vi.Address()
 	err = vi.SetPublicKey(pubKey)
 	if err != nil {
-		return nil, nil, scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %x", pubKey)
+		return nil, nil, scoreresult.InvalidParameterError.Errorf("InvalidArgument(pubKey=%x)", pubKey)
 	}
 
 	newNode := vi.Address()
-	if !oldNode.Equal(newNode) {
-		if err = s.registerNodeAddress(newNode, owner); err != nil {
-			return nil, nil, err
-		}
-		if err = db.Set(ToKey(owner), vi.Bytes()); err != nil {
-			return nil, nil, err
-		}
+	if oldNode.Equal(newNode) {
+		return nil, nil, nil
+	}
+
+	if err = s.registerNodeAddress(newNode, owner); err != nil {
+		return nil, nil, err
+	}
+	if err = db.Set(ToKey(owner), vi.Bytes()); err != nil {
+		return nil, nil, err
 	}
 	return oldNode, newNode, nil
 }
@@ -1132,8 +1147,7 @@ func (s *State) GetValidatorInfo(owner module.Address) (*ValidatorInfo, error) {
 }
 
 func (s *State) getValidatorInfo(db *containerdb.DictDB, owner module.Address) (*ValidatorInfo, error) {
-	key := ToKey(owner)
-	v := db.Get(key)
+	v := db.Get(ToKey(owner))
 	if v == nil {
 		return nil, scoreresult.Errorf(
 			hvhmodule.StatusNotFound, "ValidatorInfoNotFound(%s)", owner)
@@ -1150,7 +1164,7 @@ func (s *State) getValidatorStatus(db *containerdb.DictDB, owner module.Address)
 	v := db.Get(ToKey(owner))
 	if v == nil {
 		return nil, scoreresult.Errorf(
-			hvhmodule.StatusNotFound, "ValidatorStatus not found: %s", owner)
+			hvhmodule.StatusNotFound, "ValidatorStatusNotFound(%s)", owner)
 	}
 	return NewValidatorStatusFromBytes(v.Bytes())
 }
@@ -1168,7 +1182,8 @@ func (s *State) EnableValidator(owner module.Address, calledByGov bool) error {
 	return db.Set(ToKey(owner), vs.Bytes())
 }
 
-// DisableValidator is called on imposing nonVotePenalty
+// DisableValidator is used for test
+// Do not use this method anywhere else
 func (s *State) DisableValidator(owner module.Address) error {
 	db := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
 	vs, err := s.getValidatorStatus(db, owner)
@@ -1184,7 +1199,7 @@ func (s *State) DisableValidator(owner module.Address) error {
 
 func (s *State) GetMainValidators(count int) ([]module.Address, error) {
 	if count < 0 {
-		return nil, scoreresult.InvalidParameterError.Errorf("Invalid count: %d", count)
+		return nil, scoreresult.InvalidParameterError.Errorf("InvalidArgument(count=%d)", count)
 	}
 	if count == 0 {
 		return nil, nil
@@ -1200,9 +1215,8 @@ func (s *State) GetMainValidators(count int) ([]module.Address, error) {
 		owner := mvDB.Get(i).Address()
 		vi, err := s.getValidatorInfo(viDB, owner)
 		if err != nil {
-			return nil, scoreresult.Wrapf(
-				err, hvhmodule.StatusInvalidState,
-				"Mismatch between mainValidators and validatorInfo")
+			return nil, errors.InvalidStateError.Errorf(
+				"MismatchBetweenMainValidatorsAndValidatorInfo(owner=%s)", owner)
 		}
 		validators = append(validators, vi.Address())
 		if len(validators) == count {
@@ -1237,7 +1251,7 @@ func (s *State) GetValidatorsOf(gradeFilter GradeFilter) ([]module.Address, erro
 
 func (s *State) SetActiveValidatorCount(count int64) error {
 	if count < 1 {
-		return scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid validator count: %d", count)
+		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(%d)", count)
 	}
 	db := s.getVarDB(hvhmodule.VarActiveValidatorCount)
 	return db.Set(count)
@@ -1296,7 +1310,7 @@ func (s *State) OnBlockVote(node module.Address, vote bool) (bool, error) {
 func (s *State) GetNextActiveValidatorsAndChangeIndex(
 	activeValidators state.ValidatorState, count int) ([]module.Address, error) {
 	if count < 0 {
-		return nil, scoreresult.Errorf(hvhmodule.StatusIllegalArgument, "Invalid count: %d", count)
+		return nil, scoreresult.InvalidParameterError.Errorf("InvalidArgument(%d)", count)
 	}
 	if count == 0 {
 		return nil, nil
