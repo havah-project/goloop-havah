@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/icon-project/goloop/common"
+	"github.com/icon-project/goloop/common/codec"
 	"github.com/icon-project/goloop/common/crypto"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
@@ -40,14 +41,6 @@ func newDummyValidatorInfo(id int, grade Grade) *ValidatorInfo {
 	_, pubKey := crypto.GenerateKeyPair()
 	vi, _ := NewValidatorInfo(owner, pubKey.SerializeUncompressed(), grade, name)
 	return vi
-}
-
-func newDummyValidatorInfos(size int, grade Grade) []*ValidatorInfo {
-	vis := make([]*ValidatorInfo, size)
-	for i := 1; i <= size; i++ {
-		vis[i] = newDummyValidatorInfo(i, grade)
-	}
-	return vis
 }
 
 func TestNewValidatorInfo(t *testing.T) {
@@ -133,4 +126,24 @@ func TestValidatorInfo_SetUrl(t *testing.T) {
 	err = vi.SetName(tooLongUrl)
 	assert.Error(t, err)
 	assert.Equal(t, url, vi.Url())
+}
+
+func TestValidatorInfo_RLPDecodeSelf(t *testing.T) {
+	var err error
+	vi := newDummyValidatorInfo(1, GradeSub)
+
+	buf := bytes.NewBuffer(nil)
+	e := codec.BC.NewEncoder(buf)
+
+	err = vi.RLPEncodeSelf(e)
+	assert.NoError(t, err)
+
+	assert.Zero(t, bytes.Compare(vi.Bytes(), buf.Bytes()))
+
+	d := codec.BC.NewDecoder(buf)
+	vi2 := &ValidatorInfo{}
+	err = vi2.RLPDecodeSelf(d)
+	assert.NoError(t, err)
+
+	assert.True(t, vi2.Equal(vi))
 }
