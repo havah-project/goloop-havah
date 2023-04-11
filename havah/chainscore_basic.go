@@ -38,10 +38,6 @@ func (s *chainScore) tryChargeCall() error {
 	return nil
 }
 
-func (s *chainScore) fromGovernance() bool {
-	return s.cc.Governance().Equal(s.from)
-}
-
 // Ex_setRevision sets the system revision to the given number.
 // This can only be called by the governance SCORE.
 func (s *chainScore) Ex_setRevision(code *common.HexInt) error {

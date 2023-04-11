@@ -1131,19 +1131,6 @@ func (s *State) GetValidatorInfo(owner module.Address) (*ValidatorInfo, error) {
 	return s.getValidatorInfo(db, owner)
 }
 
-func (s *State) GetValidatorInfos(owners []module.Address) ([]*ValidatorInfo, error) {
-	vis := make([]*ValidatorInfo, len(owners))
-	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
-	for i, owner := range owners {
-		if vi, err := s.getValidatorInfo(db, owner); err == nil {
-			vis[i] = vi
-		} else {
-			return nil, err
-		}
-	}
-	return vis, nil
-}
-
 func (s *State) getValidatorInfo(db *containerdb.DictDB, owner module.Address) (*ValidatorInfo, error) {
 	key := ToKey(owner)
 	v := db.Get(key)
