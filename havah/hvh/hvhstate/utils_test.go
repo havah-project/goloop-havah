@@ -42,3 +42,33 @@ func TestIsItTimeToCheckBlockVote(t *testing.T) {
 		})
 	}
 }
+
+func TestGetTermStartAndIndex(t *testing.T) {
+	tests := []struct{
+		// input
+		height int64
+		issueStart int64
+		termPeriod int64
+		// output
+		termStart int64
+		termIndex int64
+		success bool
+	}{
+		{10, 20, 30, -1, -1, false},
+		{17, 17, 100, 17, 0, true},
+		{11, 10, 100, 10, 1, true},
+		{110, 10, 100, 110, 0, true},
+		{111, 10, 100, 110, 1, true},
+	}
+
+	for i, test := range tests {
+		name := fmt.Sprintf("name-%02d", i)
+		t.Run(name, func(t *testing.T){
+			termStart, termIndex, err := GetTermStartAndIndex(
+				test.height, test.issueStart, test.termPeriod)
+			assert.Equal(t, test.termStart, termStart)
+			assert.Equal(t, test.termIndex, termIndex)
+			assert.Equal(t, test.success, err == nil)
+		})
+	}
+}
