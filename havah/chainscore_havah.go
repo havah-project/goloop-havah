@@ -431,15 +431,14 @@ func (s *chainScore) Ex_setValidatorInfo(values []interface{}) error {
 	for _, v := range values {
 		pair, ok := v.(map[string]interface{})
 		if !ok {
-			return scoreresult.InvalidParameterError.New("Invalid argument")
+			return scoreresult.InvalidParameterError.New("InvalidArgument")
 		}
 		key := pair["key"].(string)
 		m[key] = pair["value"].(string)
 	}
 
-	size := len(m)
-	if size == 0 || size != len(values) {
-		return scoreresult.InvalidParameterError.New("Invalid argument")
+	if len(m) != len(values) {
+		return scoreresult.InvalidParameterError.New("InvalidArgument")
 	}
 	return es.SetValidatorInfo(ctx, m)
 }

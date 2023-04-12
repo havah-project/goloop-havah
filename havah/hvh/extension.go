@@ -17,10 +17,8 @@
 package hvh
 
 import (
-	"encoding/hex"
 	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/codec"
@@ -295,7 +293,7 @@ func (es *ExtensionStateImpl) SetPlanetOwner(cc hvhmodule.CallContext, id int64,
 	return err
 }
 
-func (es *ExtensionStateImpl) GetPlanetInfo(cc hvhmodule.CallContext, id int64) (map[string]interface{}, error) {
+func (es *ExtensionStateImpl) GetPlanetInfo(_ hvhmodule.CallContext, id int64) (map[string]interface{}, error) {
 	p, err := es.state.GetPlanet(id)
 	if err != nil {
 		return nil, err
@@ -613,7 +611,10 @@ func (es *ExtensionStateImpl) RegisterValidator(
 	owner module.Address, nodePublicKey []byte, gradeName, name string) error {
 	grade := hvhstate.StringToGrade(gradeName)
 	if grade == hvhstate.GradeNone {
-		return scoreresult.InvalidParameterError.Errorf("Invalid grade: %s", gradeName)
+		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(grade=%s)", gradeName)
+	}
+	if err := hvhutils.CheckNameLength(name); err != nil {
+		return err
 	}
 	return es.state.RegisterValidator(owner, nodePublicKey, grade, name)
 }
@@ -621,14 +622,14 @@ func (es *ExtensionStateImpl) RegisterValidator(
 func (es *ExtensionStateImpl) UnregisterValidator(cc hvhmodule.CallContext, owner module.Address) error {
 	from := cc.From()
 	if from == nil {
-		return scoreresult.InvalidParameterError.Errorf("Invalid argument: from=%s", from)
+		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(from=%s)", from)
 	}
 	if owner == nil || owner.IsContract() {
-		return scoreresult.InvalidParameterError.Errorf("Invalid argument: owner=%s", owner)
+		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(owner=%s)", owner)
 	}
 	isCallerGov := from.Equal(cc.Governance())
 	if !isCallerGov && !from.Equal(owner) {
-		return scoreresult.AccessDeniedError.Errorf("No permission: from=%s owner=%s", from, owner)
+		return scoreresult.AccessDeniedError.Errorf("NoPermission(from=%s,owner=%s", from, owner)
 	}
 
 	node, err := es.state.UnregisterValidator(owner)
@@ -680,31 +681,31 @@ func (es *ExtensionStateImpl) GetNetworkStatus(cc hvhmodule.CallContext) (map[st
 
 func (es *ExtensionStateImpl) SetValidatorInfo(cc hvhmodule.CallContext, m map[string]string) error {
 	from := cc.From()
-	if from == nil || from.IsContract() {
-		return scoreresult.InvalidParameterError.Errorf("Invalid argument: from=%s", from)
+	if err := hvhutils.CheckAddressArgument(from, true); err != nil {
+		return err
 	}
 
-	value, ok := m["nodePublicKey"]
-	if ok {
-		delete(m, "nodePublicKey")
-		if !strings.HasPrefix(value, "0x") || len(value) < 3 {
-			return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %s", value)
-		}
+	// value, ok := m["nodePublicKey"]
+	// if ok {
+	// 	delete(m, "nodePublicKey")
+	// 	if !strings.HasPrefix(value, "0x") || len(value) < 3 {
+	// 		return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %s", value)
+	// 	}
+	//
+	// 	var err error
+	// 	var pubKey []byte
+	// 	if pubKey, err = hex.DecodeString(value[2:]); err != nil {
+	// 		return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %s", value)
+	// 	}
+	// 	if err = es.SetNodePublicKey(cc, pubKey); err != nil {
+	// 		return err
+	// 	}
+	// }
 
-		var err error
-		var pubKey []byte
-		if pubKey, err = hex.DecodeString(value[2:]); err != nil {
-			return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %s", value)
-		}
-		if err = es.SetNodePublicKey(cc, pubKey); err != nil {
-			return err
-		}
+	if len(m) == 0 {
+		return nil
 	}
-
-	if len(m) > 0 {
-		return es.state.SetValidatorInfo(from, m)
-	}
-	return nil
+	return es.state.SetValidatorInfo(from, m)
 }
 
 func (es *ExtensionStateImpl) SetNodePublicKey(cc hvhmodule.CallContext, pubKey []byte) error {
@@ -744,15 +745,16 @@ func replaceActiveValidatorAddress(
 
 func (es *ExtensionStateImpl) EnableValidator(cc hvhmodule.CallContext, owner module.Address) error {
 	from := cc.From()
-	if from == nil {
-		return scoreresult.InvalidParameterError.Errorf("Invalid argument: from=%s", from)
+	if err := hvhutils.CheckAddressArgument(from, true); err != nil {
+		return err
 	}
-	if owner == nil || owner.IsContract() {
-		return scoreresult.InvalidParameterError.Errorf("Invalid argument: owner=%s", owner)
+	if err := hvhutils.CheckAddressArgument(owner, true); err != nil {
+		return err
 	}
+
 	isCallerGov := from.Equal(cc.Governance())
 	if !isCallerGov && !from.Equal(owner) {
-		return scoreresult.AccessDeniedError.Errorf("No permission: from=%s owner=%s", from, owner)
+		return scoreresult.AccessDeniedError.Errorf("NoPermission(from=%s,owner=%s)", from, owner)
 	}
 	return es.state.EnableValidator(owner, isCallerGov)
 }
@@ -791,7 +793,7 @@ func (es *ExtensionStateImpl) GetValidatorStatus(
 
 func (es *ExtensionStateImpl) SetActiveValidatorCount(count int64) error {
 	if !(count > 0 && count < 10_000) {
-		return scoreresult.InvalidParameterError.Errorf("Invalid count: %d", count)
+		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(%d)", count)
 	}
 
 	es.Logger().Debugf("SetActiveValidatorCount() start: count=%d", count)
@@ -809,7 +811,7 @@ func (es *ExtensionStateImpl) GetValidatorsOf(
 	height := cc.BlockHeight()
 	gradeFilter := hvhstate.StringToGradeFilter(gradeFilterName)
 	if gradeFilter == hvhstate.GradeFilterNone {
-		return nil, scoreresult.InvalidParameterError.Errorf("Invalid grade: %s", gradeFilterName)
+		return nil, scoreresult.InvalidParameterError.Errorf("InvalidArgument(%s)", gradeFilterName)
 	}
 
 	if validators, err := es.state.GetValidatorsOf(gradeFilter); err == nil {
@@ -835,7 +837,7 @@ func (es *ExtensionStateImpl) GetValidatorsInfo(
 
 	vDataType := StringToValidatorDataType(dataType)
 	if vDataType == VDataTypeNone {
-		return nil, scoreresult.InvalidParameterError.Errorf("Invalid dataType: %s", dataType)
+		return nil, scoreresult.InvalidParameterError.Errorf("InvalidArgument(%s)", dataType)
 	}
 
 	owners, err := es.state.GetValidatorsOf(hvhstate.GradeFilterAll)

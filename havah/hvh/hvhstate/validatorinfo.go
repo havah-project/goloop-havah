@@ -4,9 +4,8 @@ import (
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/codec"
 	"github.com/icon-project/goloop/common/crypto"
-	"github.com/icon-project/goloop/havah/hvhmodule"
+	"github.com/icon-project/goloop/havah/hvhutils"
 	"github.com/icon-project/goloop/module"
-	"github.com/icon-project/goloop/service/scoreresult"
 )
 
 type ValidatorInfo struct {
@@ -44,8 +43,8 @@ func (vi *ValidatorInfo) Name() string {
 }
 
 func (vi *ValidatorInfo) SetName(name string) error {
-	if len(name) > hvhmodule.MaxValidatorNameLen {
-		return scoreresult.InvalidParameterError.Errorf("TooLongName(%s)", name)
+	if err := hvhutils.CheckNameLength(name); err != nil {
+		return err
 	}
 	vi.name = name
 	return nil
@@ -60,8 +59,8 @@ func (vi *ValidatorInfo) Url() string {
 }
 
 func (vi *ValidatorInfo) SetUrl(url string) error {
-	if len(url) > hvhmodule.MaxValidatorUrlLen {
-		return scoreresult.InvalidParameterError.Errorf("TooLongUrl(%s)", url)
+	if err := hvhutils.CheckUrlLength(url); err != nil {
+		return err
 	}
 	vi.url = url
 	return nil
