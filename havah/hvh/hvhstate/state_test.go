@@ -39,8 +39,8 @@ func newPlanetReward(total, current *big.Int, lastTN int64) *planetReward {
 	}
 }
 
-func checkAllPlanet(t *testing.T, state *State, expected int64) {
-	cur := state.getVarDB(hvhmodule.VarAllPlanet).Int64()
+func checkAllPlanet(t *testing.T, s *State, expected int64) {
+	cur := s.getVarDB(hvhmodule.VarAllPlanet).Int64()
 	assert.Equal(t, expected, cur)
 }
 
@@ -1279,25 +1279,25 @@ func TestState_IsItTimeToCheckBlockVote(t *testing.T) {
 }
 
 func TestState_RenewNetworkStatusOnTermStart(t *testing.T) {
-	state := newDummyState()
+	s := newDummyState()
 	period := int64(10)
 	allowance := int64(3)
 	avCount := int64(10)
 
-	oldNs, _ := state.GetNetworkStatus()
+	oldNs, _ := s.GetNetworkStatus()
 	assert.False(t, oldNs.IsDecentralized())
 
-	assert.NoError(t, state.SetBlockVoteCheckParameters(period, allowance))
-	assert.NoError(t, state.SetActiveValidatorCount(avCount))
-	assert.NoError(t, state.RenewNetworkStatusOnTermStart())
-	ns, _ := state.GetNetworkStatus()
+	assert.NoError(t, s.SetBlockVoteCheckParameters(period, allowance))
+	assert.NoError(t, s.SetActiveValidatorCount(avCount))
+	assert.NoError(t, s.RenewNetworkStatusOnTermStart())
+	ns, _ := s.GetNetworkStatus()
 	assert.True(t, ns.Equal(oldNs))
 
 	ns.SetDecentralized()
-	assert.NoError(t, state.SetNetworkStatus(ns))
+	assert.NoError(t, s.SetNetworkStatus(ns))
 
-	assert.NoError(t, state.RenewNetworkStatusOnTermStart())
-	ns, _ = state.GetNetworkStatus()
+	assert.NoError(t, s.RenewNetworkStatusOnTermStart())
+	ns, _ = s.GetNetworkStatus()
 	assert.False(t, ns.Equal(oldNs))
 }
 
@@ -1309,7 +1309,7 @@ func TestState_GetOwnerByNode(t *testing.T) {
 
 	// Register node address: (node : owner)
 	for i := 0; i < size; i++ {
-		err := s.registerNodeAddress(nodes[i], owners[i])
+		err := s.addNodeToOwnerMap(nodes[i], owners[i])
 		assert.NoError(t, err)
 	}
 
@@ -1323,7 +1323,7 @@ func TestState_GetOwnerByNode(t *testing.T) {
 	// Change node address: (owner : owner)
 	for _, owner := range owners {
 		node := owner
-		err := s.registerNodeAddress(node, owner)
+		err := s.addNodeToOwnerMap(node, owner)
 		assert.NoError(t, err)
 
 		owner, err = s.GetOwnerByNode(node)
@@ -1333,8 +1333,69 @@ func TestState_GetOwnerByNode(t *testing.T) {
 
 	// Failed if a duplicate node address is used
 	for i, node := range nodes {
-		err := s.registerNodeAddress(node, owners[i])
+		err := s.addNodeToOwnerMap(node, owners[i])
 		assert.Error(t, err)
 		assert.False(t, node.Equal(owners[i]))
 	}
+}
+
+func TestState_SetNodePublicKey(t *testing.T) {
+	var err error
+	var idx int
+
+	size := 5
+	owners := newDummyAddresses(1, false, size)
+	nodes := make([]module.Address, size)
+	var publicKeys []*crypto.PublicKey
+	s := newDummyState()
+
+	// Register validators
+	for i := 0; i < size; i++ {
+		name := fmt.Sprintf("name-%02d", i)
+		owner := owners[i]
+		_, publicKey := crypto.GenerateKeyPair()
+		publicKeys = append(publicKeys, publicKey)
+
+		err = s.RegisterValidator(owner, publicKey.SerializeCompressed(), GradeSub, name)
+		assert.NoError(t, err)
+
+		nodes[i] = common.NewAccountAddressFromPublicKey(publicKey)
+	}
+
+	// Error case: non-existent owner
+	owner := newDummyAddress(1234, false)
+	_, publicKey := crypto.GenerateKeyPair()
+	oNode, nNode, err := s.SetNodePublicKey(owner, publicKey.SerializeCompressed())
+	assert.Nil(t, oNode)
+	assert.Nil(t, nNode)
+	assert.Error(t, err)
+
+	// Error case: already used node address
+	idx = 1
+	owner = owners[idx]
+	publicKey = publicKeys[3]
+	oNode, nNode, err = s.SetNodePublicKey(owner, publicKey.SerializeUncompressed())
+	assert.Nil(t, oNode)
+	assert.Nil(t, nNode)
+	assert.Error(t, err)
+
+	// Success case: Replace old node with the same one
+	idx = 2
+	owner = owners[idx]
+	publicKey = publicKeys[idx]
+	oNode, nNode, err = s.SetNodePublicKey(owner, publicKey.SerializeUncompressed())
+	assert.True(t, oNode.Equal(nNode))
+	assert.NoError(t, err)
+
+	// Success case
+	idx = 0
+	owner = owners[idx]
+	_, publicKey = crypto.GenerateKeyPair()
+	oNode, nNode, err = s.SetNodePublicKey(owner, publicKey.SerializeUncompressed())
+	vi, err := s.GetValidatorInfo(owner)
+	assert. NoError(t, err)
+	assert.True(t, oNode.Equal(nodes[idx]))
+	assert.True(t, publicKey.Equal(vi.PublicKey()))
+	assert.True(t, vi.Address().Equal(common.NewAccountAddressFromPublicKey(publicKey)))
+	assert.False(t, vi.Address().Equal(oNode))
 }

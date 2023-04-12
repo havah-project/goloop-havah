@@ -841,7 +841,7 @@ func (s *State) RegisterValidator(owner module.Address, nodePublicKey []byte, gr
 	if err = s.registerValidatorStatus(owner); err != nil {
 		return err
 	}
-	if err = s.registerNodeAddress(vi.Address(), owner); err != nil {
+	if err = s.addNodeToOwnerMap(vi.Address(), owner); err != nil {
 		return err
 	}
 	if err = s.addToValidatorList(grade, owner); err != nil {
@@ -887,7 +887,7 @@ func (s *State) registerValidatorStatus(owner module.Address) error {
 	return db.Set(ToKey(owner), vs.Bytes())
 }
 
-func (s *State) registerNodeAddress(node, owner module.Address) error {
+func (s *State) addNodeToOwnerMap(node, owner module.Address) error {
 	key := ToKey(node)
 	db := s.getDictDB(hvhmodule.DictNodeToOwner, 1)
 
@@ -1088,6 +1088,7 @@ func (s *State) RenewNetworkStatusOnTermStart() error {
 
 func (s *State) SetValidatorInfo(owner module.Address, values map[string]string) error {
 	s.logger.Debugf("SetValidatorInfo() start: owner=%s values=%v", owner, values)
+
 	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
 	vi, err := s.getValidatorInfo(db, owner)
 	if err != nil {
@@ -1114,6 +1115,7 @@ func (s *State) SetValidatorInfo(owner module.Address, values map[string]string)
 	return db.Set(ToKey(owner), vi.Bytes())
 }
 
+// SetNodePublicKey returns old node address, new node address and error
 func (s *State) SetNodePublicKey(owner module.Address, pubKey []byte) (module.Address, module.Address, error) {
 	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
 	vi, err := s.getValidatorInfo(db, owner)
@@ -1129,10 +1131,10 @@ func (s *State) SetNodePublicKey(owner module.Address, pubKey []byte) (module.Ad
 
 	newNode := vi.Address()
 	if oldNode.Equal(newNode) {
-		return nil, nil, nil
+		return oldNode, newNode, nil
 	}
 
-	if err = s.registerNodeAddress(newNode, owner); err != nil {
+	if err = s.addNodeToOwnerMap(newNode, owner); err != nil {
 		return nil, nil, err
 	}
 	if err = db.Set(ToKey(owner), vi.Bytes()); err != nil {
