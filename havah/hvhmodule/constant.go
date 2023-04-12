@@ -127,6 +127,7 @@ const (
 
 // Decentralization
 const (
+	MaxValidatorCount = 1_000
 	BlockVoteCheckPeriod int64 = 30
 	NonVoteAllowance     int64 = 20
 	MaxValidatorNameLen        = 100

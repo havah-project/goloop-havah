@@ -793,7 +793,7 @@ func (es *ExtensionStateImpl) GetValidatorStatus(
 }
 
 func (es *ExtensionStateImpl) SetActiveValidatorCount(count int64) error {
-	if !(count > 0 && count < 10_000) {
+	if !(count > 0 && count <= hvhmodule.MaxValidatorCount) {
 		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(%d)", count)
 	}
 
