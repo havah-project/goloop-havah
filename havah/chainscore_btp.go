@@ -2,6 +2,7 @@ package havah
 
 import (
 	"github.com/icon-project/goloop/common"
+	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/intconv"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
@@ -142,7 +143,7 @@ func (s *chainScore) setBTPPublicKey(name string, pubKey []byte) error {
 func (s *chainScore) getBTPState() (*state.BTPStateImpl, error) {
 	btpState := s.cc.GetBTPState()
 	if btpState == nil {
-		return nil, scoreresult.UnknownFailureError.Errorf("BTP state is nil")
+		return nil, errors.InvalidStateError.New("InvalidBTPState")
 	}
 	return btpState.(*state.BTPStateImpl), nil
 }

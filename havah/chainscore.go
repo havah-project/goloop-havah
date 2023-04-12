@@ -823,10 +823,28 @@ type handleRevFunc func(*chainScore, state.AccountState, int, int) error
 
 var handleRevFuncs = map[int]handleRevFunc{
 	hvhmodule.Revision0: handleRev1,
+	hvhmodule.RevisionDecentralization: handleRevBTP2,
 }
 
 func handleRev1(s *chainScore, as state.AccountState, oldRev, newRev int) error {
 	return nil
+}
+
+func handleRevBTP2(s *chainScore, as state.AccountState, oldRev, newRev int) error {
+	if newRev != hvhmodule.RevisionBTP2 {
+		return errors.InvalidStateError.Errorf("InvalidRevision(oldRev=%d,newRev=%d)", oldRev, newRev)
+	}
+
+	es, _, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return err
+	}
+	bsi, err := s.getBTPState()
+	if err != nil {
+		return err
+	}
+	btpCtx := s.newBTPContext()
+	return es.InitBTPPublicKeys(btpCtx, bsi)
 }
 
 func (s *chainScore) handleRevisionChange(as state.AccountState, oldRev, newRev int) error {

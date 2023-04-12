@@ -22,6 +22,7 @@ import (
 
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/codec"
+	"github.com/icon-project/goloop/common/crypto"
 	"github.com/icon-project/goloop/common/db"
 	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/log"
@@ -885,6 +886,29 @@ func (es *ExtensionStateImpl) GetValidatorsInfo(
 	ret["validators"] = validators
 	es.Logger().Debugf("GetValidatorsInfo() end")
 	return ret, nil
+}
+
+func (es *ExtensionStateImpl) InitBTPPublicKeys(btpCtx state.BTPContext, bsi *state.BTPStateImpl) error {
+	var vi *hvhstate.ValidatorInfo
+	var publicKey *crypto.PublicKey
+	owners, err := es.state.GetValidatorsOf(hvhstate.GradeFilterAll)
+	if err != nil {
+		return err
+	}
+
+	for _, owner := range owners {
+		vi, err = es.state.GetValidatorInfo(owner)
+		if err != nil {
+			return err
+		}
+		publicKey = vi.PublicKey()
+		if err = bsi.SetPublicKey(
+			btpCtx, owner, hvhmodule.BTPNetworkName,
+			publicKey.SerializeUncompressed()); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {
