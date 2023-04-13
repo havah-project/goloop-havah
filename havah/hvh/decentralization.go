@@ -2,6 +2,7 @@ package hvh
 
 import (
 	"github.com/icon-project/goloop/common/errors"
+	"github.com/icon-project/goloop/havah/hvh/hvhstate"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/state"
@@ -11,34 +12,76 @@ func (es *ExtensionStateImpl) isDecentralizationPossible(cc hvhmodule.CallContex
 	return es.state.IsDecentralizationPossible(cc.Revision().Value())
 }
 
-func (es *ExtensionStateImpl) initValidatorSet(cc hvhmodule.CallContext) error {
+// Initialize active validator set due to term change
+func (es *ExtensionStateImpl) initActiveValidatorSet(cc hvhmodule.CallContext) error {
 	if cc.ReadOnlyMode() {
 		return nil
 	}
 
 	validatorCount := int(es.state.GetActiveValidatorCount())
-
-	// addrs contains validator node addresses
-	addrs, err := es.state.GetMainValidators(validatorCount)
+	// nodes contains validator node addresses
+	nodes, err := es.state.GetMainValidators(validatorCount)
 	if err != nil {
 		return err
 	}
 
-	if count := validatorCount - len(addrs); count > 0 {
+	// Gets the next active validators from sub validators
+	if count := validatorCount - len(nodes); count > 0 {
 		subValidators, err := es.state.GetNextActiveValidatorsAndChangeIndex(nil, count)
 		if err != nil {
 			return err
 		}
 		if subValidators != nil {
-			addrs = append(addrs, subValidators...)
+			nodes = append(nodes, subValidators...)
 		}
 	}
 
-	validators := make([]module.Validator, len(addrs))
-	for i, addr := range addrs {
-		validators[i], _ = state.ValidatorFromAddress(addr)
+	vs := cc.GetValidatorState()
+	m := make(map[string]int)
+	addrs := make([]module.Address, 0, vs.Len()*3/2)
+	for i := 0; i < vs.Len(); i++ {
+		v, _ := vs.Get(i)
+		node := v.Address()
+		m[hvhstate.ToKey(node)] = -1
+		addrs = append(addrs, node)
 	}
-	return cc.GetValidatorState().Set(validators)
+
+	validators := make([]module.Validator, len(nodes))
+	for i, node := range nodes {
+		validators[i], err = state.ValidatorFromAddress(node)
+		if err != nil {
+			return err
+		}
+
+		k := hvhstate.ToKey(node)
+		num, ok := m[k]
+		m[k] = num + 1
+		if !ok {
+			addrs = append(addrs, node)
+		}
+	}
+
+	// Record eventLogs
+	var owner module.Address
+	for _, node := range addrs {
+		k := hvhstate.ToKey(node)
+		v := m[k]
+		if v == 0 {
+			continue
+		}
+
+		owner, err = es.state.GetOwnerByNode(node)
+		if err != nil {
+			return err
+		}
+		if v < 0 {
+			onValidatorLeaved(cc, owner, node, "termchange")
+		} else {
+			onValidatorEntered(cc, owner, node)
+		}
+	}
+
+	return vs.Set(validators)
 }
 
 func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
@@ -48,7 +91,7 @@ func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
 			// Skip to run handleBlockVote() because ConsensusInfo is nil on query call
 			return nil
 		}
-		return errors.InvalidStateError.Errorf("Invalid ConsensusInfo")
+		return errors.InvalidStateError.New("InvalidConsensusInfo")
 	}
 
 	// Assume that voters and validatorSet can be different
@@ -60,11 +103,13 @@ func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
 	// Check block vote
 	for i, vote := range voted {
 		voter, _ := voters.Get(i)
-		nodeAddr := voter.Address()
-		if penalized, err := es.state.OnBlockVote(nodeAddr, vote); err == nil {
+		node := voter.Address()
+		if penalized, owner, err := es.state.OnBlockVote(node, vote); err == nil {
 			if penalized {
-				if index := validatorState.IndexOf(nodeAddr); index >= 0 {
+				onValidatorPenalized(cc, owner, node)
+				if index := validatorState.IndexOf(node); index >= 0 {
 					validatorsToRemove = append(validatorsToRemove, voter)
+					onValidatorLeaved(cc, owner, node, "penalized")
 				}
 			}
 		}
@@ -75,7 +120,6 @@ func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
 		// No penalized validators
 		return nil
 	}
-
 	return es.replaceActiveValidators(cc, validatorsToRemove)
 }
 
@@ -127,6 +171,12 @@ func (es *ExtensionStateImpl) replaceActiveValidators(
 				// If a new validator exists
 				if validator, err = state.ValidatorFromAddress(validatorsToAdd[j]); err == nil {
 					j++
+					node := validator.Address()
+					owner, err := es.state.GetOwnerByNode(node)
+					if err != nil {
+						return err
+					}
+					onValidatorEntered(cc, owner, node)
 				} else {
 					return err
 				}

@@ -87,23 +87,23 @@ func toHVH(value int64) *big.Int {
 
 func TestState_SetUSDTPrice(t *testing.T) {
 	var price *big.Int
-	state := newDummyState()
+	s := newDummyState()
 
-	price = state.GetUSDTPrice()
+	price = s.GetUSDTPrice()
 	assert.Zero(t, price.Sign())
 
 	// In case of valid prices
 	prices := []*big.Int{new(big.Int), big.NewInt(1234)}
 	for _, price = range prices {
-		assert.NoError(t, state.SetUSDTPrice(price))
-		price2 := state.GetUSDTPrice()
+		assert.NoError(t, s.SetUSDTPrice(price))
+		price2 := s.GetUSDTPrice()
 		assert.Zero(t, price.Cmp(price2))
 	}
 
 	// In case of invalid prices
 	invalidPrices := []*big.Int{nil, big.NewInt(-1000)}
 	for _, price = range invalidPrices {
-		assert.Error(t, state.SetUSDTPrice(price))
+		assert.Error(t, s.SetUSDTPrice(price))
 	}
 }
 
@@ -111,7 +111,7 @@ func TestState_AddPlanetManager(t *testing.T) {
 	var err error
 	var address module.Address
 
-	state := newDummyState()
+	s := newDummyState()
 	addresses := []module.Address{
 		common.MustNewAddressFromString("cx1"),
 		common.MustNewAddressFromString("cx2"),
@@ -122,88 +122,88 @@ func TestState_AddPlanetManager(t *testing.T) {
 
 	// Call AddPlanetManager() with a valid argument
 	for _, address = range addresses {
-		err = state.AddPlanetManager(address)
+		err = s.AddPlanetManager(address)
 		assert.NoError(t, err)
 
-		ok, err := state.IsPlanetManager(address)
+		ok, err := s.IsPlanetManager(address)
 		assert.True(t, ok)
 		assert.NoError(t, err)
 	}
 
 	// Call AddPlanetManager with an invalid argument
 	for _, address = range []module.Address{nil, addresses[0], addresses[1]} {
-		err = state.AddPlanetManager(address)
+		err = s.AddPlanetManager(address)
 		assert.Error(t, err)
 	}
 
 	// Remove the first item with RemovePlanetManager()
 	address = addresses[0]
-	err = state.RemovePlanetManager(address)
+	err = s.RemovePlanetManager(address)
 	assert.NoError(t, err)
 
-	ok, err := state.IsPlanetManager(address)
+	ok, err := s.IsPlanetManager(address)
 	assert.NoError(t, err)
 	assert.False(t, ok)
 
 	for i := 1; i < len(addresses); i++ {
-		ok, err = state.IsPlanetManager(addresses[i])
+		ok, err = s.IsPlanetManager(addresses[i])
 		assert.True(t, ok)
 		assert.NoError(t, err)
 	}
 
 	// Remove the last item with RemovePlanetManager()
 	address = addresses[len(addresses)-1]
-	err = state.RemovePlanetManager(address)
+	err = s.RemovePlanetManager(address)
 	assert.NoError(t, err)
 
-	ok, err = state.IsPlanetManager(address)
+	ok, err = s.IsPlanetManager(address)
 	assert.NoError(t, err)
 	assert.False(t, ok)
 
 	for i := 1; i < len(addresses)-1; i++ {
-		ok, err = state.IsPlanetManager(addresses[i])
+		ok, err = s.IsPlanetManager(addresses[i])
 		assert.True(t, ok)
 		assert.NoError(t, err)
 	}
 
 	// Invalid cases of RemovePlanetManager()
 	for _, address = range []module.Address{nil, addresses[0], common.MustNewAddressFromString("hx1234")} {
-		err = state.RemovePlanetManager(address)
+		err = s.RemovePlanetManager(address)
 		assert.Error(t, err)
 	}
 
-	ok, err = state.IsPlanetManager(nil)
+	ok, err = s.IsPlanetManager(nil)
 	assert.Error(t, err)
 	assert.False(t, ok)
 }
 
 func TestState_SetIssueStart(t *testing.T) {
 	var startBH, curBH, height int64
-	state := newDummyState()
+	s := newDummyState()
 
 	// Success case: startBH > 0 && startBH > curBH
 	startBH, curBH = 2000, 1000
-	err := state.SetIssueStart(curBH, startBH)
+	err := s.SetIssueStart(curBH, startBH)
 	assert.NoError(t, err)
 
-	height = state.getVarDB(hvhmodule.VarIssueStart).Int64()
+	height = s.getVarDB(hvhmodule.VarIssueStart).Int64()
 	assert.Equal(t, startBH, height)
-	assert.Equal(t, startBH, state.GetIssueStart())
+	assert.Equal(t, startBH, s.GetIssueStart())
 
 	// Failure case: startBH <= 0 || startBH <= curBH
 	curBH = 1000
-	height = state.getVarDB(hvhmodule.VarIssueStart).Int64()
+	height = s.getVarDB(hvhmodule.VarIssueStart).Int64()
 	for _, startBH = range []int64{-100, 0, 100, 500, curBH} {
-		err = state.SetIssueStart(curBH, startBH)
+		err = s.SetIssueStart(curBH, startBH)
 		assert.Error(t, err)
 
-		startBH = state.getVarDB(hvhmodule.VarIssueStart).Int64()
+		startBH = s.getVarDB(hvhmodule.VarIssueStart).Int64()
 		assert.Equal(t, height, startBH)
 	}
 }
 
 func TestState_RegisterPlanet(t *testing.T) {
-	state := newDummyState()
+	s := newDummyState()
 	owner := common.MustNewAddressFromString("hx1234")
 	isCompany := true
 	isPrivate := true
@@ -213,87 +213,87 @@ func TestState_RegisterPlanet(t *testing.T) {
 	var planetCount int64
 	rev := hvhmodule.RevisionPlanetIDReuse
 
-	checkAllPlanet(t, state, 0)
+	checkAllPlanet(t, s, 0)
 	expectedCount := int64(0)
 	for i := 0; i < 3; i++ {
-		err := state.RegisterPlanet(rev, int64(i), isPrivate, isCompany, owner, usdt, price, height)
+		err := s.RegisterPlanet(rev, int64(i), isPrivate, isCompany, owner, usdt, price, height)
 		assert.NoError(t, err)
 
 		expectedCount++
-		planetCount = state.getVarDB(hvhmodule.VarAllPlanet).Int64()
+		planetCount = s.getVarDB(hvhmodule.VarAllPlanet).Int64()
 		assert.Equal(t, expectedCount, planetCount)
 	}
 
 	for i := 0; i < 2; i++ {
-		lostDelta, err := state.UnregisterPlanet(rev, int64(i))
+		lostDelta, err := s.UnregisterPlanet(rev, int64(i))
 		assert.NoError(t, err)
 		assert.Zero(t, lostDelta.Sign())
 		expectedCount--
-		checkAllPlanet(t, state, expectedCount)
+		checkAllPlanet(t, s, expectedCount)
 	}
 
-	planetCount = state.getVarDB(hvhmodule.VarAllPlanet).Int64()
-	lostDelta, err := state.UnregisterPlanet(rev, int64(100))
+	planetCount = s.getVarDB(hvhmodule.VarAllPlanet).Int64()
+	lostDelta, err := s.UnregisterPlanet(rev, int64(100))
 	assert.Error(t, err)
 	assert.Nil(t, lostDelta)
-	checkAllPlanet(t, state, planetCount)
+	checkAllPlanet(t, s, planetCount)
 }
 
 func TestState_UnregisterPlanet_InAbnormalCase(t *testing.T) {
 	rev := hvhmodule.RevisionPlanetIDReuse
-	state := newDummyState()
-	checkAllPlanet(t, state, int64(0))
-	lostDelta, err := state.UnregisterPlanet(rev, int64(-1))
+	s := newDummyState()
+	checkAllPlanet(t, s, int64(0))
+	lostDelta, err := s.UnregisterPlanet(rev, int64(-1))
 	assert.Error(t, err)
 	assert.Nil(t, lostDelta)
 
-	lostDelta, err = state.UnregisterPlanet(rev, int64(100))
+	lostDelta, err = s.UnregisterPlanet(rev, int64(100))
 	assert.Error(t, err)
 	assert.Nil(t, lostDelta)
 
-	checkAllPlanet(t, state, int64(0))
+	checkAllPlanet(t, s, int64(0))
 }
 
 func TestState_GetBigInt(t *testing.T) {
 	key := "key"
-	state := newDummyState()
-	varDB := state.getVarDB(key)
+	s := newDummyState()
+	varDB := s.getVarDB(key)
 
 	assert.Nil(t, varDB.BigInt())
 
-	value := state.getBigInt(key)
+	value := s.getBigInt(key)
 	assert.NotNil(t, value)
 
 	defValue := hvhmodule.BigIntHooverBudget
-	value = state.getBigIntOrDefault(key, defValue)
+	value = s.getBigIntOrDefault(key, defValue)
 	assert.Zero(t, defValue.Cmp(value))
 
 	newValue := new(big.Int).Add(defValue, big.NewInt(100))
-	err := state.setBigInt(key, newValue)
+	err := s.setBigInt(key, newValue)
 	assert.NoError(t, err)
 
-	value = state.getBigInt(key)
+	value = s.getBigInt(key)
 	assert.Zero(t, newValue.Cmp(value))
 
-	value = state.getBigIntOrDefault(key, defValue)
+	value = s.getBigIntOrDefault(key, defValue)
 	assert.Zero(t, value.Cmp(newValue))
 }
 
 func TestState_GetPlanet(t *testing.T) {
 	id := int64(1)
 
-	state := newDummyState()
-	p, err := state.GetPlanet(id)
+	s := newDummyState()
+	p, err := s.GetPlanet(id)
 	assert.Nil(t, p)
 	assert.Error(t, err)
 
-	dictDB := state.getDictDB(hvhmodule.DictPlanet, 1)
+	dictDB := s.getDictDB(hvhmodule.DictPlanet, 1)
 
 	p = newDummyPlanet(false, false, 1234)
-	err = state.setPlanet(dictDB, id, p)
+	err = s.setPlanet(dictDB, id, p)
 	assert.NoError(t, err)
 
-	p2, err := state.getPlanet(dictDB, id)
+	p2, err := s.getPlanet(dictDB, id)
 	assert.NotNil(t, p)
 	assert.NoError(t, err)
 	assert.True(t, p.equal(p2))
@@ -303,8 +303,8 @@ func TestState_GetPlanetReward(t *testing.T) {
 	id := int64(1)
 	reward := big.NewInt(100)
 
-	state := newDummyState()
-	pr, err := state.GetPlanetReward(id)
+	s := newDummyState()
+	pr, err := s.GetPlanetReward(id)
 	assert.NotNil(t, pr)
 	assert.NoError(t, err)
 	assert.Zero(t, pr.Total().Sign())
@@ -314,34 +314,34 @@ func TestState_GetPlanetReward(t *testing.T) {
 	err = pr.increment(10, reward, reward)
 	assert.NoError(t, err)
 
-	err = state.setPlanetReward(id, pr)
+	err = s.setPlanetReward(id, pr)
 	assert.NoError(t, err)
 
-	pr2, err := state.GetPlanetReward(id)
+	pr2, err := s.GetPlanetReward(id)
 	assert.NotNil(t, pr2)
 	assert.NoError(t, err)
 	assert.True(t, pr.equal(pr2))
 }
 
 func TestState_IncrementWorkingPlanet(t *testing.T) {
-	state := newDummyState()
+	s := newDummyState()
 
-	ov := state.getInt64(hvhmodule.VarWorkingPlanet)
-	err := state.IncrementWorkingPlanet()
+	ov := s.getInt64(hvhmodule.VarWorkingPlanet)
+	err := s.IncrementWorkingPlanet()
 	assert.NoError(t, err)
 
-	nv := state.getInt64(hvhmodule.VarWorkingPlanet)
+	nv := s.getInt64(hvhmodule.VarWorkingPlanet)
 	assert.Equal(t, ov+1, nv)
 }
 
 func TestState_InitState(t *testing.T) {
-	state := newDummyState()
+	s := newDummyState()
 
-	assert.Equal(t, int64(hvhmodule.TermPeriod), state.GetTermPeriod())
-	assert.Zero(t, state.GetHooverBudget().Cmp(hvhmodule.BigIntHooverBudget))
-	assert.Equal(t, int64(hvhmodule.IssueReductionCycle), state.GetIssueReductionCycle())
-	assert.Zero(t, state.GetIssueStart())
-	assert.Zero(t, state.GetIssueReductionRate().Cmp(hvhmodule.BigRatIssueReductionRate))
+	assert.Equal(t, int64(hvhmodule.TermPeriod), s.GetTermPeriod())
+	assert.Zero(t, s.GetHooverBudget().Cmp(hvhmodule.BigIntHooverBudget))
+	assert.Equal(t, int64(hvhmodule.IssueReductionCycle), s.GetIssueReductionCycle())
+	assert.Zero(t, s.GetIssueStart())
+	assert.Zero(t, s.GetIssueReductionRate().Cmp(hvhmodule.BigRatIssueReductionRate))
 
 	cfg := &StateConfig{}
 	cfg.TermPeriod = &common.HexInt64{Value: 100}
@@ -349,25 +349,25 @@ func TestState_InitState(t *testing.T) {
 	cfg.IssueReductionCycle = &common.HexInt64{Value: 180}
 	cfg.USDTPrice = common.NewHexInt(200_000)
 
-	assert.NoError(t, state.InitState(cfg))
-	assert.Equal(t, cfg.TermPeriod.Value, state.GetTermPeriod())
-	assert.Zero(t, state.GetHooverBudget().Cmp(cfg.HooverBudget.Value()))
-	assert.Equal(t, cfg.IssueReductionCycle.Value, state.GetIssueReductionCycle())
-	assert.Zero(t, state.GetIssueReductionRate().Cmp(hvhmodule.BigRatIssueReductionRate))
+	assert.NoError(t, s.InitState(cfg))
+	assert.Equal(t, cfg.TermPeriod.Value, s.GetTermPeriod())
+	assert.Zero(t, s.GetHooverBudget().Cmp(cfg.HooverBudget.Value()))
+	assert.Equal(t, cfg.IssueReductionCycle.Value, s.GetIssueReductionCycle())
+	assert.Zero(t, s.GetIssueReductionRate().Cmp(hvhmodule.BigRatIssueReductionRate))
 }
 
 func TestState_DecreaseRewardRemain(t *testing.T) {
 	const initRewardRemain = 1_000_000
 	const key = hvhmodule.VarRewardRemain
-	state := newDummyState()
+	s := newDummyState()
 
-	safeSetBigInt(t, state, key, big.NewInt(initRewardRemain))
+	safeSetBigInt(t, s, key, big.NewInt(initRewardRemain))
 
 	amount := int64(1000)
-	err := state.DecreaseRewardRemain(big.NewInt(amount))
+	err := s.DecreaseRewardRemain(big.NewInt(amount))
 	assert.NoError(t, err)
 
-	newRewardRemain := state.getBigInt(key)
+	newRewardRemain := s.getBigInt(key)
 	assert.Zero(t, big.NewInt(initRewardRemain).Cmp(new(big.Int).Add(newRewardRemain, big.NewInt(amount))))
 }
 
@@ -378,7 +378,7 @@ func TestState_calcClaimableReward(t *testing.T) {
 	price := toHVH(50000)
 	p := newPlanet(false, false, owner, usdt, price, 100)
 	pr := newEmpyPlanetReward()
-	state := newDummyState()
+	s := newDummyState()
 
 	amount := toHVH(1)
 	err := pr.increment(1, amount, amount)
@@ -387,7 +387,7 @@ func TestState_calcClaimableReward(t *testing.T) {
 	p2 := deepCopyPlanet(t, p)
 	pr2 := deepCopyPlanetReward(t, pr)
 
-	reward, err := state.calcClaimableReward(height, p, pr)
+	reward, err := s.calcClaimableReward(height, p, pr)
 	assert.NoError(t, err)
 	assert.Zero(t, reward.Cmp(amount))
 	assert.True(t, p.equal(p2))
@@ -403,7 +403,7 @@ func TestState_ClaimPlanetReward(t *testing.T) {
 	issueStart := int64(100)
 	owner := common.MustNewAddressFromString("hx1234")
 
-	state := newDummyState()
+	s := newDummyState()
 
 	ps := []*Planet{
 		nil,
@@ -419,27 +419,27 @@ func TestState_ClaimPlanetReward(t *testing.T) {
 	}
 	for i := 1; i < 4; i++ {
 		pr := deepCopyPlanetReward(t, prs[i])
-		err := state.setPlanetReward(int64(i), pr)
+		err := s.setPlanetReward(int64(i), pr)
 		assert.NoError(t, err)
 	}
 
-	planetDictDB := state.getDictDB(hvhmodule.DictPlanet, 1)
+	planetDictDB := s.getDictDB(hvhmodule.DictPlanet, 1)
 	for i := 1; i < 4; i++ {
 		p := deepCopyPlanet(t, ps[i])
-		err := state.setPlanet(planetDictDB, int64(i), p)
+		err := s.setPlanet(planetDictDB, int64(i), p)
 		assert.NoError(t, err)
 	}
 
-	err := state.SetIssueStart(1, issueStart)
+	err := s.SetIssueStart(1, issueStart)
 	assert.NoError(t, err)
 
-	height := state.GetIssueStart() + state.GetTermPeriod()
+	height := s.GetIssueStart() + s.GetTermPeriod()
 	for _, id := range []int64{publicId, companyId} {
-		reward, err := state.ClaimPlanetReward(id, height, owner)
+		reward, err := s.ClaimPlanetReward(id, height, owner)
 		assert.NoError(t, err)
 		assert.Zero(t, reward.Cmp(prs[id].Current()))
 
-		pr, err := state.GetPlanetReward(id)
+		pr, err := s.GetPlanetReward(id)
 		assert.NoError(t, err)
 		assert.Zero(t, pr.Total().Cmp(prs[id].Total()))
 		assert.Zero(t, pr.Current().Sign())
@@ -447,7 +447,7 @@ func TestState_ClaimPlanetReward(t *testing.T) {
 	}
 
 	id := int64(privateId)
-	reward, err := state.ClaimPlanetReward(id, height, owner)
+	reward, err := s.ClaimPlanetReward(id, height, owner)
 	assert.NoError(t, err)
 	assert.Zero(t, reward.Sign())
 }
@@ -456,12 +456,12 @@ func TestState_SetPrivateClaimableRate(t *testing.T) {
 	var err error
 	var num, denom int64
 	var expNum, expDenom int64
-	state := newDummyState()
+	s := newDummyState()
 
 	// Check default value
 	expNum = int64(0)
 	expDenom = int64(hvhmodule.PrivateClaimableRate)
-	num, denom = state.GetPrivateClaimableRate()
+	num, denom = s.GetPrivateClaimableRate()
 	assert.Zero(t, num)
 	assert.Equal(t, expDenom, denom)
 
@@ -478,10 +478,10 @@ func TestState_SetPrivateClaimableRate(t *testing.T) {
 		{10001, 10001},
 	}
 	for _, in := range ins {
-		err = state.SetPrivateClaimableRate(in[0], in[1])
+		err = s.SetPrivateClaimableRate(in[0], in[1])
 		assert.Error(t, err)
 
-		num, denom = state.GetPrivateClaimableRate()
+		num, denom = s.GetPrivateClaimableRate()
 		assert.Zero(t, num)
 		assert.Equal(t, expDenom, denom)
 	}
@@ -495,10 +495,10 @@ func TestState_SetPrivateClaimableRate(t *testing.T) {
 	}
 	for _, in := range ins {
 		expNum, expDenom = in[0], in[1]
-		err = state.SetPrivateClaimableRate(expNum, expDenom)
+		err = s.SetPrivateClaimableRate(expNum, expDenom)
 		assert.NoError(t, err)
 
-		num, denom = state.GetPrivateClaimableRate()
+		num, denom = s.GetPrivateClaimableRate()
 		assert.Equal(t, expNum, num)
 		assert.Equal(t, expDenom, denom)
 	}
@@ -530,9 +530,9 @@ func TestState_Lost(t *testing.T) {
 	var err error
 	var lost, amount *big.Int
 	expLost := new(big.Int)
-	state := newDummyState()
+	s := newDummyState()
 
-	lost, err = state.GetLost()
+	lost, err = s.GetLost()
 	assert.NoError(t, err)
 	assert.Zero(t, lost.Sign())
 
@@ -540,25 +540,25 @@ func TestState_Lost(t *testing.T) {
 		amount = big.NewInt(100)
 		expLost.Add(expLost, amount)
 
-		err = state.addLost(amount)
+		err = s.addLost(amount)
 		assert.NoError(t, err)
-		lost, err = state.GetLost()
+		lost, err = s.GetLost()
 		assert.NoError(t, err)
 		assert.Zero(t, lost.Cmp(expLost))
 	}
 
-	lost, err = state.DeleteLost()
+	lost, err = s.DeleteLost()
 	assert.NoError(t, err)
 	assert.Zero(t, lost.Cmp(expLost))
 
-	lost, err = state.GetLost()
+	lost, err = s.GetLost()
 	assert.NoError(t, err)
 	assert.Zero(t, lost.Sign())
 
 	amount = big.NewInt(10)
-	err = state.addLost(amount)
+	err = s.addLost(amount)
 	assert.NoError(t, err)
-	lost, err = state.GetLost()
+	lost, err = s.GetLost()
 	assert.NoError(t, err)
 	assert.Zero(t, lost.Cmp(amount))
 }
@@ -586,23 +586,23 @@ func TestState_UnregisterPlanet(t *testing.T) {
 		big.NewInt(rand.Int63()),
 	}
 
-	state := newDummyState()
+	s := newDummyState()
 
 	for i := 0; i < len(planets); i++ {
 		id := int64(i + 1)
 		p := planets[i]
-		err = state.RegisterPlanet(
+		err = s.RegisterPlanet(
 			rev,
 			id, p.isPrivate, p.isCompany, p.owner, usdt, price, 5)
 		assert.NoError(t, err)
 
-		pr, err := state.GetPlanetReward(id)
+		pr, err := s.GetPlanetReward(id)
 		assert.NoError(t, err)
 		assert.Zero(t, pr.Total().Sign())
 		assert.Zero(t, pr.Current().Sign())
 
 		reward := rewards[i]
-		err = state.OfferReward(1, id, pr, reward, reward)
+		err = s.OfferReward(1, id, pr, reward, reward)
 		assert.NoError(t, err)
 
 		expLost.Add(expLost, reward)
@@ -610,17 +610,17 @@ func TestState_UnregisterPlanet(t *testing.T) {
 
 	for i := 0; i < len(planets); i++ {
 		id := int64(i + 1)
-		lostDelta, err := state.UnregisterPlanet(rev, id)
+		lostDelta, err := s.UnregisterPlanet(rev, id)
 		assert.NoError(t, err)
 		assert.Zero(t, lostDelta.Cmp(rewards[i]))
 
-		pr, err := state.GetPlanetReward(id)
+		pr, err := s.GetPlanetReward(id)
 		assert.NoError(t, err)
 		assert.Zero(t, pr.Total().Sign())
 		assert.Zero(t, pr.Current().Sign())
 	}
 
-	lost, err := state.GetLost()
+	lost, err := s.GetLost()
 	assert.NoError(t, err)
 	assert.True(t, lost.Sign() > 0)
 	assert.Zero(t, expLost.Cmp(lost))
@@ -630,12 +630,12 @@ func TestState_RegisterValidator(t *testing.T) {
 	owner := newDummyAddress(1, false)
 	name := "name-01"
 	_, pubKey := crypto.GenerateKeyPair()
-	state := newDummyState()
+	s := newDummyState()
 
-	err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	err := s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
 	assert.NoError(t, err)
 
-	err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
 	assert.Error(t, err)
 
 }
@@ -645,16 +645,16 @@ func TestState_UnregisterValidator(t *testing.T) {
 	owner := newDummyAddress(1, false)
 	name := "name-01"
 	_, pubKey := crypto.GenerateKeyPair()
-	state := newDummyState()
+	s := newDummyState()
 
-	err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	err := s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
 	assert.NoError(t, err)
 
-	vi, err := state.GetValidatorInfo(owner)
+	vi, err := s.GetValidatorInfo(owner)
 	assert.NoError(t, err)
 	assert.True(t, vi.Owner().Equal(owner))
 
-	vs, err := state.GetValidatorStatus(owner)
+	vs, err := s.GetValidatorStatus(owner)
 	assert.NoError(t, err)
 	assert.False(t, vs.Disabled())
 	assert.False(t, vs.Disqualified())
@@ -662,15 +662,15 @@ func TestState_UnregisterValidator(t *testing.T) {
 
 	// Try to unregister a not-registered validator
 	invalidOwner := newDummyAddress(2, false)
-	node, err = state.UnregisterValidator(invalidOwner)
+	node, err = s.UnregisterValidator(invalidOwner)
 	assert.Error(t, err)
 	assert.Nil(t, node)
 
-	node, err = state.UnregisterValidator(owner)
+	node, err = s.UnregisterValidator(owner)
 	assert.NoError(t, err)
 	assert.True(t, node.Equal(vi.Address()))
 
-	vs, err = state.GetValidatorStatus(owner)
+	vs, err = s.GetValidatorStatus(owner)
 	assert.True(t, vs.Disqualified())
 }
 
@@ -678,9 +678,9 @@ func TestState_SetValidatorInfo(t *testing.T) {
 	owner := newDummyAddress(1, false)
 	name := "name-01"
 	_, pubKey := crypto.GenerateKeyPair()
-	state := newDummyState()
+	s := newDummyState()
 
-	err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	err := s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
 	assert.NoError(t, err)
 
 	newName := "newName"
@@ -692,10 +692,10 @@ func TestState_SetValidatorInfo(t *testing.T) {
 	values["url"] = newUrl
 	// values["nodePublicKey"] = newNodePublicKey
 
-	err = state.SetValidatorInfo(owner, values)
+	err = s.SetValidatorInfo(owner, values)
 	assert.NoError(t, err)
 
-	vi, err := state.GetValidatorInfo(owner)
+	vi, err := s.GetValidatorInfo(owner)
 	assert.NoError(t, err)
 	assert.Equal(t, newName, vi.Name())
 	assert.Equal(t, newUrl, vi.Url())
@@ -706,100 +706,100 @@ func TestState_EnableValidator(t *testing.T) {
 	owner := newDummyAddress(1, false)
 	name := "name-01"
 	_, pubKey := crypto.GenerateKeyPair()
-	state := newDummyState()
+	s := newDummyState()
 
-	err := state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	err := s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
 	assert.NoError(t, err)
 
-	vs, err := state.GetValidatorStatus(owner)
+	vs, err := s.GetValidatorStatus(owner)
 	enableCount := vs.EnableCount()
 	assert.NoError(t, err)
 	assert.Equal(t, hvhmodule.MaxEnableCount, enableCount)
 
 	// Called by an invalid owner
 	NoOwner := newDummyAddress(2, false)
-	err = state.EnableValidator(NoOwner, false)
+	err = s.EnableValidator(NoOwner, false)
 	assert.Error(t, err)
 	assert.Equal(t, enableCount, vs.EnableCount())
 
 	// Case where calling EnableValidator() to an enabled validator
-	err = state.EnableValidator(owner, false)
+	err = s.EnableValidator(owner, false)
 	assert.NoError(t, err)
 	assert.Equal(t, hvhmodule.MaxEnableCount, vs.EnableCount())
 
 	for i := 1; i <= hvhmodule.MaxEnableCount; i++ {
-		assert.NoError(t, state.DisableValidator(owner))
-		vs, err = state.GetValidatorStatus(owner)
+		assert.NoError(t, s.DisableValidator(owner))
+		vs, err = s.GetValidatorStatus(owner)
 		assert.NoError(t, err)
 		assert.True(t, vs.Disabled())
 
-		err = state.EnableValidator(owner, false)
+		err = s.EnableValidator(owner, false)
 		assert.NoError(t, err)
 
-		vs, err = state.GetValidatorStatus(owner)
+		vs, err = s.GetValidatorStatus(owner)
 		assert.NoError(t, err)
 		assert.Equal(t, hvhmodule.MaxEnableCount-i, vs.EnableCount())
 		assert.True(t, vs.Enabled())
 	}
 
-	assert.NoError(t, state.DisableValidator(owner))
-	vs, err = state.GetValidatorStatus(owner)
+	assert.NoError(t, s.DisableValidator(owner))
+	vs, err = s.GetValidatorStatus(owner)
 	assert.NoError(t, err)
 	assert.True(t, vs.Disabled())
 
-	err = state.EnableValidator(owner, false)
+	err = s.EnableValidator(owner, false)
 	assert.Error(t, err)
 
-	vs, err = state.GetValidatorStatus(owner)
+	vs, err = s.GetValidatorStatus(owner)
 	assert.NoError(t, err)
 	assert.True(t, vs.Disabled())
 	assert.Zero(t, vs.EnableCount())
 }
 
 func TestState_SetValidatorCount(t *testing.T) {
-	state := newDummyState()
-	count := state.GetActiveValidatorCount()
+	s := newDummyState()
+	count := s.GetActiveValidatorCount()
 	assert.Zero(t, count)
 
 	newCount := int64(10)
-	err := state.SetActiveValidatorCount(newCount)
+	err := s.SetActiveValidatorCount(newCount)
 	assert.NoError(t, err)
-	count = state.GetActiveValidatorCount()
+	count = s.GetActiveValidatorCount()
 	assert.Equal(t, newCount, count)
 
-	assert.Error(t, state.SetActiveValidatorCount(0))
-	count = state.GetActiveValidatorCount()
+	assert.Error(t, s.SetActiveValidatorCount(0))
+	count = s.GetActiveValidatorCount()
 	assert.Equal(t, newCount, count)
 }
 
 func TestState_IsDecentralizationPossible(t *testing.T) {
 	var err error
-	state := newDummyState()
+	s := newDummyState()
 
 	// Decentralization is not possible if revision is less than hvhmodule.RevisionDecentralization
 	for rev := 0; rev < hvhmodule.RevisionDecentralization; rev++ {
-		assert.False(t, state.IsDecentralizationPossible(rev))
+		assert.False(t, s.IsDecentralizationPossible(rev))
 	}
 
 	rev := hvhmodule.RevisionDecentralization
 
-	validatorCount := state.GetActiveValidatorCount()
+	validatorCount := s.GetActiveValidatorCount()
 	assert.Zero(t, validatorCount)
 
 	validatorCount = 10
-	err = state.SetActiveValidatorCount(validatorCount)
+	err = s.SetActiveValidatorCount(validatorCount)
 	assert.NoError(t, err)
-	assert.False(t, state.IsDecentralizationPossible(rev))
+	assert.False(t, s.IsDecentralizationPossible(rev))
 
 	for i := 0; i < int(validatorCount); i++ {
 		name := fmt.Sprintf("name-%02d", i)
 		owner := newDummyAddress(i+1, false)
 		_, pubKey := crypto.GenerateKeyPair()
-		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
 		assert.NoError(t, err)
 	}
 
-	assert.True(t, state.IsDecentralizationPossible(rev))
+	assert.True(t, s.IsDecentralizationPossible(rev))
 }
 
 func TestState_GetValidatorsOf(t *testing.T) {
@@ -811,14 +811,14 @@ func TestState_GetValidatorsOf(t *testing.T) {
 	mainOwners := make([]module.Address, 0, mainCount)
 	subOwners := make([]module.Address, 0, subCount)
 
-	state := newDummyState()
+	s := newDummyState()
 
 	for i := 0; i < mainCount; i++ {
 		name := fmt.Sprintf("name-%02d", i)
 		owner := newDummyAddress(i+1, false)
 		_, pubKey := crypto.GenerateKeyPair()
 
-		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeMain, name)
+		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeMain, name)
 		assert.NoError(t, err)
 
 		mainOwners = append(mainOwners, owner)
@@ -828,7 +828,7 @@ func TestState_GetValidatorsOf(t *testing.T) {
 		owner := newDummyAddress(i+1, false)
 		_, pubKey := crypto.GenerateKeyPair()
 
-		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
 		assert.NoError(t, err)
 
 		subOwners = append(subOwners, owner)
@@ -841,7 +841,7 @@ func TestState_GetValidatorsOf(t *testing.T) {
 
 	for _, gFilter := range []GradeFilter{GradeFilterSub, GradeFilterMain, GradeFilterAll} {
 		owners := ownersOf[gFilter]
-		validators, err = state.GetValidatorsOf(gFilter)
+		validators, err = s.GetValidatorsOf(gFilter)
 		assert.NoError(t, err)
 		assert.Equal(t, len(owners), len(validators))
 		for i, v := range validators {
@@ -852,12 +852,12 @@ func TestState_GetValidatorsOf(t *testing.T) {
 	// Unregister a main validator
 	idx := 1
 	ownerToRemove := mainOwners[idx]
-	_, err = state.UnregisterValidator(ownerToRemove)
+	_, err = s.UnregisterValidator(ownerToRemove)
 	assert.NoError(t, err)
 	mainOwners = append(mainOwners[:idx], mainOwners[idx+1:]...)
 	assert.Equal(t, mainCount-1, len(mainOwners))
 
-	validators, err = state.GetValidatorsOf(GradeFilterMain)
+	validators, err = s.GetValidatorsOf(GradeFilterMain)
 	assert.NoError(t, err)
 	assert.Equal(t, len(mainOwners), len(validators))
 	for i := 0; i < len(validators); i++ {
@@ -867,12 +867,12 @@ func TestState_GetValidatorsOf(t *testing.T) {
 	// Unregister a sub validator
 	idx = 1
 	ownerToRemove = subOwners[1]
-	_, err = state.UnregisterValidator(ownerToRemove)
+	_, err = s.UnregisterValidator(ownerToRemove)
 	assert.NoError(t, err)
 	subOwners = append(subOwners[:idx], subOwners[idx+1:]...)
 	assert.Equal(t, subCount-1, len(subOwners))
 
-	validators, err = state.GetValidatorsOf(GradeFilterSub)
+	validators, err = s.GetValidatorsOf(GradeFilterSub)
 	assert.NoError(t, err)
 	assert.Equal(t, subCount-1, len(validators))
 	for i := 0; i < len(validators); i++ {
@@ -881,23 +881,23 @@ func TestState_GetValidatorsOf(t *testing.T) {
 
 	// Unregister all main validators
 	for _, owner := range mainOwners {
-		_, err = state.UnregisterValidator(owner)
+		_, err = s.UnregisterValidator(owner)
 		assert.NoError(t, err)
 	}
-	validators, err = state.GetValidatorsOf(GradeFilterMain)
+	validators, err = s.GetValidatorsOf(GradeFilterMain)
 	assert.NoError(t, err)
 	assert.Zero(t, len(validators))
 
 	// Unregister all sub validators
 	for _, owner := range subOwners {
-		_, err = state.UnregisterValidator(owner)
+		_, err = s.UnregisterValidator(owner)
 		assert.NoError(t, err)
 	}
-	validators, err = state.GetValidatorsOf(GradeFilterSub)
+	validators, err = s.GetValidatorsOf(GradeFilterSub)
 	assert.NoError(t, err)
 	assert.Zero(t, len(validators))
 
-	validators, err = state.GetValidatorsOf(GradeFilterAll)
+	validators, err = s.GetValidatorsOf(GradeFilterAll)
 	assert.NoError(t, err)
 	assert.Zero(t, len(validators))
 }
@@ -908,15 +908,17 @@ func TestState_OnBlockVote(t *testing.T) {
 	var vi *ValidatorInfo
 	var vs *ValidatorStatus
 	var owner module.Address
+	var idx int
 
 	mainCount := 7
 	subCount := 3
 	validatorCount := mainCount + subCount
 
-	state := newDummyState()
-	assert.NoError(t, state.SetDecentralized())
-	assert.NoError(t, state.RenewNetworkStatusOnTermStart())
+	s := newDummyState()
+	assert.NoError(t, s.SetDecentralized())
+	assert.NoError(t, s.RenewNetworkStatusOnTermStart())
 
+	owners := make([]module.Address, validatorCount)
 	validators := make([]module.Address, validatorCount)
 
 	for i := 0; i < validatorCount; i++ {
@@ -930,58 +932,67 @@ func TestState_OnBlockVote(t *testing.T) {
 			grade = GradeSub
 		}
 
-		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), grade, name)
+		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), grade, name)
 		assert.NoError(t, err)
 
-		vi, err = state.GetValidatorInfo(owner)
+		vi, err = s.GetValidatorInfo(owner)
 		assert.NoError(t, err)
+
+		owners[i] = owner
 		validators[i] = vi.Address()
 	}
 
 	var penalized bool
-	for _, v := range validators {
-		penalized, err = state.OnBlockVote(v, true)
+	for i, v := range validators {
+		penalized, owner, err = s.OnBlockVote(v, true)
 		assert.NoError(t, err)
 		assert.False(t, penalized)
+		assert.True(t, owners[i].Equal(owner))
 
-		owner, err = state.GetOwnerByNode(v)
+		owner, err = s.GetOwnerByNode(v)
 		assert.NoError(t, err)
 
-		vs, err = state.GetValidatorStatus(owner)
+		vs, err = s.GetValidatorStatus(owner)
 		assert.NoError(t, err)
 		assert.Zero(t, vs.NonVotes())
 		assert.True(t, vs.Enabled())
 		assert.Equal(t, hvhmodule.MaxEnableCount, vs.EnableCount())
 	}
 
-	node := validators[0]
+	// Case: a main validator does not get penalized even though its nonVotes is larger than nonVoteAllowance
+	idx = 0
+	node := validators[idx]
 	size := int(hvhmodule.NonVoteAllowance) + 1
-	owner, err = state.GetOwnerByNode(node)
+	owner, err = s.GetOwnerByNode(node)
 	assert.NoError(t, err)
 	for i := 0; i < size; i++ {
-		penalized, err = state.OnBlockVote(node, false)
+		penalized, owner2, err := s.OnBlockVote(node, false)
 		assert.NoError(t, err)
 		assert.False(t, penalized)
+		assert.True(t, owner2.Equal(owner))
 
-		vs, err = state.GetValidatorStatus(owner)
+		vs, err = s.GetValidatorStatus(owner)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(i + 1), vs.NonVotes())
 		assert.True(t, vs.Enabled())
 		assert.Equal(t, hvhmodule.MaxEnableCount, vs.EnableCount())
 	}
 
-	node = validators[mainCount]
+	// Case: a sub validator gets penalized if its nonVotes is larger than nonVoteAllowance
+	idx = mainCount
+	node = validators[idx]
 	size = int(hvhmodule.NonVoteAllowance) + 1
-	owner, err = state.GetOwnerByNode(node)
+	owner = owners[idx]
 	assert.NoError(t, err)
 	for i := 0; i < size; i++ {
 		expectedPenalized := i == size - 1
 
-		penalized, err = state.OnBlockVote(node, false)
+		penalized, owner2, err := s.OnBlockVote(node, false)
 		assert.NoError(t, err)
 		assert.Equal(t, expectedPenalized, penalized)
+		assert.True(t, owner2.Equal(owner))
 
-		vs, err = state.GetValidatorStatus(owner)
+		vs, err = s.GetValidatorStatus(owner)
 		assert.NoError(t, err)
 		assert.Equal(t, int64(i + 1), vs.NonVotes())
 		assert.Equal(t, !expectedPenalized, vs.Enabled())
@@ -991,7 +1002,7 @@ func TestState_OnBlockVote(t *testing.T) {
 
 func TestState_GetMainValidators(t *testing.T) {
 	var err error
-	state := newDummyState()
+	s := newDummyState()
 	size := 7
 	owners := make([]module.Address, size)
 	expValidators := make([]module.Address, size)
@@ -1001,7 +1012,7 @@ func TestState_GetMainValidators(t *testing.T) {
 		owner := newDummyAddress(i+1, false)
 		_, pubKey := crypto.GenerateKeyPair()
 
-		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeMain, name)
+		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeMain, name)
 		assert.NoError(t, err)
 
 		expValidators[i] = common.NewAccountAddressFromPublicKey(pubKey)
@@ -1009,7 +1020,7 @@ func TestState_GetMainValidators(t *testing.T) {
 	}
 
 	count := 5
-	validators, err := state.GetMainValidators(count)
+	validators, err := s.GetMainValidators(count)
 	assert.NoError(t, err)
 	assert.Equal(t, count, len(validators))
 
@@ -1018,11 +1029,11 @@ func TestState_GetMainValidators(t *testing.T) {
 	}
 
 	idx := size / 2
-	_, err = state.UnregisterValidator(owners[idx])
+	_, err = s.UnregisterValidator(owners[idx])
 	assert.NoError(t, err)
 
 	count = 10
-	validators, err = state.GetMainValidators(count)
+	validators, err = s.GetMainValidators(count)
 	assert.NoError(t, err)
 	assert.Equal(t, size-1, len(validators))
 
@@ -1079,7 +1090,7 @@ func newDummyValidatorState(validators []module.Address) state.ValidatorState {
 
 func TestState_GetNextActiveValidatorsAndChangeIndex(t *testing.T) {
 	var err error
-	state := newDummyState()
+	s := newDummyState()
 	size := 7
 	owners := make([]module.Address, size)
 	expValidators := make([]module.Address, size)
@@ -1089,7 +1100,7 @@ func TestState_GetNextActiveValidatorsAndChangeIndex(t *testing.T) {
 		owner := newDummyAddress(i+1, false)
 		_, pubKey := crypto.GenerateKeyPair()
 
-		err = state.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
 		assert.NoError(t, err)
 
 		expValidators[i] = common.NewAccountAddressFromPublicKey(pubKey)
@@ -1107,31 +1118,31 @@ func TestState_GetNextActiveValidatorsAndChangeIndex(t *testing.T) {
 		{count: 2, expLen: 2, expSVIndex: 4},
 	}
 
-	validators, err := state.GetNextActiveValidatorsAndChangeIndex(nil, size)
+	validators, err := s.GetNextActiveValidatorsAndChangeIndex(nil, size)
 	assert.NoError(t, err)
 	assert.Equal(t, size, len(validators))
 	for i := 0; i < size; i++ {
 		assert.True(t, expValidators[i].Equal(validators[i]))
 	}
-	assert.Zero(t, state.GetSubValidatorsIndex())
+	assert.Zero(t, s.GetSubValidatorsIndex())
 
 	activeValidators := newDummyValidatorState(expValidators[:3])
 	for i, test := range args {
 		name := fmt.Sprintf("no-disabled-%d", i)
 		t.Run(name, func(t *testing.T) {
-			validators, err = state.GetNextActiveValidatorsAndChangeIndex(activeValidators, test.count)
+			validators, err = s.GetNextActiveValidatorsAndChangeIndex(activeValidators, test.count)
 			if test.count >= 0 {
 				assert.NoError(t, err)
 			} else {
 				assert.Error(t, err)
 			}
 			assert.Equal(t, test.expLen, len(validators))
-			assert.Equal(t, test.expSVIndex, int(state.GetSubValidatorsIndex()))
+			assert.Equal(t, test.expSVIndex, int(s.GetSubValidatorsIndex()))
 			for _, v := range validators {
 				assert.True(t, activeValidators.IndexOf(v) < 0)
-				owner, err := state.GetOwnerByNode(v)
+				owner, err := s.GetOwnerByNode(v)
 				assert.NoError(t, err)
-				vs, err := state.GetValidatorStatus(owner)
+				vs, err := s.GetValidatorStatus(owner)
 				assert.NoError(t, err)
 				assert.True(t, vs.Enabled())
 			}
@@ -1142,43 +1153,43 @@ func TestState_GetNextActiveValidatorsAndChangeIndex(t *testing.T) {
 		{count: 3, expLen: 3, expSVIndex: 4},
 		{count: 1, expLen: 1, expSVIndex: 6},
 	}
-	owner, _ := state.GetOwnerByNode(expValidators[4])
-	assert.NoError(t, state.DisableValidator(owner))
+	owner, _ := s.GetOwnerByNode(expValidators[4])
+	assert.NoError(t, s.DisableValidator(owner))
 	for i, test := range args {
 		name := fmt.Sprintf("one-disabled-%d", i)
 		t.Run(name, func(t *testing.T) {
-			validators, err = state.GetNextActiveValidatorsAndChangeIndex(activeValidators, test.count)
+			validators, err = s.GetNextActiveValidatorsAndChangeIndex(activeValidators, test.count)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expLen, len(validators))
-			assert.Equal(t, test.expSVIndex, int(state.GetSubValidatorsIndex()))
+			assert.Equal(t, test.expSVIndex, int(s.GetSubValidatorsIndex()))
 			for _, v := range validators {
 				assert.True(t, activeValidators.IndexOf(v) < 0)
-				owner, _ = state.GetOwnerByNode(v)
-				vs, _ := state.GetValidatorStatus(owner)
+				owner, _ = s.GetOwnerByNode(v)
+				vs, _ := s.GetValidatorStatus(owner)
 				assert.True(t, vs.Enabled())
 			}
 		})
 	}
 
-	assert.Equal(t, 6, int(state.GetSubValidatorsIndex()))
+	assert.Equal(t, 6, int(s.GetSubValidatorsIndex()))
 	args = []arg{
 		{count: 1, expLen: 1, expSVIndex: 4},
 	}
-	owner, _ = state.GetOwnerByNode(expValidators[4])
-	_, err = state.UnregisterValidator(owner)
+	owner, _ = s.GetOwnerByNode(expValidators[4])
+	_, err = s.UnregisterValidator(owner)
 	assert.NoError(t, err)
 	// sub_validators: |0|1|2|3|5|6|
 	for i, test := range args {
 		name := fmt.Sprintf("one-unregistered-%d", i)
 		t.Run(name, func(t *testing.T) {
-			validators, err = state.GetNextActiveValidatorsAndChangeIndex(activeValidators, test.count)
+			validators, err = s.GetNextActiveValidatorsAndChangeIndex(activeValidators, test.count)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expLen, len(validators))
-			assert.Equal(t, test.expSVIndex, int(state.GetSubValidatorsIndex()))
+			assert.Equal(t, test.expSVIndex, int(s.GetSubValidatorsIndex()))
 			for _, v := range validators {
 				assert.True(t, activeValidators.IndexOf(v) < 0)
-				owner, _ = state.GetOwnerByNode(v)
-				vs, _ := state.GetValidatorStatus(owner)
+				owner, _ = s.GetOwnerByNode(v)
+				vs, _ := s.GetValidatorStatus(owner)
 				assert.True(t, vs.Enabled())
 			}
 		})
@@ -1186,9 +1197,9 @@ func TestState_GetNextActiveValidatorsAndChangeIndex(t *testing.T) {
 }
 
 func TestState_SetBlockVoteCheckParameters(t *testing.T) {
-	state := newDummyState()
-	assert.Equal(t, hvhmodule.BlockVoteCheckPeriod, state.GetBlockVoteCheckPeriod())
-	assert.Equal(t, hvhmodule.NonVoteAllowance, state.GetNonVoteAllowance())
+	s := newDummyState()
+	assert.Equal(t, hvhmodule.BlockVoteCheckPeriod, s.GetBlockVoteCheckPeriod())
+	assert.Equal(t, hvhmodule.NonVoteAllowance, s.GetNonVoteAllowance())
 
 	tests := []struct{
 		period int64
@@ -1211,26 +1222,26 @@ func TestState_SetBlockVoteCheckParameters(t *testing.T) {
 		success := test.success
 		name := fmt.Sprintf("test%02d_%d_%d_%t", i, period, allowance, success)
 		t.Run(name, func(t *testing.T){
-			oPeriod := state.GetBlockVoteCheckPeriod()
-			oAllowance := state.GetNonVoteAllowance()
+			oPeriod := s.GetBlockVoteCheckPeriod()
+			oAllowance := s.GetNonVoteAllowance()
 
-			err := state.SetBlockVoteCheckParameters(period, allowance)
+			err := s.SetBlockVoteCheckParameters(period, allowance)
 			assert.Equal(t, success, err == nil)
 			if success {
-				assert.Equal(t, period, state.GetBlockVoteCheckPeriod())
-				assert.Equal(t, allowance, state.GetNonVoteAllowance())
+				assert.Equal(t, period, s.GetBlockVoteCheckPeriod())
+				assert.Equal(t, allowance, s.GetNonVoteAllowance())
 			} else {
-				assert.Equal(t, oPeriod, state.GetBlockVoteCheckPeriod())
-				assert.Equal(t, oAllowance, state.GetNonVoteAllowance())
+				assert.Equal(t, oPeriod, s.GetBlockVoteCheckPeriod())
+				assert.Equal(t, oAllowance, s.GetNonVoteAllowance())
 			}
 		})
 	}
 }
 
 func TestState_SetNetworkStatus(t *testing.T) {
-	state := newDummyState()
+	s := newDummyState()
 	emptyNS := NewNetworkStatus()
-	ns, err := state.GetNetworkStatus()
+	ns, err := s.GetNetworkStatus()
 	assert.NoError(t, err)
 	assert.True(t, ns.Equal(emptyNS))
 
@@ -1238,16 +1249,16 @@ func TestState_SetNetworkStatus(t *testing.T) {
 	assert.NoError(t, ns.SetActiveValidatorCount(25))
 	assert.NoError(t, ns.SetNonVoteAllowance(100))
 	assert.NoError(t, ns.SetBlockVoteCheckPeriod(100))
-	assert.NoError(t, state.SetNetworkStatus(ns))
+	assert.NoError(t, s.SetNetworkStatus(ns))
 
-	ns2, err := state.GetNetworkStatus()
+	ns2, err := s.GetNetworkStatus()
 	assert.NoError(t, err)
 	assert.True(t, ns != ns2)
 	assert.True(t, ns2.Equal(ns))
 }
 
 func TestState_IsItTimeToCheckBlockVote(t *testing.T) {
-	state := newDummyState()
+	s := newDummyState()
 	tests := []struct{
 		blockIndex int64
 		mode NetMode
@@ -1265,15 +1276,15 @@ func TestState_IsItTimeToCheckBlockVote(t *testing.T) {
 		{40, NetModeDecentralized, 20, 3, true},
 	}
 
-	ns, _ := state.GetNetworkStatus()
+	ns, _ := s.GetNetworkStatus()
 	for i, test := range tests {
 		name := fmt.Sprintf("name-%02d", i)
 		t.Run(name, func(t *testing.T){
 			ns.SetMode(test.mode)
 			assert.NoError(t, ns.SetBlockVoteCheckPeriod(test.period))
 			assert.NoError(t, ns.SetNonVoteAllowance(test.allowance))
-			assert.NoError(t, state.SetNetworkStatus(ns))
-			assert.Equal(t, test.result, state.IsItTimeToCheckBlockVote(test.blockIndex))
+			assert.NoError(t, s.SetNetworkStatus(ns))
+			assert.Equal(t, test.result, s.IsItTimeToCheckBlockVote(test.blockIndex))
 		})
 	}
 }

@@ -347,7 +347,7 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 			}
 			// Initialize ValidatorSet at the beginning of each term
 			// ValidatorSet = Active validatorSet + Standby validatorSet
-			if err = es.initValidatorSet(cc); err != nil {
+			if err = es.initActiveValidatorSet(cc); err != nil {
 				return err
 			}
 		}
