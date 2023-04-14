@@ -366,11 +366,11 @@ func (s *chainScore) Ex_setBlockVoteCheckParameters(period, allowance *common.He
 	if err := s.checkGovernance(true); err != nil {
 		return err
 	}
-	es, _, err := s.getExtensionStateAndContext()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
-	return es.SetBlockVoteCheckParameters(period.Int64(), allowance.Int64())
+	return es.SetBlockVoteCheckParameters(ctx, period.Int64(), allowance.Int64())
 }
 
 func (s *chainScore) Ex_getBlockVoteCheckParameters() (map[string]interface{}, error) {
@@ -389,11 +389,11 @@ func (s *chainScore) Ex_registerValidator(
 	if err := s.checkGovernance(true); err != nil {
 		return err
 	}
-	es, _, err := s.getExtensionStateAndContext()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
-	return es.RegisterValidator(owner, nodePublicKey, grade, name)
+	return es.RegisterValidator(ctx, owner, nodePublicKey, grade, name)
 }
 
 func (s *chainScore) Ex_unregisterValidator(owner module.Address) error {
@@ -497,11 +497,11 @@ func (s *chainScore) Ex_setActiveValidatorCount(count *common.HexInt) error {
 	if err := s.checkGovernance(true); err != nil {
 		return err
 	}
-	es, _, err := s.getExtensionStateAndContext()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
-	return es.SetActiveValidatorCount(count.Int64())
+	return es.SetActiveValidatorCount(ctx, count.Int64())
 }
 
 func (s *chainScore) Ex_getActiveValidatorCount() (int64, error) {

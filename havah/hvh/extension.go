@@ -592,8 +592,13 @@ func (es *ExtensionStateImpl) GetLost() (*big.Int, error) {
 	return es.state.GetLost()
 }
 
-func (es *ExtensionStateImpl) SetBlockVoteCheckParameters(period, allowance int64) error {
-	return es.state.SetBlockVoteCheckParameters(period, allowance)
+func (es *ExtensionStateImpl) SetBlockVoteCheckParameters(cc hvhmodule.CallContext, period, allowance int64) error {
+	from := cc.From()
+	height := cc.BlockHeight()
+	es.logger.Debugf("SetBlockVoteCheckParameters() start: height=%d from=%s", height, from)
+	err := es.state.SetBlockVoteCheckParameters(period, allowance)
+	es.logger.Debugf("SetBlockVoteCheckParameters() end: height=%d", height)
+	return err
 }
 
 func (es *ExtensionStateImpl) GetBlockVoteCheckParameters(cc hvhmodule.CallContext) (map[string]interface{}, error) {
@@ -604,12 +609,14 @@ func (es *ExtensionStateImpl) GetBlockVoteCheckParameters(cc hvhmodule.CallConte
 	}, nil
 }
 
-func (es *ExtensionStateImpl) GetBlockVoteCheckPeriod() int64 {
-	return es.state.GetBlockVoteCheckPeriod()
-}
-
 func (es *ExtensionStateImpl) RegisterValidator(
+	cc hvhmodule.CallContext,
 	owner module.Address, nodePublicKey []byte, gradeName, name string) error {
+	height := cc.BlockHeight()
+	es.logger.Debugf(
+		"RegisterValidator() start: height=%d owner=%s nodePublicKey=%x grade=%s name=%s",
+		height, owner, nodePublicKey, gradeName, name)
+
 	grade := hvhstate.StringToGrade(gradeName)
 	if grade == hvhstate.GradeNone {
 		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(grade=%s)", gradeName)
@@ -617,16 +624,22 @@ func (es *ExtensionStateImpl) RegisterValidator(
 	if err := hvhutils.CheckNameLength(name); err != nil {
 		return err
 	}
-	return es.state.RegisterValidator(owner, nodePublicKey, grade, name)
+	err := es.state.RegisterValidator(owner, nodePublicKey, grade, name)
+
+	es.logger.Debugf("RegisterValidator() end: height=%d err=%v", height, err)
+	return err
 }
 
 func (es *ExtensionStateImpl) UnregisterValidator(cc hvhmodule.CallContext, owner module.Address) error {
 	from := cc.From()
+	height := cc.BlockHeight()
+	es.logger.Debugf("UnregisterValidator() start: height=%d from=%s owner=%s", height, from, owner)
+
 	if from == nil {
 		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(from=%s)", from)
 	}
-	if owner == nil || owner.IsContract() {
-		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(owner=%s)", owner)
+	if err := hvhutils.CheckAddressArgument(owner, true); err != nil {
+		return err
 	}
 	isCallerGov := from.Equal(cc.Governance())
 	if !isCallerGov && !from.Equal(owner) {
@@ -649,11 +662,15 @@ func (es *ExtensionStateImpl) UnregisterValidator(cc hvhmodule.CallContext, owne
 		validatorToRemove, _ := validatorState.Get(idx)
 		return es.replaceActiveValidators(cc, []module.Validator{validatorToRemove})
 	}
+
+	es.logger.Debugf("UnregisterValidator() end: height=%d", height)
 	return nil
 }
 
 func (es *ExtensionStateImpl) GetNetworkStatus(cc hvhmodule.CallContext) (map[string]interface{}, error) {
 	height := cc.BlockHeight()
+	es.logger.Debugf("GetNetworkStatus() start: height=%d", height)
+
 	issueStart := es.state.GetIssueStart()
 	if issueStart == 0 {
 		return nil, scoreresult.Errorf(
@@ -678,44 +695,47 @@ func (es *ExtensionStateImpl) GetNetworkStatus(cc hvhmodule.CallContext) (map[st
 	jso = ns.ToJSON()
 	jso["height"] = height
 	jso["termStart"] = termStart
+
+	es.logger.Debugf("GetNetworkStatus() end: height=%d", height)
 	return jso, nil
 }
 
 func (es *ExtensionStateImpl) SetValidatorInfo(cc hvhmodule.CallContext, m map[string]string) error {
+	var err error
 	from := cc.From()
-	if err := hvhutils.CheckAddressArgument(from, true); err != nil {
+	height := cc.BlockHeight()
+	es.logger.Debugf("SetValidatorInfo() start: height=%d from=%s", height, from)
+
+	if err = hvhutils.CheckAddressArgument(from, true); err != nil {
 		return err
 	}
 
-	// value, ok := m["nodePublicKey"]
-	// if ok {
-	// 	delete(m, "nodePublicKey")
-	// 	if !strings.HasPrefix(value, "0x") || len(value) < 3 {
-	// 		return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %s", value)
-	// 	}
-	//
-	// 	var err error
-	// 	var pubKey []byte
-	// 	if pubKey, err = hex.DecodeString(value[2:]); err != nil {
-	// 		return scoreresult.InvalidParameterError.Errorf("Invalid publicKey: %s", value)
-	// 	}
-	// 	if err = es.SetNodePublicKey(cc, pubKey); err != nil {
-	// 		return err
-	// 	}
-	// }
-
 	if len(m) == 0 {
+		es.logger.Infof("Empty argument")
 		return nil
 	}
-	return es.state.SetValidatorInfo(from, m)
+	err = es.state.SetValidatorInfo(from, m)
+
+	es.logger.Debugf("SetValidatorInfo() end: height=%d err=%v", height, err)
+	return err
 }
 
 func (es *ExtensionStateImpl) SetNodePublicKey(cc hvhmodule.CallContext, pubKey []byte) error {
-	oldNode, newNode, err := es.state.SetNodePublicKey(cc.From(), pubKey)
+	from := cc.From()
+	height := cc.BlockHeight()
+	es.logger.Debugf("SetNodePublicKey() start: height=%d from=%s pubKey=%x", height, from, pubKey)
+
+	if err :=  hvhutils.CheckAddressArgument(from, true); err != nil {
+		return err
+	}
+	oldNode, newNode, err := es.state.SetNodePublicKey(from, pubKey)
 	if err != nil {
 		return err
 	}
-	return replaceActiveValidatorAddress(cc, oldNode, newNode)
+
+	err = replaceActiveValidatorAddress(cc, oldNode, newNode)
+	es.logger.Debugf("SetNodePublicKey() end: height=%d err=%v", height, err)
+	return err
 }
 
 func replaceActiveValidatorAddress(
@@ -747,6 +767,9 @@ func replaceActiveValidatorAddress(
 
 func (es *ExtensionStateImpl) EnableValidator(cc hvhmodule.CallContext, owner module.Address) error {
 	from := cc.From()
+	height := cc.BlockHeight()
+	es.logger.Debugf("EnableValidator() start: height=%d from=%s", height, from)
+
 	if from == nil {
 		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(from=%s)", from)
 	}
@@ -758,7 +781,10 @@ func (es *ExtensionStateImpl) EnableValidator(cc hvhmodule.CallContext, owner mo
 	if !isCallerGov && !from.Equal(owner) {
 		return scoreresult.AccessDeniedError.Errorf("NoPermission(from=%s,owner=%s)", from, owner)
 	}
-	return es.state.EnableValidator(owner, isCallerGov)
+
+	err := es.state.EnableValidator(owner, isCallerGov)
+	es.logger.Debugf("EnableValidator() end: height=%d err=%v", height, err)
+	return err
 }
 
 func (es *ExtensionStateImpl) GetValidatorInfo(
@@ -793,14 +819,16 @@ func (es *ExtensionStateImpl) GetValidatorStatus(
 	return jso, err
 }
 
-func (es *ExtensionStateImpl) SetActiveValidatorCount(count int64) error {
+func (es *ExtensionStateImpl) SetActiveValidatorCount(cc hvhmodule.CallContext, count int64) error {
+	height := cc.BlockHeight()
+	es.Logger().Debugf("SetActiveValidatorCount() start: height=%d count=%d", height, count)
+
 	if !(count > 0 && count <= hvhmodule.MaxValidatorCount) {
 		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(%d)", count)
 	}
 
-	es.Logger().Debugf("SetActiveValidatorCount() start: count=%d", count)
 	err := es.state.SetActiveValidatorCount(count)
-	es.Logger().Debugf("SetActiveValidatorCount() end: count=%d err=%v", count, err)
+	es.Logger().Debugf("SetActiveValidatorCount() end: height=%d err=%v", height, err)
 	return err
 }
 
@@ -885,11 +913,16 @@ func (es *ExtensionStateImpl) GetValidatorsInfo(
 
 	ret["height"] = height
 	ret["validators"] = validators
-	es.Logger().Debugf("GetValidatorsInfo() end")
+	es.Logger().Debugf("GetValidatorsInfo() end: height=%d", height)
 	return ret, nil
 }
 
+// InitBTPPublicKeys registers existing validators public keys to BTPState
+// Called only once when the revision is set to RevisionBTP2
 func (es *ExtensionStateImpl) InitBTPPublicKeys(btpCtx state.BTPContext, bsi *state.BTPStateImpl) error {
+	height := btpCtx.BlockHeight()
+	es.logger.Debugf("InitBTPPublicKeys() start: height=%s", height)
+
 	var vi *hvhstate.ValidatorInfo
 	var publicKey *crypto.PublicKey
 	owners, err := es.state.GetValidatorsOf(hvhstate.GradeFilterAll)
@@ -909,6 +942,8 @@ func (es *ExtensionStateImpl) InitBTPPublicKeys(btpCtx state.BTPContext, bsi *st
 			return err
 		}
 	}
+
+	es.logger.Debugf("InitBTPPublicKeys() end: height=%s", height)
 	return nil
 }
 

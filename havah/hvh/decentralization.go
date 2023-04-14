@@ -8,10 +8,6 @@ import (
 	"github.com/icon-project/goloop/service/state"
 )
 
-func (es *ExtensionStateImpl) isDecentralizationPossible(cc hvhmodule.CallContext) bool {
-	return es.state.IsDecentralizationPossible(cc.Revision().Value())
-}
-
 // Initialize active validator set due to term change
 func (es *ExtensionStateImpl) initActiveValidatorSet(cc hvhmodule.CallContext) error {
 	if cc.ReadOnlyMode() {
