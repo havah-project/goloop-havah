@@ -746,8 +746,8 @@ func replaceActiveValidatorAddress(
 
 func (es *ExtensionStateImpl) EnableValidator(cc hvhmodule.CallContext, owner module.Address) error {
 	from := cc.From()
-	if err := hvhutils.CheckAddressArgument(from, true); err != nil {
-		return err
+	if from == nil {
+		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(from=%s)", from)
 	}
 	if err := hvhutils.CheckAddressArgument(owner, true); err != nil {
 		return err

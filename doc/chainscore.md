@@ -1695,7 +1695,8 @@ None
 
 ### getNetworkStatus() dict
 
-* Returns network status
+* Returns network status after decentralization
+* If it is not decentralized, an error response is returned
 * Since `revision 4`
 
 > Request
@@ -1753,8 +1754,8 @@ None
     "method": "setValidatorInfo",
     "params": [
       {
-        "key": "nodePublicKey",
-        "value": "0x03921d018c1302f9be67e0aca8e583f8970af127e18727d68af4e7caa81c8eb2b1"
+        "key": "name",
+        "value": "ABC Node"
       },
       {
         "key": "url",
@@ -1773,12 +1774,13 @@ None
 
 > T_KEY_VALUE
 
-| Key   | VALUE Type | Required | Description                    |
-|:------|:-----------|:---------|:-------------------------------|
-| key   | T_STRING   | true     | `nodePublicKey`, `name`, `url` |
-| value | T_STRING   | true     | New value for a given key      |
+| Key   | VALUE Type | Required | Description               |
+|:------|:-----------|:---------|:--------------------------|
+| key   | T_STRING   | true     | `name`, `url`             |
+| value | T_STRING   | true     | New value for a given key |
 
-* If the nodePublicKey of an active validator is changed, activeValidatorSet is also changed
+* Maximum name length: `100` in bytes
+* Maximum url length: `200` in bytes
 * Additional values for key field would be added in the future
 
 #### Returns
@@ -1953,6 +1955,7 @@ None
 ### setActiveValidatorCount(count int)
 
 * Sets the maximum number of active validators participating in block validation
+* Maximum number of active validators: `1000`
 * Called by Governance SCORE
 * Since `revision 4`
 
@@ -1981,7 +1984,7 @@ None
 
 ### getActiveValidatorCount() int
 
-* Returns the maximum number of active validators participating in block validation
+* Returns the maximum number of active validators to take effect in the next term
 * Since `revision 4`
 
 > Request
@@ -2008,9 +2011,9 @@ None
 
 #### Returns
 
-| Key | VALUE Type | Required | Description                                            |
-|:----|:-----------|:---------|:-------------------------------------------------------|
-| -   | T_INT      | true     | Number of validators participating in block validation |
+| Key | VALUE Type | Required | Description                                                         |
+|:----|:-----------|:---------|:--------------------------------------------------------------------|
+| -   | T_INT      | true     | Maximum number of active validators to take effect in the next term |
 
 ### getValidatorsOf(grade string) dict
 
@@ -2088,19 +2091,30 @@ None
 {
   "result": {
     "height": "0x3e8",
-    "grade": "sub",
+    "grade": "all",
     "validators": [
       {
         "enableCount": "0x3",
         "flags": "0x0",
         "grade": "main",
-        "name": "name-0",
+        "name": "main-0",
         "node": "hxa8df82e93e8a9cd5325e37289bcd0fbc0a8b4e5e",
         "nodePublicKey": "0x0335a46022ed9c8e3ba0e82951d15062f63d15d778f6b3a400bfd183ce322b80a1",
         "nonVotes": "0x0",
         "owner": "hxb6dc91d57ef0c94a29a5e5f709db323853022093",
-        "url": "http://www.havah.com/details.json"
+        "url": "https://www.havah.com/details.json"
       },
+      {
+        "enableCount": "0x2",
+        "flags": "0x0",
+        "grade": "sub",
+        "name": "sub-0",
+        "node": "hxb9e093f93e8a9cd5325e37289bcd0fbc0b9c5f6f",
+        "nodePublicKey": "0x0293b57132fc9c8e3ba0e82951d15062f63d15d778f6b3a400bfd183ce402c91b2",
+        "nonVotes": "0x1",
+        "owner": "hxc7eda2e68fc0c94a29a5e5f709db3239641331a4",
+        "url": "https://www.example.com/details.json"
+      }
     ]
   }
 }
@@ -2383,3 +2397,80 @@ HAVAH records the following eventLogs:
 | Key                  | VALUE Type | Indexed | Description                         |
 |:---------------------|:-----------|:--------|:------------------------------------|
 | activeValidatorCount | T_INT      | false   | Maximum number of active validators |
+
+### ValidatorEntered(Address,Address)
+
+* Logged when a validator entered active validator set
+* Located in base transaction result
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+* Since `revision 4`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "ValidatorEntered(Address,Address)",
+    "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
+  ],
+  "data":[
+    "hx0123456789012345678901234567890123456789"
+  ]
+}
+```
+
+| Key   | VALUE Type | Indexed | Description             |
+|:------|:-----------|:--------|:------------------------|
+| owner | T_ADDRESS  | true    | Validator owner address |
+| node  | T_ADDRESS  | false   | Validator node address  |
+
+### ValidatorLeaved(Address,Address,string)
+
+* Logged when a validator leaved active validator set
+* Located in base transaction result
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+* Since `revision 4`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "ValidatorLeaved(Address,Address)",
+    "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
+  ],
+  "data":[
+    "hx0123456789012345678901234567890123456789",
+    "penalized"
+  ]
+}
+```
+
+| Key    | VALUE Type | Indexed | Description               |
+|:-------|:-----------|:--------|:--------------------------|
+| owner  | T_ADDRESS  | true    | Validator owner address   |
+| node   | T_ADDRESS  | false   | Validator node address    |
+| reason | T_STRING   | false   | `penalized`, `termchange` |
+
+### ValidatorPenalized(Address,Address)
+
+* Logged when a validator got penalized
+* Located in base transaction result
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+* Since `revision 4`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "ValidatorPenalized(Address,Address)",
+    "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
+  ],
+  "data":[
+    "hx0123456789012345678901234567890123456789",
+  ]
+}
+```
+
+| Key    | VALUE Type | Indexed | Description               |
+|:-------|:-----------|:--------|:--------------------------|
+| owner  | T_ADDRESS  | true    | Validator owner address   |
+| node   | T_ADDRESS  | false   | Validator node address    |

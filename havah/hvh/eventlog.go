@@ -23,6 +23,12 @@ const (
 	SigTermStarted = "TermStarted(int,int,int)"
 	// Decentralized(activeValidatorCount int)
 	SigDecentralized = "Decentralized(int)"
+	// ValidatorLeaved(owner Address, node Address, reason string)
+	SigValidatorLeaved = "ValidatorLeaved(Address,Address,str)"
+	// ValidatorEntered(owner Address, node Address)
+	SigValidatorEntered = "ValidatorEntered(Address,Address)"
+	// ValidatorPenalized(owner Address, node Address)
+	SigValidatorPenalized = "ValidatorPenalized(Address,Address)"
 )
 
 func onRewardOfferedEvent(
@@ -129,6 +135,49 @@ func onDecentralizedEvent(cc hvhmodule.CallContext, activeValidatorCount int64) 
 		[][]byte{[]byte(SigDecentralized)},
 		[][]byte{
 			intconv.Int64ToBytes(activeValidatorCount),
+		},
+	)
+}
+
+// onValidatorLeaved is called when a validator leaved active validator set
+func onValidatorLeaved(cc hvhmodule.CallContext, owner, node module.Address, reason string) {
+	cc.OnEvent(
+		state.SystemAddress,
+		[][]byte{
+			[]byte(SigValidatorLeaved),
+			owner.Bytes(),
+		},
+		[][]byte{
+			node.Bytes(),
+			[]byte(reason),
+		},
+	)
+}
+
+// onValidatorEntered is called when a validator entered active validator set
+func onValidatorEntered(cc hvhmodule.CallContext, owner, node module.Address) {
+	cc.OnEvent(
+		state.SystemAddress,
+		[][]byte{
+			[]byte(SigValidatorEntered),
+			owner.Bytes(),
+		},
+		[][]byte{
+			node.Bytes(),
+		},
+	)
+}
+
+// onValidatorPenalized is called when a validator leaved active validator set
+func onValidatorPenalized(cc hvhmodule.CallContext, owner, node module.Address) {
+	cc.OnEvent(
+		state.SystemAddress,
+		[][]byte{
+			[]byte(SigValidatorPenalized),
+			owner.Bytes(),
+		},
+		[][]byte{
+			node.Bytes(),
 		},
 	)
 }

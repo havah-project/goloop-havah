@@ -1266,27 +1266,28 @@ func (s *State) GetActiveValidatorCount() int64 {
 	return db.Int64()
 }
 
-func (s *State) OnBlockVote(node module.Address, vote bool) (bool, error) {
+// OnBlockVote returns penalized, owner address and error
+func (s *State) OnBlockVote(node module.Address, vote bool) (bool, module.Address, error) {
 	ntoDB := s.getDictDB(hvhmodule.DictNodeToOwner, 1)
 	viDB := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
 	vsDB := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
 	ns, err := s.GetNetworkStatus()
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	nonVoteAllowance := ns.NonVoteAllowance()
 
 	owner, err := s.getOwnerByNode(ntoDB, node)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	vi, err := s.getValidatorInfo(viDB, owner)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 	vs, err := s.getValidatorStatus(vsDB, owner)
 	if err != nil {
-		return false, err
+		return false, nil, err
 	}
 
 	if vs.Enabled() {
@@ -1304,9 +1305,9 @@ func (s *State) OnBlockVote(node module.Address, vote bool) (bool, error) {
 			}
 		}
 		err = vsDB.Set(ToKey(owner), vs.Bytes())
-		return penalized, err
+		return penalized, owner, err
 	}
-	return false, nil
+	return false, owner, nil
 }
 
 func (s *State) GetNextActiveValidatorsAndChangeIndex(
