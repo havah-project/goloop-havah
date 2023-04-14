@@ -1624,6 +1624,11 @@ None
 
 `T_HASH` - txHash
 
+#### EventLog
+
+* [`ValidatorRemoved(Address,Address,string)`](#validatorremovedaddressaddressstring)
+* [`ValidatorAdded(Address,Address)`](#validatoraddedaddressaddress)
+ 
 ### setBlockVoteCheckParameters(period int, allowance int)
 
 * Sets `blockVoteCheckPeriod` and `nonVoteAllowance` parameters used after decentralization
@@ -1871,6 +1876,11 @@ None
 
 `T_HASH` - txHash
 
+#### EventLog
+
+* [`ValidatorRemoved(Address,Address,string)`](#validatorremovedaddressaddressstring)
+* [`ValidatorAdded(Address,Address)`](#validatoraddedaddressaddress)
+ 
 ### enableValidator(owner Address)
 
 * Enable a disabled validator indicated by owner, resetting its nonVotes to 0
@@ -2398,9 +2408,9 @@ HAVAH records the following eventLogs:
 |:---------------------|:-----------|:--------|:------------------------------------|
 | activeValidatorCount | T_INT      | false   | Maximum number of active validators |
 
-### ValidatorEntered(Address,Address)
+### ValidatorAdded(Address,Address)
 
-* Logged when a validator entered active validator set
+* Logged when a validator was added to active validator set
 * Located in base transaction result
 * ScoreAddress: `cx0000000000000000000000000000000000000000`
 * Since `revision 4`
@@ -2409,7 +2419,7 @@ HAVAH records the following eventLogs:
 {
   "scoreAddress": "cx0000000000000000000000000000000000000000",
   "indexed":[
-    "ValidatorEntered(Address,Address)",
+    "ValidatorAdded(Address,Address)",
     "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
   ],
   "data":[
@@ -2423,9 +2433,9 @@ HAVAH records the following eventLogs:
 | owner | T_ADDRESS  | true    | Validator owner address |
 | node  | T_ADDRESS  | false   | Validator node address  |
 
-### ValidatorLeaved(Address,Address,string)
+### ValidatorRemoved(Address,Address,string)
 
-* Logged when a validator leaved active validator set
+* Logged when an active validator was removed from active validator set
 * Located in base transaction result
 * ScoreAddress: `cx0000000000000000000000000000000000000000`
 * Since `revision 4`
@@ -2434,7 +2444,7 @@ HAVAH records the following eventLogs:
 {
   "scoreAddress": "cx0000000000000000000000000000000000000000",
   "indexed":[
-    "ValidatorLeaved(Address,Address)",
+    "ValidatorRemoved(Address,Address)",
     "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
   ],
   "data":[
@@ -2444,11 +2454,11 @@ HAVAH records the following eventLogs:
 }
 ```
 
-| Key    | VALUE Type | Indexed | Description                               |
-|:-------|:-----------|:--------|:------------------------------------------|
-| owner  | T_ADDRESS  | true    | Validator owner address                   |
-| node   | T_ADDRESS  | false   | Validator node address                    |
-| reason | T_STRING   | false   | `penalized`, `termchange`, `unregistered` |
+| Key    | VALUE Type | Indexed | Description                                               |
+|:-------|:-----------|:--------|:----------------------------------------------------------|
+| owner  | T_ADDRESS  | true    | Validator owner address                                   |
+| node   | T_ADDRESS  | false   | Validator node address                                    |
+| reason | T_STRING   | false   | `penalized`, `termchange`, `unregistered`, `pubkeychange` |
 
 ### ValidatorPenalized(Address,Address)
 

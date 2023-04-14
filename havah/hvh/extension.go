@@ -658,7 +658,7 @@ func (es *ExtensionStateImpl) UnregisterValidator(cc hvhmodule.CallContext, owne
 			// No need to change active validator set
 			return nil
 		}
-		onValidatorLeaved(cc, owner, node, "unregistered")
+		onValidatorRemoved(cc, owner, node, "unregistered")
 		validatorToRemove, _ := validatorState.Get(idx)
 		return es.replaceActiveValidators(cc, []module.Validator{validatorToRemove})
 	}
@@ -733,36 +733,35 @@ func (es *ExtensionStateImpl) SetNodePublicKey(cc hvhmodule.CallContext, pubKey 
 		return err
 	}
 
-	err = replaceActiveValidatorAddress(cc, oldNode, newNode)
+	if changed, err := replaceActiveValidatorAddress(cc, oldNode, newNode); err == nil {
+		if changed {
+			onValidatorRemoved(cc, from, oldNode, "pubkeychange")
+			onValidatorAdded(cc, from, newNode)
+		}
+	}
+
 	es.logger.Debugf("SetNodePublicKey() end: height=%d err=%v", height, err)
 	return err
 }
 
 func replaceActiveValidatorAddress(
-	cc hvhmodule.CallContext, oldNode, newNode module.Address) error {
+	cc hvhmodule.CallContext, oldNode, newNode module.Address) (bool, error) {
 	if oldNode.Equal(newNode) {
 		// No need to replace, because old node is the same as new one
-		return nil
+		return false, nil
 	}
 	validatorState := cc.GetValidatorState()
 	idx := validatorState.IndexOf(oldNode)
 	if idx < 0 {
 		// oldNode is not an active validator
-		return nil
+		return false, nil
 	}
 
-	size := validatorState.Len()
-	validators := make([]module.Validator, size)
-	for i := 0; i < size; i++ {
-		validators[i], _ = validatorState.Get(i)
-	}
-
-	var err error
-	validators[idx], err = state.ValidatorFromAddress(newNode)
+	validator, err := state.ValidatorFromAddress(newNode)
 	if err != nil {
-		return err
+		return false, err
 	}
-	return validatorState.Set(validators)
+	return true, validatorState.SetAt(idx, validator)
 }
 
 func (es *ExtensionStateImpl) EnableValidator(cc hvhmodule.CallContext, owner module.Address) error {

@@ -71,9 +71,9 @@ func (es *ExtensionStateImpl) initActiveValidatorSet(cc hvhmodule.CallContext) e
 			return err
 		}
 		if v < 0 {
-			onValidatorLeaved(cc, owner, node, "termchange")
+			onValidatorRemoved(cc, owner, node, "termchange")
 		} else {
-			onValidatorEntered(cc, owner, node)
+			onValidatorAdded(cc, owner, node)
 		}
 	}
 
@@ -105,7 +105,7 @@ func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
 				onValidatorPenalized(cc, owner, node)
 				if index := validatorState.IndexOf(node); index >= 0 {
 					validatorsToRemove = append(validatorsToRemove, voter)
-					onValidatorLeaved(cc, owner, node, "penalized")
+					onValidatorRemoved(cc, owner, node, "penalized")
 				}
 			}
 		}
@@ -172,7 +172,7 @@ func (es *ExtensionStateImpl) replaceActiveValidators(
 					if err != nil {
 						return err
 					}
-					onValidatorEntered(cc, owner, node)
+					onValidatorAdded(cc, owner, node)
 				} else {
 					return err
 				}

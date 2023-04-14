@@ -23,10 +23,10 @@ const (
 	SigTermStarted = "TermStarted(int,int,int)"
 	// Decentralized(activeValidatorCount int)
 	SigDecentralized = "Decentralized(int)"
-	// ValidatorLeaved(owner Address, node Address, reason string)
-	SigValidatorLeaved = "ValidatorLeaved(Address,Address,str)"
-	// ValidatorEntered(owner Address, node Address)
-	SigValidatorEntered = "ValidatorEntered(Address,Address)"
+	// ValidatorRemoved(owner Address, node Address, reason string)
+	SigValidatorRemoved = "ValidatorRemoved(Address,Address,str)"
+	// ValidatorAdded(owner Address, node Address)
+	SigValidatorAdded = "ValidatorAdded(Address,Address)"
 	// ValidatorPenalized(owner Address, node Address)
 	SigValidatorPenalized = "ValidatorPenalized(Address,Address)"
 )
@@ -139,12 +139,12 @@ func onDecentralizedEvent(cc hvhmodule.CallContext, activeValidatorCount int64) 
 	)
 }
 
-// onValidatorLeaved is called when a validator leaved active validator set
-func onValidatorLeaved(cc hvhmodule.CallContext, owner, node module.Address, reason string) {
+// onValidatorRemoved is called when an active validator was removed from active validator set
+func onValidatorRemoved(cc hvhmodule.CallContext, owner, node module.Address, reason string) {
 	cc.OnEvent(
 		state.SystemAddress,
 		[][]byte{
-			[]byte(SigValidatorLeaved),
+			[]byte(SigValidatorRemoved),
 			owner.Bytes(),
 		},
 		[][]byte{
@@ -154,12 +154,12 @@ func onValidatorLeaved(cc hvhmodule.CallContext, owner, node module.Address, rea
 	)
 }
 
-// onValidatorEntered is called when a validator entered active validator set
-func onValidatorEntered(cc hvhmodule.CallContext, owner, node module.Address) {
+// onValidatorAdded is called when a validator was added to active validator set
+func onValidatorAdded(cc hvhmodule.CallContext, owner, node module.Address) {
 	cc.OnEvent(
 		state.SystemAddress,
 		[][]byte{
-			[]byte(SigValidatorEntered),
+			[]byte(SigValidatorAdded),
 			owner.Bytes(),
 		},
 		[][]byte{
@@ -168,7 +168,7 @@ func onValidatorEntered(cc hvhmodule.CallContext, owner, node module.Address) {
 	)
 }
 
-// onValidatorPenalized is called when a validator leaved active validator set
+// onValidatorPenalized is called when a validator got penalized
 func onValidatorPenalized(cc hvhmodule.CallContext, owner, node module.Address) {
 	cc.OnEvent(
 		state.SystemAddress,
