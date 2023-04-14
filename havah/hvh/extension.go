@@ -904,8 +904,8 @@ func (es *ExtensionStateImpl) InitBTPPublicKeys(btpCtx state.BTPContext, bsi *st
 		}
 		publicKey = vi.PublicKey()
 		if err = bsi.SetPublicKey(
-			btpCtx, owner, hvhmodule.BTPNetworkName,
-			publicKey.SerializeUncompressed()); err != nil {
+			btpCtx, owner, hvhmodule.DSASecp256k1,
+			publicKey.SerializeCompressed()); err != nil {
 			return err
 		}
 	}

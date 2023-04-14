@@ -455,7 +455,7 @@ func (s *chainScore) Ex_setNodePublicKey(pubKey []byte) error {
 		return err
 	}
 	if ctx.Revision().Value() >= hvhmodule.RevisionBTP2 {
-		return s.setBTPPublicKey(hvhmodule.BTPNetworkName, pubKey)
+		return s.setBTPPublicKey(hvhmodule.DSASecp256k1, pubKey)
 	}
 	return nil
 }

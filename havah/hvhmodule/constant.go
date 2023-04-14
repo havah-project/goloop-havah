@@ -137,7 +137,7 @@ const (
 
 // BTP
 const (
-	BTPNetworkName = "havah"
+	DSASecp256k1 = "ecdsa/secp256k1"
 )
 
 // The following variables are read-only
