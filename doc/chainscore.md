@@ -2444,11 +2444,11 @@ HAVAH records the following eventLogs:
 }
 ```
 
-| Key    | VALUE Type | Indexed | Description               |
-|:-------|:-----------|:--------|:--------------------------|
-| owner  | T_ADDRESS  | true    | Validator owner address   |
-| node   | T_ADDRESS  | false   | Validator node address    |
-| reason | T_STRING   | false   | `penalized`, `termchange` |
+| Key    | VALUE Type | Indexed | Description                               |
+|:-------|:-----------|:--------|:------------------------------------------|
+| owner  | T_ADDRESS  | true    | Validator owner address                   |
+| node   | T_ADDRESS  | false   | Validator node address                    |
+| reason | T_STRING   | false   | `penalized`, `termchange`, `unregistered` |
 
 ### ValidatorPenalized(Address,Address)
 

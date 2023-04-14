@@ -645,6 +645,7 @@ func (es *ExtensionStateImpl) UnregisterValidator(cc hvhmodule.CallContext, owne
 			// No need to change active validator set
 			return nil
 		}
+		onValidatorLeaved(cc, owner, node, "unregistered")
 		validatorToRemove, _ := validatorState.Get(idx)
 		return es.replaceActiveValidators(cc, []module.Validator{validatorToRemove})
 	}
