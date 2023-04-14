@@ -2397,3 +2397,80 @@ HAVAH records the following eventLogs:
 | Key                  | VALUE Type | Indexed | Description                         |
 |:---------------------|:-----------|:--------|:------------------------------------|
 | activeValidatorCount | T_INT      | false   | Maximum number of active validators |
+
+### ValidatorEntered(Address,Address)
+
+* Logged when a validator entered active validator set
+* Located in base transaction result
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+* Since `revision 4`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "ValidatorEntered(Address,Address)",
+    "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
+  ],
+  "data":[
+    "hx0123456789012345678901234567890123456789"
+  ]
+}
+```
+
+| Key   | VALUE Type | Indexed | Description             |
+|:------|:-----------|:--------|:------------------------|
+| owner | T_ADDRESS  | true    | Validator owner address |
+| node  | T_ADDRESS  | false   | Validator node address  |
+
+### ValidatorLeaved(Address,Address,string)
+
+* Logged when a validator leaved active validator set
+* Located in base transaction result
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+* Since `revision 4`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "ValidatorLeaved(Address,Address)",
+    "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
+  ],
+  "data":[
+    "hx0123456789012345678901234567890123456789",
+    "penalized"
+  ]
+}
+```
+
+| Key    | VALUE Type | Indexed | Description               |
+|:-------|:-----------|:--------|:--------------------------|
+| owner  | T_ADDRESS  | true    | Validator owner address   |
+| node   | T_ADDRESS  | false   | Validator node address    |
+| reason | T_STRING   | false   | `penalized`, `termchange` |
+
+### ValidatorPenalized(Address,Address)
+
+* Logged when a validator got penalized
+* Located in base transaction result
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+* Since `revision 4`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "ValidatorPenalized(Address,Address)",
+    "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
+  ],
+  "data":[
+    "hx0123456789012345678901234567890123456789",
+  ]
+}
+```
+
+| Key    | VALUE Type | Indexed | Description               |
+|:-------|:-----------|:--------|:--------------------------|
+| owner  | T_ADDRESS  | true    | Validator owner address   |
+| node   | T_ADDRESS  | false   | Validator node address    |
