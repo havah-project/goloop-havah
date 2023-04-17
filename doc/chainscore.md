@@ -1626,8 +1626,8 @@ None
 
 #### EventLog
 
-* [`ValidatorRemoved(Address,Address,string)`](#validatorremovedaddressaddressstring)
-* [`ValidatorAdded(Address,Address)`](#validatoraddedaddressaddress)
+* [`ActiveValidatorRemoved(Address,Address,string)`](#activevalidatorremovedaddressaddressstring)
+* [`ActiveValidatorAdded(Address,Address)`](#activevalidatoraddedaddressaddress)
  
 ### setBlockVoteCheckParameters(period int, allowance int)
 
@@ -1878,8 +1878,8 @@ None
 
 #### EventLog
 
-* [`ValidatorRemoved(Address,Address,string)`](#validatorremovedaddressaddressstring)
-* [`ValidatorAdded(Address,Address)`](#validatoraddedaddressaddress)
+* [`ActiveValidatorRemoved(Address,Address,string)`](#validatorremovedaddressaddressstring)
+* [`ActiveValidatorAdded(Address,Address)`](#validatoraddedaddressaddress)
  
 ### enableValidator(owner Address)
 
@@ -2408,7 +2408,7 @@ HAVAH records the following eventLogs:
 |:---------------------|:-----------|:--------|:------------------------------------|
 | activeValidatorCount | T_INT      | false   | Maximum number of active validators |
 
-### ValidatorAdded(Address,Address)
+### ActiveValidatorAdded(Address,Address)
 
 * Logged when a validator was added to active validator set
 * Located in base transaction result
@@ -2419,7 +2419,7 @@ HAVAH records the following eventLogs:
 {
   "scoreAddress": "cx0000000000000000000000000000000000000000",
   "indexed":[
-    "ValidatorAdded(Address,Address)",
+    "ActiveValidatorAdded(Address,Address)",
     "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
   ],
   "data":[
@@ -2433,7 +2433,7 @@ HAVAH records the following eventLogs:
 | owner | T_ADDRESS  | true    | Validator owner address |
 | node  | T_ADDRESS  | false   | Validator node address  |
 
-### ValidatorRemoved(Address,Address,string)
+### ActiveValidatorRemoved(Address,Address,string)
 
 * Logged when an active validator was removed from active validator set
 * Located in base transaction result
@@ -2444,7 +2444,7 @@ HAVAH records the following eventLogs:
 {
   "scoreAddress": "cx0000000000000000000000000000000000000000",
   "indexed":[
-    "ValidatorRemoved(Address,Address)",
+    "ActiveValidatorRemoved(Address,Address)",
     "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
   ],
   "data":[
@@ -2460,7 +2460,7 @@ HAVAH records the following eventLogs:
 | node   | T_ADDRESS  | false   | Validator node address                                    |
 | reason | T_STRING   | false   | `penalized`, `termchange`, `unregistered`, `pubkeychange` |
 
-### ValidatorPenalized(Address,Address)
+### ActiveValidatorPenalized(Address,Address)
 
 * Logged when a validator got penalized
 * Located in base transaction result
@@ -2471,7 +2471,7 @@ HAVAH records the following eventLogs:
 {
   "scoreAddress": "cx0000000000000000000000000000000000000000",
   "indexed":[
-    "ValidatorPenalized(Address,Address)",
+    "ActiveValidatorPenalized(Address,Address)",
     "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
   ],
   "data":[

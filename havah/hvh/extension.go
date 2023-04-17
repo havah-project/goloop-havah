@@ -658,7 +658,7 @@ func (es *ExtensionStateImpl) UnregisterValidator(cc hvhmodule.CallContext, owne
 			// No need to change active validator set
 			return nil
 		}
-		onValidatorRemoved(cc, owner, node, "unregistered")
+		onActiveValidatorRemoved(cc, owner, node, "unregistered")
 		validatorToRemove, _ := validatorState.Get(idx)
 		return es.replaceActiveValidators(cc, []module.Validator{validatorToRemove})
 	}
@@ -735,8 +735,8 @@ func (es *ExtensionStateImpl) SetNodePublicKey(cc hvhmodule.CallContext, pubKey 
 
 	if changed, err := replaceActiveValidatorAddress(cc, oldNode, newNode); err == nil {
 		if changed {
-			onValidatorRemoved(cc, from, oldNode, "pubkeychange")
-			onValidatorAdded(cc, from, newNode)
+			onActiveValidatorRemoved(cc, from, oldNode, "pubkeychange")
+			onActiveValidatorAdded(cc, from, newNode)
 		}
 	}
 

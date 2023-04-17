@@ -23,12 +23,12 @@ const (
 	SigTermStarted = "TermStarted(int,int,int)"
 	// Decentralized(activeValidatorCount int)
 	SigDecentralized = "Decentralized(int)"
-	// ValidatorRemoved(owner Address, node Address, reason string)
-	SigValidatorRemoved = "ValidatorRemoved(Address,Address,str)"
-	// ValidatorAdded(owner Address, node Address)
-	SigValidatorAdded = "ValidatorAdded(Address,Address)"
-	// ValidatorPenalized(owner Address, node Address)
-	SigValidatorPenalized = "ValidatorPenalized(Address,Address)"
+	// ActiveValidatorRemoved(owner Address, node Address, reason string)
+	SigActiveValidatorRemoved = "ActiveValidatorRemoved(Address,Address,str)"
+	// ActiveValidatorAdded(owner Address, node Address)
+	SigActiveValidatorAdded = "ActiveValidatorAdded(Address,Address)"
+	// ActiveValidatorPenalized(owner Address, node Address)
+	SigActiveValidatorPenalized = "ActiveValidatorPenalized(Address,Address)"
 )
 
 func onRewardOfferedEvent(
@@ -139,12 +139,12 @@ func onDecentralizedEvent(cc hvhmodule.CallContext, activeValidatorCount int64) 
 	)
 }
 
-// onValidatorRemoved is called when an active validator was removed from active validator set
-func onValidatorRemoved(cc hvhmodule.CallContext, owner, node module.Address, reason string) {
+// onActiveValidatorRemoved is called when an active validator was removed from active validator set
+func onActiveValidatorRemoved(cc hvhmodule.CallContext, owner, node module.Address, reason string) {
 	cc.OnEvent(
 		state.SystemAddress,
 		[][]byte{
-			[]byte(SigValidatorRemoved),
+			[]byte(SigActiveValidatorRemoved),
 			owner.Bytes(),
 		},
 		[][]byte{
@@ -154,12 +154,12 @@ func onValidatorRemoved(cc hvhmodule.CallContext, owner, node module.Address, re
 	)
 }
 
-// onValidatorAdded is called when a validator was added to active validator set
-func onValidatorAdded(cc hvhmodule.CallContext, owner, node module.Address) {
+// onActiveValidatorAdded is called when a validator was added to active validator set
+func onActiveValidatorAdded(cc hvhmodule.CallContext, owner, node module.Address) {
 	cc.OnEvent(
 		state.SystemAddress,
 		[][]byte{
-			[]byte(SigValidatorAdded),
+			[]byte(SigActiveValidatorAdded),
 			owner.Bytes(),
 		},
 		[][]byte{
@@ -168,12 +168,12 @@ func onValidatorAdded(cc hvhmodule.CallContext, owner, node module.Address) {
 	)
 }
 
-// onValidatorPenalized is called when a validator got penalized
-func onValidatorPenalized(cc hvhmodule.CallContext, owner, node module.Address) {
+// onActiveValidatorPenalized is called when a validator got penalized
+func onActiveValidatorPenalized(cc hvhmodule.CallContext, owner, node module.Address) {
 	cc.OnEvent(
 		state.SystemAddress,
 		[][]byte{
-			[]byte(SigValidatorPenalized),
+			[]byte(SigActiveValidatorPenalized),
 			owner.Bytes(),
 		},
 		[][]byte{
