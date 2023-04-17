@@ -33,6 +33,8 @@ func (es *ExtensionStateImpl) initActiveValidatorSet(cc hvhmodule.CallContext) e
 	}
 
 	vs := cc.GetValidatorState()
+	oc := vs.Len() // old active validator count
+
 	m := make(map[string]int)
 	addrs := make([]module.Address, 0, vs.Len()*3/2)
 	for i := 0; i < vs.Len(); i++ {
@@ -42,6 +44,7 @@ func (es *ExtensionStateImpl) initActiveValidatorSet(cc hvhmodule.CallContext) e
 		addrs = append(addrs, node)
 	}
 
+	// Next active validators
 	validators := make([]module.Validator, len(nodes))
 	for i, node := range nodes {
 		validators[i], err = state.ValidatorFromAddress(node)
@@ -63,6 +66,7 @@ func (es *ExtensionStateImpl) initActiveValidatorSet(cc hvhmodule.CallContext) e
 		k := hvhstate.ToKey(node)
 		v := m[k]
 		if v == 0 {
+			// Reused active validator
 			continue
 		}
 
@@ -75,6 +79,12 @@ func (es *ExtensionStateImpl) initActiveValidatorSet(cc hvhmodule.CallContext) e
 		} else {
 			onActiveValidatorAdded(cc, owner, node)
 		}
+	}
+
+	// Actual number of active validators has been changed
+	nc := len(validators)
+	if oc != nc {
+		onActiveValidatorCountChanged(cc, int64(oc), int64(nc))
 	}
 
 	return vs.Set(validators)
@@ -125,7 +135,7 @@ func (es *ExtensionStateImpl) IsItTimeToCheckBlockVote(blockIndexInTerm int64) b
 
 func (es *ExtensionStateImpl) replaceActiveValidators(
 	cc hvhmodule.CallContext, validatorsToRemove []module.Validator) error {
-	es.logger.Debugf("replaceActiveValidators(): start: validatorsToRemove=%v", validatorsToRemove)
+	es.logger.Debugf("replaceActiveValidators() start: validatorsToRemove=%v", validatorsToRemove)
 
 	if len(validatorsToRemove) == 0 {
 		// Nothing to remove
@@ -143,7 +153,7 @@ func (es *ExtensionStateImpl) replaceActiveValidators(
 
 	if len(m) == 0 {
 		// No validator to remove
-		es.logger.Debugf("replaceActiveValidators(): end")
+		es.logger.Debug("replaceActiveValidators() end")
 		return nil
 	}
 
@@ -153,7 +163,8 @@ func (es *ExtensionStateImpl) replaceActiveValidators(
 		return err
 	}
 
-	size := validatorState.Len() - len(m) + len(validatorsToAdd)
+	oc := validatorState.Len()
+	size := oc - len(m) + len(validatorsToAdd)
 	validators := make([]module.Validator, 0, size)
 
 	j := 0
@@ -186,6 +197,10 @@ func (es *ExtensionStateImpl) replaceActiveValidators(
 		}
 	}
 
-	es.logger.Debugf("replaceActiveValidators(): end: validatorsToAdd=%v", validatorsToAdd)
+	if nc := len(validators); oc != nc {
+		onActiveValidatorCountChanged(cc, int64(oc), int64(nc))
+	}
+
+	es.logger.Debugf("replaceActiveValidators() end: validatorsToAdd=%v", validatorsToAdd)
 	return validatorState.Set(validators)
 }

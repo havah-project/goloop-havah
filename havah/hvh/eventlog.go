@@ -29,6 +29,8 @@ const (
 	SigActiveValidatorAdded = "ActiveValidatorAdded(Address,Address)"
 	// ActiveValidatorPenalized(owner Address, node Address)
 	SigActiveValidatorPenalized = "ActiveValidatorPenalized(Address,Address)"
+	// ActiveValidatorCountChanged(oc int, nc int)
+	SigActiveValidatorCountChanged = "ActiveValidatorCountChanged(int,int)"
 )
 
 func onRewardOfferedEvent(
@@ -178,6 +180,19 @@ func onActiveValidatorPenalized(cc hvhmodule.CallContext, owner, node module.Add
 		},
 		[][]byte{
 			node.Bytes(),
+		},
+	)
+}
+
+func onActiveValidatorCountChanged(cc hvhmodule.CallContext, oc, nc int64) {
+	cc.OnEvent(
+		state.SystemAddress,
+		[][]byte{
+			[]byte(SigActiveValidatorCountChanged),
+		},
+		[][]byte{
+			intconv.Int64ToBytes(oc),
+			intconv.Int64ToBytes(nc),
 		},
 	)
 }

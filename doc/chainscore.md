@@ -2411,7 +2411,6 @@ HAVAH records the following eventLogs:
 ### ActiveValidatorAdded(Address,Address)
 
 * Logged when a validator was added to active validator set
-* Located in base transaction result
 * ScoreAddress: `cx0000000000000000000000000000000000000000`
 * Since `revision 4`
 
@@ -2436,7 +2435,6 @@ HAVAH records the following eventLogs:
 ### ActiveValidatorRemoved(Address,Address,string)
 
 * Logged when an active validator was removed from active validator set
-* Located in base transaction result
 * ScoreAddress: `cx0000000000000000000000000000000000000000`
 * Since `revision 4`
 
@@ -2484,3 +2482,27 @@ HAVAH records the following eventLogs:
 |:-------|:-----------|:--------|:--------------------------|
 | owner  | T_ADDRESS  | true    | Validator owner address   |
 | node   | T_ADDRESS  | false   | Validator node address    |
+
+### ActiveValidatorCountChanged(int,int)
+
+* Logged when the number of active validator set has been changed
+* ScoreAddress: `cx0000000000000000000000000000000000000000`
+* Since `revision 4`
+
+```json
+{
+  "scoreAddress": "cx0000000000000000000000000000000000000000",
+  "indexed":[
+    "ActiveValidatorCountChanged(int,int)"
+  ],
+  "data":[
+    "0x9",
+    "0xa"
+  ]
+}
+```
+
+| Key       | VALUE Type | Indexed | Description                        |
+|:----------|:-----------|:--------|:-----------------------------------|
+| old count | T_INT      | false   | Number of old active validator set |
+| new count | T_INT      | false   | Number of new active validator set |
