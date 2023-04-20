@@ -13,6 +13,7 @@ import (
 	"github.com/icon-project/goloop/common/db"
 	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/intconv"
+	"github.com/icon-project/goloop/common/log"
 	"github.com/icon-project/goloop/havah/hvh/hvhstate"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
@@ -141,7 +142,7 @@ func (cc *mockCallContext) SetBalance(address module.Address, amount *big.Int) {
 }
 
 func (cc *mockCallContext) FrameLogger() *trace.Logger {
-	return nil
+	return trace.LoggerOf(log.GlobalLogger())
 }
 
 func (cc *mockCallContext) Revision() module.Revision {

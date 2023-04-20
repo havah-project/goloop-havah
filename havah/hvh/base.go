@@ -338,7 +338,6 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 				}
 				count := es.state.GetActiveValidatorCount()
 				onDecentralizedEvent(cc, count)
-				es.logger.Infof("Decentralized(height=%d,avc=%d)", height, count)
 			}
 		}
 
@@ -364,7 +363,7 @@ func (es *ExtensionStateImpl) OnBaseTx(cc hvhmodule.CallContext, data []byte) er
 		}
 	}
 
-	es.Logger().Debugf("OnBaseTx() end: height=%d termStart=%t termSeq=%e", height, termStart, termSeq)
+	es.Logger().Debugf("OnBaseTx() end: height=%d termStart=%t termSeq=%d", height, termStart, termSeq)
 	return nil
 }
 

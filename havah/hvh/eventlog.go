@@ -36,9 +36,13 @@ const (
 func onRewardOfferedEvent(
 	cc hvhmodule.CallContext,
 	termSeq, id int64, reward, hoover *big.Int) {
+	signature := SigRewardOffered
+	cc.FrameLogger().Debugf(
+		"%s event: height=%d termSeq=%d id=%d reward=%d hoover=%d",
+		signature, cc.BlockHeight(), termSeq, id, reward, hoover)
 	cc.OnEvent(
 		state.SystemAddress,
-		[][]byte{[]byte(SigRewardOffered)},
+		[][]byte{[]byte(signature)},
 		[][]byte{
 			intconv.Int64ToBytes(termSeq),
 			intconv.Int64ToBytes(id),
@@ -50,9 +54,13 @@ func onRewardOfferedEvent(
 
 func onRewardClaimedEvent(
 	cc hvhmodule.CallContext, owner module.Address, termSeq, id int64, amount *big.Int) {
+	signature := SigRewardClaimed
+	cc.FrameLogger().Debugf(
+		"%s event: height=%d owner=%s termSeq=%d id=%d amount=%d",
+		signature, cc.BlockHeight(), owner, termSeq, id, amount)
 	cc.OnEvent(
 		state.SystemAddress,
-		[][]byte{[]byte(SigRewardClaimed), owner.Bytes()},
+		[][]byte{[]byte(signature), owner.Bytes()},
 		[][]byte{
 			intconv.Int64ToBytes(termSeq),
 			intconv.Int64ToBytes(id),
@@ -62,9 +70,13 @@ func onRewardClaimedEvent(
 }
 
 func onIssuedEvent(cc hvhmodule.CallContext, termSeq int64, amount, totalSupply *big.Int) {
+	signature := SigIssued
+	cc.FrameLogger().Debugf(
+		"%s event: height=%d termSeq=%d amount=%d totalSupply=%d",
+		signature, cc.BlockHeight(), termSeq, amount, totalSupply)
 	cc.OnEvent(
 		state.SystemAddress,
-		[][]byte{[]byte(SigIssued)},
+		[][]byte{[]byte(signature)},
 		[][]byte{
 			intconv.Int64ToBytes(termSeq),
 			intconv.BigIntToBytes(amount),
@@ -74,9 +86,13 @@ func onIssuedEvent(cc hvhmodule.CallContext, termSeq int64, amount, totalSupply 
 }
 
 func onBurnedEvent(cc hvhmodule.CallContext, owner module.Address, amount, totalSupply *big.Int) {
+	signature := SigBurned
+	cc.FrameLogger().Debugf(
+		"%s event: height=%d owner=%s amount=%d totalSupply=%d",
+		signature, cc.BlockHeight(), owner, amount, totalSupply)
 	cc.OnEvent(
 		state.SystemAddress,
-		[][]byte{[]byte(SigBurned), owner.Bytes()},
+		[][]byte{[]byte(signature), owner.Bytes()},
 		[][]byte{
 			intconv.BigIntToBytes(amount),
 			intconv.BigIntToBytes(totalSupply),
@@ -85,9 +101,13 @@ func onBurnedEvent(cc hvhmodule.CallContext, owner module.Address, amount, total
 }
 
 func onHooverRefilledEvent(cc hvhmodule.CallContext, amount, hooverBalance, sustainableFundBalance *big.Int) {
+	signature := SigHooverRefilled
+	cc.FrameLogger().Debugf(
+		"%s event: height=%d amount=%d hooverBalance=%d sustainableFundBalance=%d",
+		signature, cc.BlockHeight(), amount, hooverBalance, sustainableFundBalance)
 	cc.OnEvent(
 		state.SystemAddress,
-		[][]byte{[]byte(SigHooverRefilled)},
+		[][]byte{[]byte(signature)},
 		[][]byte{
 			intconv.BigIntToBytes(amount),
 			intconv.BigIntToBytes(hooverBalance),
@@ -97,9 +117,13 @@ func onHooverRefilledEvent(cc hvhmodule.CallContext, amount, hooverBalance, sust
 }
 
 func onLostDepositedEvent(cc hvhmodule.CallContext, lostDelta, lost *big.Int, reason string) {
+	signature := SigLostDeposited
+	cc.FrameLogger().Debugf(
+		"%s event: height=%d lostDelta=%d lost=%d reason=%s",
+		signature, cc.BlockHeight(), lostDelta, lost, reason)
 	cc.OnEvent(
 		state.SystemAddress,
-		[][]byte{[]byte(SigLostDeposited)},
+		[][]byte{[]byte(signature)},
 		[][]byte{
 			intconv.BigIntToBytes(lostDelta),
 			intconv.BigIntToBytes(lost),
@@ -109,9 +133,11 @@ func onLostDepositedEvent(cc hvhmodule.CallContext, lostDelta, lost *big.Int, re
 }
 
 func onLostWithdrawnEvent(cc hvhmodule.CallContext, to module.Address, amount *big.Int) {
+	signature := SigLostWithdrawn
+	cc.FrameLogger().Debugf("%s event: height=%d to=%s amount=%d", signature, cc.BlockHeight(), to, amount)
 	cc.OnEvent(
 		state.SystemAddress,
-		[][]byte{[]byte(SigLostWithdrawn)},
+		[][]byte{[]byte(signature)},
 		[][]byte{
 			to.Bytes(),
 			intconv.BigIntToBytes(amount),
@@ -120,9 +146,13 @@ func onLostWithdrawnEvent(cc hvhmodule.CallContext, to module.Address, amount *b
 }
 
 func onTermStartedEvent(cc hvhmodule.CallContext, termSeq int64, planetCount, rewardPerActivePlanet *big.Int) {
+	signature := SigTermStarted
+	cc.FrameLogger().Debugf(
+		"%s event: height=%d termSeq=%d planetCount=%d rewardPerActivePlanet=%d",
+		signature, cc.BlockHeight(), termSeq, planetCount, rewardPerActivePlanet)
 	cc.OnEvent(
 		state.SystemAddress,
-		[][]byte{[]byte(SigTermStarted)},
+		[][]byte{[]byte(signature)},
 		[][]byte{
 			intconv.Int64ToBytes(termSeq),
 			intconv.BigIntToBytes(planetCount),
@@ -132,9 +162,11 @@ func onTermStartedEvent(cc hvhmodule.CallContext, termSeq int64, planetCount, re
 }
 
 func onDecentralizedEvent(cc hvhmodule.CallContext, activeValidatorCount int64) {
+	signature := SigDecentralized
+	cc.FrameLogger().Debugf("%s event: height=%d avc=%d", signature, cc.BlockHeight(), activeValidatorCount)
 	cc.OnEvent(
 		state.SystemAddress,
-		[][]byte{[]byte(SigDecentralized)},
+		[][]byte{[]byte(signature)},
 		[][]byte{
 			intconv.Int64ToBytes(activeValidatorCount),
 		},
@@ -143,10 +175,13 @@ func onDecentralizedEvent(cc hvhmodule.CallContext, activeValidatorCount int64) 
 
 // onActiveValidatorRemoved is called when an active validator was removed from active validator set
 func onActiveValidatorRemoved(cc hvhmodule.CallContext, owner, node module.Address, reason string) {
+	signature := SigActiveValidatorRemoved
+	cc.FrameLogger().Debugf("%s event: height=%d owner=%s node=%s reason=%s",
+		signature, cc.BlockHeight(), owner, node, reason)
 	cc.OnEvent(
 		state.SystemAddress,
 		[][]byte{
-			[]byte(SigActiveValidatorRemoved),
+			[]byte(signature),
 			owner.Bytes(),
 		},
 		[][]byte{
@@ -158,10 +193,13 @@ func onActiveValidatorRemoved(cc hvhmodule.CallContext, owner, node module.Addre
 
 // onActiveValidatorAdded is called when a validator was added to active validator set
 func onActiveValidatorAdded(cc hvhmodule.CallContext, owner, node module.Address) {
+	signature := SigActiveValidatorAdded
+	cc.FrameLogger().Debugf("%s event: height=%d owner=%s node=%s",
+		signature, cc.BlockHeight(), owner, node)
 	cc.OnEvent(
 		state.SystemAddress,
 		[][]byte{
-			[]byte(SigActiveValidatorAdded),
+			[]byte(signature),
 			owner.Bytes(),
 		},
 		[][]byte{
@@ -172,10 +210,13 @@ func onActiveValidatorAdded(cc hvhmodule.CallContext, owner, node module.Address
 
 // onActiveValidatorPenalized is called when a validator got penalized
 func onActiveValidatorPenalized(cc hvhmodule.CallContext, owner, node module.Address) {
+	signature := SigActiveValidatorPenalized
+	cc.FrameLogger().Debugf("%s event: height=%d owner=%s node=%s",
+		signature, cc.BlockHeight(), owner, node)
 	cc.OnEvent(
 		state.SystemAddress,
 		[][]byte{
-			[]byte(SigActiveValidatorPenalized),
+			[]byte(signature),
 			owner.Bytes(),
 		},
 		[][]byte{
@@ -185,10 +226,12 @@ func onActiveValidatorPenalized(cc hvhmodule.CallContext, owner, node module.Add
 }
 
 func onActiveValidatorCountChanged(cc hvhmodule.CallContext, oc, nc int64) {
+	signature := SigActiveValidatorCountChanged
+	cc.FrameLogger().Debugf("%s event: height=%d oc=%d nc=%d", signature, cc.BlockHeight(), oc, nc)
 	cc.OnEvent(
 		state.SystemAddress,
 		[][]byte{
-			[]byte(SigActiveValidatorCountChanged),
+			[]byte(signature),
 		},
 		[][]byte{
 			intconv.Int64ToBytes(oc),
