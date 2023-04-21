@@ -90,6 +90,11 @@ func (es *ExtensionStateImpl) initActiveValidatorSet(cc hvhmodule.CallContext) e
 	return vs.Set(validators)
 }
 
+type penalizedInfo struct {
+	owner module.Address
+	validator module.Validator
+}
+
 func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
 	ci := cc.ConsensusInfo()
 	if ci == nil {
@@ -103,8 +108,7 @@ func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
 	// Assume that voters and validatorSet can be different
 	voters := ci.Voters()
 	voted := ci.Voted()
-	validatorState := cc.GetValidatorState()
-	validatorsToRemove := make([]module.Validator, 0)
+	penalizedInfos := make([]*penalizedInfo, 0)
 
 	// Check block vote
 	for i, vote := range voted {
@@ -112,48 +116,41 @@ func (es *ExtensionStateImpl) handleBlockVote(cc hvhmodule.CallContext) error {
 		node := voter.Address()
 		if penalized, owner, err := es.state.OnBlockVote(node, vote); err == nil {
 			if penalized {
+				penalizedInfos = append(
+					penalizedInfos, &penalizedInfo{owner: owner, validator: voter})
 				onActiveValidatorPenalized(cc, owner, node)
-				if index := validatorState.IndexOf(node); index >= 0 {
-					validatorsToRemove = append(validatorsToRemove, voter)
-					onActiveValidatorRemoved(cc, owner, node, "penalized")
-				}
 			}
 		}
 	}
 
 	// Penalized validators not found
-	if len(validatorsToRemove) == 0 {
+	if len(penalizedInfos) == 0 {
 		// No penalized validators
 		return nil
 	}
-	return es.replaceActiveValidators(cc, validatorsToRemove)
+	return es.replacePenalizedActiveValidators(cc, penalizedInfos)
 }
 
 func (es *ExtensionStateImpl) IsItTimeToCheckBlockVote(blockIndexInTerm int64) bool {
 	return es.state.IsItTimeToCheckBlockVote(blockIndexInTerm)
 }
 
-func (es *ExtensionStateImpl) replaceActiveValidators(
-	cc hvhmodule.CallContext, validatorsToRemove []module.Validator) error {
-	es.logger.Debugf("replaceActiveValidators() start: validatorsToRemove=%v", validatorsToRemove)
+func (es *ExtensionStateImpl) replacePenalizedActiveValidators(
+	cc hvhmodule.CallContext, penalizedInfos []*penalizedInfo) error {
+	es.logger.Debugf("replacePenalizedActiveValidators() start: penalizedValidators=%d", len(penalizedInfos))
 
-	if len(validatorsToRemove) == 0 {
-		// Nothing to remove
-		return nil
-	}
-
-	m := make(map[int]struct{})
+	m := make(map[int]*penalizedInfo)
 	validatorState := cc.GetValidatorState()
-	// Remove old validators
-	for _, v := range validatorsToRemove {
-		if idx := validatorState.IndexOf(v.Address()); idx >= 0 {
-			m[idx] = struct{}{}
+
+	for _, info := range penalizedInfos {
+		node := info.validator.Address()
+		if idx := validatorState.IndexOf(node); idx >= 0 {
+			m[idx] = info
 		}
 	}
-
 	if len(m) == 0 {
 		// No validator to remove
-		es.logger.Debug("replaceActiveValidators() end")
+		es.logger.Debug("replacePenalizedActiveValidators() end")
 		return nil
 	}
 
@@ -163,44 +160,36 @@ func (es *ExtensionStateImpl) replaceActiveValidators(
 		return err
 	}
 
+	i := 0
 	oc := validatorState.Len()
-	size := oc - len(m) + len(validatorsToAdd)
-	validators := make([]module.Validator, 0, size)
-
-	j := 0
+	var owner module.Address
 	var validator module.Validator
-	for i := 0; i < validatorState.Len(); i++ {
-		validator, _ = validatorState.Get(i)
+	for idx := range m {
+		info, _ := m[idx]
+		onActiveValidatorRemoved(cc, info.owner, info.validator.Address(), "penalized")
 
-		// If this validator should be removed
-		if _, removed := m[i]; removed {
-			if j < len(validatorsToAdd) {
-				// If a new validator exists
-				if validator, err = state.ValidatorFromAddress(validatorsToAdd[j]); err == nil {
-					j++
-					node := validator.Address()
-					owner, err := es.state.GetOwnerByNode(node)
-					if err != nil {
-						return err
-					}
-					onActiveValidatorAdded(cc, owner, node)
-				} else {
-					return err
-				}
-			} else {
-				validator = nil
+		if i < len(validatorsToAdd) {
+			validator, err = state.ValidatorFromAddress(validatorsToAdd[i])
+			if err != nil {
+				return err
 			}
-		}
-
-		if validator != nil {
-			validators = append(validators, validator)
+			node := validator.Address()
+			if owner, err = es.state.GetOwnerByNode(node); err != nil {
+				return err
+			}
+			if err = validatorState.SetAt(idx, validator); err != nil {
+				return err
+			}
+			onActiveValidatorAdded(cc, owner, node)
+			i++
+		} else {
+			validatorState.Remove(info.validator)
 		}
 	}
 
-	if nc := len(validators); oc != nc {
+	if nc := validatorState.Len(); oc != nc {
 		onActiveValidatorCountChanged(cc, int64(oc), int64(nc))
 	}
-
 	es.logger.Debugf("replaceActiveValidators() end: validatorsToAdd=%v", validatorsToAdd)
-	return validatorState.Set(validators)
+	return nil
 }
