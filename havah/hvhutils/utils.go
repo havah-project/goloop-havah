@@ -3,6 +3,9 @@ package hvhutils
 import (
 	"reflect"
 
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
+
+	"github.com/icon-project/goloop/common/crypto"
 	"github.com/icon-project/goloop/common/log"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/module"
@@ -42,4 +45,13 @@ func CheckAddressArgument(addr module.Address, eoaOnly bool) error {
 		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(%s)", addr)
 	}
 	return nil
+}
+
+func CheckCompressedPublicKeyFormat(pubKey []byte) error {
+	if len(pubKey) == secp256k1.PubKeyBytesLenCompressed {
+		if _, err := crypto.ParsePublicKey(pubKey); err == nil {
+			return nil
+		}
+	}
+	return scoreresult.InvalidParameterError.Errorf("InvalidArgument(pubKey=%x)", pubKey)
 }

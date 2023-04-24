@@ -617,6 +617,9 @@ func (es *ExtensionStateImpl) RegisterValidator(
 		"RegisterValidator() start: height=%d owner=%s nodePublicKey=%x grade=%s name=%s",
 		height, owner, nodePublicKey, gradeName, name)
 
+	if err := hvhutils.CheckCompressedPublicKeyFormat(nodePublicKey); err != nil {
+		return err
+	}
 	grade := hvhstate.StringToGrade(gradeName)
 	if grade == hvhstate.GradeNone {
 		return scoreresult.InvalidParameterError.Errorf("InvalidArgument(grade=%s)", gradeName)
@@ -728,6 +731,9 @@ func (es *ExtensionStateImpl) SetNodePublicKey(cc hvhmodule.CallContext, pubKey 
 	es.logger.Debugf("SetNodePublicKey() start: height=%d from=%s pubKey=%x", height, from, pubKey)
 
 	if err :=  hvhutils.CheckAddressArgument(from, true); err != nil {
+		return err
+	}
+	if err := hvhutils.CheckCompressedPublicKeyFormat(pubKey); err != nil {
 		return err
 	}
 	oldNode, newNode, err := es.state.SetNodePublicKey(from, pubKey)
