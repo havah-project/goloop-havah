@@ -1583,12 +1583,14 @@ None
 
 #### Parameters
 
-| Key           | VALUE Type | Required | Description        |
-|:--------------|:-----------|:---------|:-------------------|
-| owner         | T_ADDRESS  | true     | Node owner address |
-| nodePublicKey | T_BYTES    | true     | Node publicKey     |
-| grade         | T_STRING   | true     | `sub`, `main`      | 
-| name          | T_STRING   | true     | Node name          |
+| Key           | VALUE Type | Required | Description                         |
+|:--------------|:-----------|:---------|:------------------------------------|
+| owner         | T_ADDRESS  | true     | Node owner address                  |
+| nodePublicKey | T_BYTES    | true     | Node publicKey in compressed format |
+| grade         | T_STRING   | true     | `sub`, `main`                       | 
+| name          | T_STRING   | true     | Node name                           |
+
+* Only publicKeys in compressed format are accepted
 
 #### Returns
 
@@ -1868,9 +1870,11 @@ None
 
 #### Parameters
 
-| Key    | VALUE Type | Required | Description   |
-|:-------|:-----------|:---------|:--------------|
-| pubKey | T_BYTES    | true     | nodePublicKey |
+| Key    | VALUE Type | Required | Description                        |
+|:-------|:-----------|:---------|:-----------------------------------|
+| pubKey | T_BYTES    | true     | nodePublicKey in compressed format |
+
+* Only publicKeys in compressed format are accepted
 
 #### Returns
 
