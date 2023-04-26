@@ -1882,8 +1882,8 @@ None
 
 #### EventLog
 
-* [`ActiveValidatorRemoved(Address,Address,string)`](#validatorremovedaddressaddressstring)
-* [`ActiveValidatorAdded(Address,Address)`](#validatoraddedaddressaddress)
+* [`ActiveValidatorRemoved(Address,Address,string)`](#activevalidatorremovedaddressaddressstring)
+* [`ActiveValidatorAdded(Address,Address)`](#activevalidatoraddedaddressaddress)
  
 ### enableValidator(owner Address)
 
@@ -2477,7 +2477,7 @@ HAVAH records the following eventLogs:
     "hx3ece50aaa01f7c4d128c029d569dd86950c34215"
   ],
   "data":[
-    "hx0123456789012345678901234567890123456789",
+    "hx0123456789012345678901234567890123456789"
   ]
 }
 ```
