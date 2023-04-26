@@ -629,13 +629,14 @@ func TestState_UnregisterPlanet(t *testing.T) {
 func TestState_RegisterValidator(t *testing.T) {
 	owner := newDummyAddress(1, false)
 	name := "name-01"
+	url := fmt.Sprintf("https://www.%s.com/details.json", name)
 	_, pubKey := crypto.GenerateKeyPair()
 	s := newDummyState()
 
-	err := s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	err := s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name, &url)
 	assert.NoError(t, err)
 
-	err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name, &url)
 	assert.Error(t, err)
 
 }
@@ -644,10 +645,11 @@ func TestState_UnregisterValidator(t *testing.T) {
 	var node module.Address
 	owner := newDummyAddress(1, false)
 	name := "name-01"
+	url := fmt.Sprintf("https://www.%s.com/details.json", name)
 	_, pubKey := crypto.GenerateKeyPair()
 	s := newDummyState()
 
-	err := s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	err := s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name, &url)
 	assert.NoError(t, err)
 
 	vi, err := s.GetValidatorInfo(owner)
@@ -677,10 +679,11 @@ func TestState_UnregisterValidator(t *testing.T) {
 func TestState_SetValidatorInfo(t *testing.T) {
 	owner := newDummyAddress(1, false)
 	name := "name-01"
+	url := fmt.Sprintf("https://www.%s.com/details.json", name)
 	_, pubKey := crypto.GenerateKeyPair()
 	s := newDummyState()
 
-	err := s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	err := s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name, &url)
 	assert.NoError(t, err)
 
 	newName := "newName"
@@ -705,10 +708,11 @@ func TestState_SetValidatorInfo(t *testing.T) {
 func TestState_EnableValidator(t *testing.T) {
 	owner := newDummyAddress(1, false)
 	name := "name-01"
+	url := fmt.Sprintf("https://www.%s.com/details.json", name)
 	_, pubKey := crypto.GenerateKeyPair()
 	s := newDummyState()
 
-	err := s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+	err := s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name, &url)
 	assert.NoError(t, err)
 
 	vs, err := s.GetValidatorStatus(owner)
@@ -793,9 +797,10 @@ func TestState_IsDecentralizationPossible(t *testing.T) {
 
 	for i := 0; i < int(validatorCount); i++ {
 		name := fmt.Sprintf("name-%02d", i)
+		url := fmt.Sprintf("https://www.%s.com/details.json", name)
 		owner := newDummyAddress(i+1, false)
 		_, pubKey := crypto.GenerateKeyPair()
-		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name, &url)
 		assert.NoError(t, err)
 	}
 
@@ -817,8 +822,9 @@ func TestState_GetValidatorsOf(t *testing.T) {
 		name := fmt.Sprintf("name-%02d", i)
 		owner := newDummyAddress(i+1, false)
 		_, pubKey := crypto.GenerateKeyPair()
+		url := fmt.Sprintf("https://www.%s.com/details.json", name)
 
-		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeMain, name)
+		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeMain, name, &url)
 		assert.NoError(t, err)
 
 		mainOwners = append(mainOwners, owner)
@@ -827,8 +833,9 @@ func TestState_GetValidatorsOf(t *testing.T) {
 		name := fmt.Sprintf("name-%02d", i)
 		owner := newDummyAddress(i+1, false)
 		_, pubKey := crypto.GenerateKeyPair()
+		url := fmt.Sprintf("https://www.%s.com/details.json", name)
 
-		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name, &url)
 		assert.NoError(t, err)
 
 		subOwners = append(subOwners, owner)
@@ -925,6 +932,7 @@ func TestState_OnBlockVote(t *testing.T) {
 		name := fmt.Sprintf("name-%02d", i)
 		owner = newDummyAddress(i+1, false)
 		_, pubKey := crypto.GenerateKeyPair()
+		url := fmt.Sprintf("https://www.%s.com/details.json", name)
 
 		if i < mainCount {
 			grade = GradeMain
@@ -932,7 +940,7 @@ func TestState_OnBlockVote(t *testing.T) {
 			grade = GradeSub
 		}
 
-		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), grade, name)
+		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), grade, name, &url)
 		assert.NoError(t, err)
 
 		vi, err = s.GetValidatorInfo(owner)
@@ -1011,8 +1019,9 @@ func TestState_GetMainValidators(t *testing.T) {
 		name := fmt.Sprintf("name-%02d", i)
 		owner := newDummyAddress(i+1, false)
 		_, pubKey := crypto.GenerateKeyPair()
+		url := fmt.Sprintf("https://www.%s.com/details.json", name)
 
-		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeMain, name)
+		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeMain, name, &url)
 		assert.NoError(t, err)
 
 		expValidators[i] = common.NewAccountAddressFromPublicKey(pubKey)
@@ -1099,8 +1108,9 @@ func TestState_GetNextActiveValidatorsAndChangeIndex(t *testing.T) {
 		name := fmt.Sprintf("name-%02d", i+1)
 		owner := newDummyAddress(i+1, false)
 		_, pubKey := crypto.GenerateKeyPair()
+		url := fmt.Sprintf("https://www.%s.com/details.json", name)
 
-		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name)
+		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name, &url)
 		assert.NoError(t, err)
 
 		expValidators[i] = common.NewAccountAddressFromPublicKey(pubKey)
@@ -1366,8 +1376,9 @@ func TestState_SetNodePublicKey(t *testing.T) {
 		owner := owners[i]
 		_, publicKey := crypto.GenerateKeyPair()
 		publicKeys = append(publicKeys, publicKey)
+		url := fmt.Sprintf("https://www.%s.com/details.json", name)
 
-		err = s.RegisterValidator(owner, publicKey.SerializeCompressed(), GradeSub, name)
+		err = s.RegisterValidator(owner, publicKey.SerializeCompressed(), GradeSub, name, &url)
 		assert.NoError(t, err)
 
 		nodes[i] = common.NewAccountAddressFromPublicKey(publicKey)

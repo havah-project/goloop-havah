@@ -501,6 +501,7 @@ var chainMethods = []*chainMethod{
 			{"nodePublicKey", scoreapi.Bytes, nil, nil},
 			{"grade", scoreapi.String, nil, nil},
 			{"name", scoreapi.String, nil, nil},
+			{"url", scoreapi.String, nil, nil},
 		},
 		nil,
 	}, hvhmodule.RevisionDecentralization, 0},

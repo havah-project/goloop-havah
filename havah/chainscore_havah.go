@@ -385,7 +385,7 @@ func (s *chainScore) Ex_getBlockVoteCheckParameters() (map[string]interface{}, e
 }
 
 func (s *chainScore) Ex_registerValidator(
-	owner module.Address, nodePublicKey []byte, grade, name string) error {
+	owner module.Address, nodePublicKey []byte, grade, name string, url *string) error {
 	if err := s.checkGovernance(true); err != nil {
 		return err
 	}
@@ -393,7 +393,7 @@ func (s *chainScore) Ex_registerValidator(
 	if err != nil {
 		return err
 	}
-	return es.RegisterValidator(ctx, owner, nodePublicKey, grade, name)
+	return es.RegisterValidator(ctx, owner, nodePublicKey, grade, name, url)
 }
 
 func (s *chainScore) Ex_unregisterValidator(owner module.Address) error {

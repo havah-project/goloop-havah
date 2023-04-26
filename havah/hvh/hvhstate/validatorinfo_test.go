@@ -39,7 +39,7 @@ func newDummyValidatorInfo(id int, grade Grade) *ValidatorInfo {
 	owner := newDummyAddress(id, false)
 	name := fmt.Sprintf("name-%02d", id)
 	_, pubKey := crypto.GenerateKeyPair()
-	vi, _ := NewValidatorInfo(owner, pubKey.SerializeUncompressed(), grade, name)
+	vi, _ := NewValidatorInfo(owner, pubKey.SerializeUncompressed(), grade, name, nil)
 	return vi
 }
 
@@ -48,8 +48,9 @@ func TestNewValidatorInfo(t *testing.T) {
 	_, pubKey := crypto.GenerateKeyPair()
 	name := "name01"
 	address := common.NewAccountAddressFromPublicKey(pubKey)
+	url := fmt.Sprintf("https://www.%s.com/details.json", name)
 
-	vi0, err := NewValidatorInfo(owner, pubKey.SerializeCompressed(), GradeMain, name)
+	vi0, err := NewValidatorInfo(owner, pubKey.SerializeCompressed(), GradeMain, name, &url)
 	assert.NoError(t, err)
 	assert.NotNil(t, vi0)
 
@@ -60,8 +61,9 @@ func TestNewValidatorInfo(t *testing.T) {
 	assert.True(t, pubKey.Equal(vi0.PublicKey()))
 	assert.True(t, address.Equal(vi0.Address()))
 	assert.False(t, address.Equal(owner))
+	assert.Equal(t, url, vi0.Url())
 
-	vi1, err := NewValidatorInfo(owner, pubKey.SerializeUncompressed(), GradeMain, name)
+	vi1, err := NewValidatorInfo(owner, pubKey.SerializeUncompressed(), GradeMain, name, &url)
 	assert.NoError(t, err)
 	assert.True(t, vi0.Equal(vi1))
 
@@ -111,20 +113,24 @@ func TestValidatorInfo_SetUrl(t *testing.T) {
 	assert.Equal(t, "", vi.Url())
 
 	url := "https://www.example.com/info"
-	err := vi.SetUrl(url)
+	err := vi.SetUrl(&url)
 	assert.NoError(t, err)
 	assert.Equal(t, url, vi.Url())
 
 	for ; len(url) < hvhmodule.MaxValidatorUrlLen; {
 		url += "a"
 	}
-	err = vi.SetUrl(url)
+	err = vi.SetUrl(&url)
 	assert.NoError(t, err)
 	assert.Equal(t, url, vi.Url())
 
 	tooLongUrl := url + "a"
 	err = vi.SetName(tooLongUrl)
 	assert.Error(t, err)
+	assert.Equal(t, url, vi.Url())
+
+	url = vi.Url()
+	assert.NoError(t, vi.SetUrl(nil))
 	assert.Equal(t, url, vi.Url())
 }
 

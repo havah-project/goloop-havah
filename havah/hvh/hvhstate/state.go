@@ -829,12 +829,13 @@ func (s *State) GetNonVoteAllowance() int64 {
 	return hvhmodule.NonVoteAllowance
 }
 
-func (s *State) RegisterValidator(owner module.Address, nodePublicKey []byte, grade Grade, name string) error {
+func (s *State) RegisterValidator(
+	owner module.Address, nodePublicKey []byte, grade Grade, name string, urlPtr *string) error {
 	s.logger.Debugf(
-		"RegisterValidator() start: owner=%s grade=%d name=%s nodePublicKey=%x",
-		owner, grade, name, nodePublicKey)
+		"RegisterValidator() start: owner=%s pubKey=%x grade=%s name=%s urlPtr=%v",
+		owner, nodePublicKey, grade, name, urlPtr)
 
-	vi, err := s.registerValidatorInfo(owner, nodePublicKey, grade, name)
+	vi, err := s.registerValidatorInfo(owner, nodePublicKey, grade, name, urlPtr)
 	if err != nil {
 		return err
 	}
@@ -853,15 +854,12 @@ func (s *State) RegisterValidator(owner module.Address, nodePublicKey []byte, gr
 }
 
 func (s *State) registerValidatorInfo(
-	owner module.Address, nodePublicKey []byte, grade Grade, name string) (*ValidatorInfo, error) {
+	owner module.Address, nodePublicKey []byte, grade Grade, name string, urlPtr *string) (*ValidatorInfo, error) {
 	if owner == nil {
 		return nil, scoreresult.InvalidParameterError.Errorf("InvalidArgument(owner=%s)", owner)
 	}
 	if grade == GradeNone {
 		return nil, scoreresult.InvalidParameterError.Errorf("InvalidArgument(grade=%s)", grade)
-	}
-	if len(name) > hvhmodule.MaxValidatorNameLen {
-		return nil, scoreresult.InvalidParameterError.Errorf("TooLongName(%s)", name)
 	}
 
 	db := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
@@ -870,7 +868,7 @@ func (s *State) registerValidatorInfo(
 			hvhmodule.StatusDuplicate, "ValidatorInfoAlreadyExists(%s)", owner)
 	}
 
-	vi, err := NewValidatorInfo(owner, nodePublicKey, grade, name)
+	vi, err := NewValidatorInfo(owner, nodePublicKey, grade, name, urlPtr)
 	if err != nil {
 		return nil, err
 	}
@@ -1102,7 +1100,7 @@ func (s *State) SetValidatorInfo(owner module.Address, values map[string]string)
 				return err
 			}
 		case "url":
-			if err = vi.SetUrl(value); err != nil {
+			if err = vi.SetUrl(&value); err != nil {
 				return err
 			}
 		default:

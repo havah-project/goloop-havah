@@ -611,11 +611,12 @@ func (es *ExtensionStateImpl) GetBlockVoteCheckParameters(cc hvhmodule.CallConte
 
 func (es *ExtensionStateImpl) RegisterValidator(
 	cc hvhmodule.CallContext,
-	owner module.Address, nodePublicKey []byte, gradeName, name string) error {
+	owner module.Address, nodePublicKey []byte, gradeName, name string,
+	urlPtr *string) error {
 	height := cc.BlockHeight()
 	es.logger.Debugf(
-		"RegisterValidator() start: height=%d owner=%s nodePublicKey=%x grade=%s name=%s",
-		height, owner, nodePublicKey, gradeName, name)
+		"RegisterValidator() start: height=%d owner=%s nodePublicKey=%x grade=%s name=%s urlPtr=%v",
+		height, owner, nodePublicKey, gradeName, name, urlPtr)
 
 	if err := hvhutils.CheckCompressedPublicKeyFormat(nodePublicKey); err != nil {
 		return err
@@ -627,7 +628,12 @@ func (es *ExtensionStateImpl) RegisterValidator(
 	if err := hvhutils.CheckNameLength(name); err != nil {
 		return err
 	}
-	err := es.state.RegisterValidator(owner, nodePublicKey, grade, name)
+	if urlPtr != nil {
+		if err := hvhutils.CheckUrlLength(*urlPtr); err != nil {
+			return err
+		}
+	}
+	err := es.state.RegisterValidator(owner, nodePublicKey, grade, name, urlPtr)
 
 	es.logger.Debugf("RegisterValidator() end: height=%d err=%v", height, err)
 	return err

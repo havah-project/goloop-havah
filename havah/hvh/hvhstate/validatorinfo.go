@@ -58,7 +58,11 @@ func (vi *ValidatorInfo) Url() string {
 	return vi.url
 }
 
-func (vi *ValidatorInfo) SetUrl(url string) error {
+func (vi *ValidatorInfo) SetUrl(urlPtr *string) error {
+	if urlPtr == nil {
+		return nil
+	}
+	url := *urlPtr
 	if err := hvhutils.CheckUrlLength(url); err != nil {
 		return err
 	}
@@ -129,11 +133,14 @@ func (vi *ValidatorInfo) ToJSON() map[string]interface{} {
 }
 
 func NewValidatorInfo(
-	owner module.Address, pubKey []byte, grade Grade, name string) (*ValidatorInfo, error) {
+	owner module.Address, pubKey []byte, grade Grade, name string, urlPtr *string) (*ValidatorInfo, error) {
 	vi := &ValidatorInfo{
 		owner: owner,
 		grade: grade,
 		name:  name,
+	}
+	if err := vi.SetUrl(urlPtr); err != nil {
+		return nil, err
 	}
 	if err := vi.SetPublicKey(pubKey); err != nil {
 		return nil, err
