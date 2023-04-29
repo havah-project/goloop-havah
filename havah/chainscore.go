@@ -595,6 +595,15 @@ var chainMethods = []*chainMethod{
 			scoreapi.Dict,
 		},
 	}, hvhmodule.RevisionDecentralization, 0},
+	{scoreapi.Method{scoreapi.Function, "getDisqualifiedValidatorsInfo",
+		scoreapi.FlagReadOnly, 1,
+		[]scoreapi.Parameter{
+			{"dataType", scoreapi.String, nil, nil},
+		},
+		[]scoreapi.DataType{
+			scoreapi.Dict,
+		},
+	}, hvhmodule.RevisionDecentralization, 0},
 }
 
 func initFeeConfig(cfg *FeeConfig, as state.AccountState) error {

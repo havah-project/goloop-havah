@@ -880,61 +880,80 @@ func (es *ExtensionStateImpl) GetValidatorsOf(
 }
 
 func (es *ExtensionStateImpl) GetValidatorsInfo(
-	cc hvhmodule.CallContext, dataType string) (map[string]interface{}, error) {
+	cc hvhmodule.CallContext, dataType string, disqualifiedOnly bool) (map[string]interface{}, error) {
 	var err error
+	var owners []module.Address
 	height := cc.BlockHeight()
-	es.Logger().Debugf("GetValidatorsInfo() start: height=%d dataType=%s", height, dataType)
+	es.Logger().Debugf(
+		"GetValidatorsInfo() start: height=%d dataType=%s disqualifiedOnly=%t",
+		height, dataType, disqualifiedOnly)
 
 	vDataType := StringToValidatorDataType(dataType)
 	if vDataType == VDataTypeNone {
-		return nil, scoreresult.InvalidParameterError.Errorf("InvalidArgument(%s)", dataType)
+		return nil, scoreresult.InvalidParameterError.Errorf("InvalidArgument(dataType=%s)", dataType)
 	}
 
-	owners, err := es.state.GetValidatorsOf(hvhstate.GradeFilterAll)
+	if disqualifiedOnly {
+		owners, err = es.state.GetDisqualifiedValidators()
+	} else {
+		owners, err = es.state.GetValidatorsOf(hvhstate.GradeFilterAll)
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	var vi *hvhstate.ValidatorInfo
-	var vs *hvhstate.ValidatorStatus
 	var jso map[string]interface{}
 	validators := make([]interface{}, len(owners))
 	ret := make(map[string]interface{})
 
 	for i, owner := range owners {
-		if vDataType & VDataTypeInfo != 0 {
-			vi, err = es.state.GetValidatorInfo(owner)
-			if err != nil {
-				return nil, err
-			}
-			jso = vi.ToJSON()
+		if jso, err = es.getValidatorInfoAndStatus(owner, vDataType); err == nil {
+			validators[i] = jso
 		} else {
-			jso = nil
+			return nil, err
 		}
-
-		if vDataType & VDataTypeStatus != 0 {
-			vs, err = es.state.GetValidatorStatus(owner)
-			if err != nil {
-				return nil, err
-			}
-			vsJso := vs.ToJSON()
-			if jso == nil {
-				jso = vsJso
-				jso["owner"] = owner
-			} else {
-				for k, v := range vsJso {
-					jso[k] = v
-				}
-			}
-		}
-
-		validators[i] = jso
 	}
 
 	ret["height"] = height
 	ret["validators"] = validators
 	es.Logger().Debugf("GetValidatorsInfo() end: height=%d", height)
 	return ret, nil
+}
+
+func (es *ExtensionStateImpl) getValidatorInfoAndStatus(
+	owner module.Address, vDataType ValidatorDataType) (map[string]interface{}, error) {
+	var err error
+	var vi *hvhstate.ValidatorInfo
+	var vs *hvhstate.ValidatorStatus
+	var jso map[string]interface{}
+
+	if vDataType & VDataTypeInfo != 0 {
+		vi, err = es.state.GetValidatorInfo(owner)
+		if err != nil {
+			return nil, err
+		}
+		jso = vi.ToJSON()
+	} else {
+		jso = nil
+	}
+
+	if vDataType & VDataTypeStatus != 0 {
+		vs, err = es.state.GetValidatorStatus(owner)
+		if err != nil {
+			return nil, err
+		}
+		vsJso := vs.ToJSON()
+		if jso == nil {
+			jso = vsJso
+			jso["owner"] = owner
+		} else {
+			for k, v := range vsJso {
+				jso[k] = v
+			}
+		}
+	}
+
+	return jso, nil
 }
 
 // InitBTPPublicKeys registers existing validators public keys to BTPState

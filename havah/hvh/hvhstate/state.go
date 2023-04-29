@@ -956,6 +956,11 @@ func (s *State) removeFromValidatorList(grade Grade, owner module.Address) error
 		"FailedToRemoveFromValidatorList(grade=%s,owner=%s,validators=%d)", grade, owner, size)
 }
 
+func (s *State) addToDisqualifiedValidatorList(owner module.Address) error {
+	db := s.getArrayDB(hvhmodule.ArrayDisqualifiedValidators)
+	return db.Put(owner)
+}
+
 func (s *State) getValidatorArrayDB(grade Grade) *containerdb.ArrayDB {
 	switch grade {
 	case GradeMain:
@@ -1003,6 +1008,9 @@ func (s *State) UnregisterValidator(owner module.Address) (module.Address, error
 	}
 	err = s.removeFromValidatorList(vi.Grade(), owner)
 	if err != nil {
+		return nil, err
+	}
+	if err = s.addToDisqualifiedValidatorList(owner); err != nil {
 		return nil, err
 	}
 	return vi.Address(), nil
@@ -1247,6 +1255,20 @@ func (s *State) GetValidatorsOf(gradeFilter GradeFilter) ([]module.Address, erro
 	}
 
 	return validatorOwners, nil
+}
+
+func (s *State) GetDisqualifiedValidators() ([]module.Address, error) {
+	db := s.getArrayDB(hvhmodule.ArrayDisqualifiedValidators)
+	size := db.Size()
+	if size == 0 {
+		return nil, nil
+	}
+
+	owners := make([]module.Address, size)
+	for i := 0; i < size; i++ {
+		owners[i] = db.Get(i).Address()
+	}
+	return owners, nil
 }
 
 func (s *State) SetActiveValidatorCount(count int64) error {

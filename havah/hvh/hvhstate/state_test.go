@@ -662,18 +662,28 @@ func TestState_UnregisterValidator(t *testing.T) {
 	assert.False(t, vs.Disqualified())
 	assert.True(t, vs.Enabled())
 
+	owners, err := s.GetDisqualifiedValidators()
+	assert.Zero(t, len(owners))
+	assert.NoError(t, err)
+
 	// Try to unregister a not-registered validator
 	invalidOwner := newDummyAddress(2, false)
 	node, err = s.UnregisterValidator(invalidOwner)
 	assert.Error(t, err)
 	assert.Nil(t, node)
 
+	// Success case
 	node, err = s.UnregisterValidator(owner)
 	assert.NoError(t, err)
 	assert.True(t, node.Equal(vi.Address()))
 
 	vs, err = s.GetValidatorStatus(owner)
 	assert.True(t, vs.Disqualified())
+
+	owners, err = s.GetDisqualifiedValidators()
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(owners))
+	assert.True(t, owners[0].Equal(owner))
 }
 
 func TestState_SetValidatorInfo(t *testing.T) {

@@ -534,6 +534,16 @@ func (s *chainScore) Ex_getValidatorsInfo(dataType string) (map[string]interface
 	if err != nil {
 		return nil, err
 	}
-	return es.GetValidatorsInfo(ctx, dataType)
+	return es.GetValidatorsInfo(ctx, dataType, false)
 }
 
+func (s *chainScore) Ex_getDisqualifiedValidatorsInfo(dataType string) (map[string]interface{}, error) {
+	if err := s.tryChargeCall(); err != nil {
+		return nil, err
+	}
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return nil, err
+	}
+	return es.GetValidatorsInfo(ctx, dataType, true)
+}

@@ -105,6 +105,7 @@ const (
 	ArraySubValidators      = "sub_validators"  // sub validators
 	VarSubValidatorsIndex   = "sub_validators_index"
 	VarNetworkStatus        = "network_status"
+	ArrayDisqualifiedValidators = "disqualified_validators"
 )
 
 // VarDBs in SustainableFund Score
