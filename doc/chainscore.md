@@ -2150,6 +2150,29 @@ None
 > T_VALIDATOR_INFO
  
 * Contains results of [getValidatorInfo](#getvalidatorinfoowner-address-dict) or [getValidatorStatus](#getvalidatorstatusowner-address-dict) depending on `dataType`
+
+### getDisqualifiedValidatorsInfo(dataType string) dict
+
+* Returns the information on disqualified validators
+* All descriptions are the same as those of [getValidatorsInfo](#getvalidatorsinfodatatype-string-dict) except for method name
+* Since `revision 4`
+
+#### Parameters
+
+| Key      | VALUE Type | Required | Description             |
+|:---------|:-----------|:---------|:------------------------|
+| dataType | T_STRING   | true     | `info`, `status`, `all` |
+
+#### Returns
+
+| Key        | VALUE Type         | Required | Description                                    |
+|:-----------|:-------------------|:---------|:-----------------------------------------------|
+| height     | T_INT              | true     | Block height of state                          |
+| validators | []T_VALIDATOR_INFO | true     | List of information of disqualified validators |
+
+> T_VALIDATOR_INFO
+
+* Refer to the `Returns` section of [getValidatorsInfo](#getvalidatorsinfodatatype-string-dict)
  
 ## EventLogs
 
