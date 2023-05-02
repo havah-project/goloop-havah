@@ -107,6 +107,20 @@ func TestState_SetUSDTPrice(t *testing.T) {
 	}
 }
 
+func TestState_GetActiveUSDTPrice(t *testing.T) {
+	s := newDummyState()
+
+	price := s.GetActiveUSDTPrice()
+	assert.Equal(t, int64(0), price.Int64())
+
+	newPrice := big.NewInt(100)
+	err := s.setBigInt(hvhmodule.VarActiveUSDTPrice, newPrice)
+	assert.NoError(t, err)
+
+	price = s.GetActiveUSDTPrice()
+	assert.Zero(t, newPrice.Cmp(price))
+}
+
 func TestState_AddPlanetManager(t *testing.T) {
 	var err error
 	var address module.Address
