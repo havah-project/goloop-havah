@@ -268,6 +268,45 @@ func TestState_UnregisterPlanet_InAbnormalCase(t *testing.T) {
 	checkAllPlanet(t, s, int64(0))
 }
 
+func TestState_SetPlanetOwner(t *testing.T) {
+	s := newDummyState()
+
+	id := int64(0)
+	owner := common.MustNewAddressFromString("hx1234")
+	isCompany := true
+	isPrivate := true
+	usdt := big.NewInt(1000)
+	price := new(big.Int).Mul(usdt, big.NewInt(10))
+	height := int64(200)
+	rev := hvhmodule.RevisionPlanetIDReuse
+
+	err := s.RegisterPlanet(rev, id, isPrivate, isCompany, owner, usdt, price, height)
+	assert.NoError(t, err)
+
+	newOwner := newDummyAddress(123, false)
+	planet, err := s.GetPlanet(id)
+	assert.NoError(t, err)
+	assert.False(t, newOwner.Equal(planet.Owner()))
+
+	err = s.SetPlanetOwner(id, newOwner)
+	assert.NoError(t, err)
+	planet, err = s.GetPlanet(id)
+	assert.NoError(t, err)
+	assert.True(t, newOwner.Equal(planet.Owner()))
+
+	// Invalid planet id
+	err = s.SetPlanetOwner(int64(100), owner)
+	assert.Error(t, err)
+	planet, _ = s.GetPlanet(id)
+	assert.True(t, newOwner.Equal(planet.Owner()))
+
+	// Invalid owner
+	err = s.SetPlanetOwner(id, nil)
+	assert.Error(t, err)
+	planet, _ = s.GetPlanet(id)
+	assert.True(t, newOwner.Equal(planet.Owner()))
+}
+
 func TestState_GetBigInt(t *testing.T) {
 	key := "key"
 	s := newDummyState()
@@ -346,6 +385,82 @@ func TestState_IncrementWorkingPlanet(t *testing.T) {
 
 	nv := s.getInt64(hvhmodule.VarWorkingPlanet)
 	assert.Equal(t, ov+1, nv)
+}
+
+func TestState_IncreaseEcoSystemReward(t *testing.T) {
+	var err error
+	s := newDummyState()
+
+	reward := s.getBigInt(hvhmodule.VarEcoReward)
+	assert.Zero(t, reward.Int64())
+
+	err = s.IncreaseEcoSystemReward(nil)
+	assert.NoError(t, err)
+
+	reward = s.getBigInt(hvhmodule.VarEcoReward)
+	assert.Zero(t, reward.Int64())
+
+	amount := big.NewInt(100)
+	err = s.IncreaseEcoSystemReward(amount)
+	assert.NoError(t, err)
+	assert.Zero(t, s.getBigInt(hvhmodule.VarEcoReward).Cmp(big.NewInt(100)))
+
+	err = s.IncreaseEcoSystemReward(amount)
+	assert.NoError(t, err)
+	assert.Zero(t, s.getBigInt(hvhmodule.VarEcoReward).Cmp(big.NewInt(200)))
+}
+
+func TestState_ClaimEcoSystemReward(t *testing.T) {
+	var err error
+	s := newDummyState()
+
+	reward, err := s.ClaimEcoSystemReward()
+	assert.NoError(t, err)
+	assert.Zero(t, reward.Int64())
+
+	amount := big.NewInt(100)
+	err = s.IncreaseEcoSystemReward(amount)
+	assert.NoError(t, err)
+	assert.Zero(t, s.getBigInt(hvhmodule.VarEcoReward).Cmp(big.NewInt(100)))
+
+	reward, err = s.ClaimEcoSystemReward()
+	assert.NoError(t, err)
+	assert.Zero(t, reward.Cmp(amount))
+
+	reward = s.getBigInt(hvhmodule.VarEcoReward)
+	assert.Zero(t, reward.Int64())
+}
+
+func TestState_ClaimMissedReward(t *testing.T) {
+	var err error
+	s := newDummyState()
+	usdt := big.NewInt(1000)
+	price := big.NewInt(2000)
+	count := 5
+	issueAmount := big.NewInt(500)
+
+	// Register 5 planets
+	for i := 0; i < count; i++ {
+		id := int64(i)
+		height := int64(i+100)
+		owner := newDummyAddress(i+1, false)
+		err = s.RegisterPlanet(
+			hvhmodule.LatestRevision,
+			id, false, false, owner, usdt, price, height)
+		assert.NoError(t, err)
+	}
+
+	err = s.OnTermStart(issueAmount)
+	assert.NoError(t, err)
+
+	for i := 0; i < 3; i++ {
+		err = s.IncrementWorkingPlanet()
+		assert.NoError(t, err)
+	}
+
+	reward, err := s.ClaimMissedReward()
+	assert.NoError(t, err)
+	assert.Zero(t, reward.Cmp(big.NewInt(200)))
 }
 
 func TestState_InitState(t *testing.T) {
