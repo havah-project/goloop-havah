@@ -2,6 +2,7 @@ package hvhstate
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -121,4 +122,10 @@ func TestNetworkStatus_RLPDecodeSelf(t *testing.T) {
 	assert.True(t, ns2.IsDecentralized())
 	assert.Equal(t, allowance, ns2.NonVoteAllowance())
 	assert.Equal(t, period, ns2.BlockVoteCheckPeriod())
+}
+
+func TestNetworkStatus_String(t *testing.T) {
+	ns := NewNetworkStatus()
+	text := fmt.Sprintf("%s", ns)
+	assert.Equal(t, ns.String(), text)
 }

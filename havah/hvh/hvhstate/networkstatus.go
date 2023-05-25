@@ -1,6 +1,8 @@
 package hvhstate
 
 import (
+	"fmt"
+
 	"github.com/icon-project/goloop/common/codec"
 	"github.com/icon-project/goloop/common/errors"
 )
@@ -107,6 +109,12 @@ func (ns *NetworkStatus) IsDecentralized() bool {
 
 func (ns *NetworkStatus) SetDecentralized() {
 	ns.mode = NetModeDecentralized
+}
+
+func (ns *NetworkStatus) String() string {
+	return fmt.Sprintf("NetworkStatus(" +
+			"version=%d,mode=%d,blockVoteCheckPeriod=%d,nonVoteAllowance=%d,activeValidatorCount=%d)",
+			ns.version, ns.mode, ns.blockVoteCheckPeriod, ns.nonVoteAllowance, ns.activeValidatorCount)
 }
 
 func NewNetworkStatus() *NetworkStatus {

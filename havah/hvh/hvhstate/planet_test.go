@@ -2,6 +2,7 @@ package hvhstate
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -85,4 +86,14 @@ func TestPlanet_ToJSON(t *testing.T) {
 	assert.Zero(t, usdt.Cmp(jso["usdtPrice"].(*big.Int)))
 	assert.Zero(t, price.Cmp(jso["havahPrice"].(*big.Int)))
 	assert.Equal(t, height, jso["height"].(int64))
+}
+
+func TestPlanet_String(t *testing.T) {
+	owner := common.MustNewAddressFromString("hx1234")
+	usdt := big.NewInt(1000)
+	price := new(big.Int).Mul(usdt, big.NewInt(10))
+	height := int64(123)
+	p := newPlanet(true, false, owner, usdt, price, height)
+	text := fmt.Sprintf("%s", p)
+	assert.Equal(t, p.String(), text)
 }

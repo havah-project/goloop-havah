@@ -1,6 +1,7 @@
 package hvhstate
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/icon-project/goloop/common"
@@ -148,56 +149,7 @@ func (p *Planet) ToJSON() map[string]interface{} {
 	}
 }
 
-// ====================================================================
-
-/*
-type PlanetSnapshot struct {
-	Planet
+func (p *Planet) String() string {
+	return fmt.Sprintf("Planet(flags=%d,owner=%s,usdt=%d,price=%d,height=%d)",
+			p.flags, p.owner, p.usdt, p.price, p.height)
 }
-
-type PlanetState struct {
-	snapshot *PlanetSnapshot
-	Planet
-}
-
-func NewPlanetState(flags PlanetFlag, owner module.Address, usdt, price *big.Int, height int64) *PlanetState {
-	ps := PlanetState{}
-	ps.snapshot = nil
-	ps.flags = flags
-	ps.owner = common.AddressToPtr(owner)
-	ps.usdt = usdt
-	ps.price = price
-	ps.height = height
-	return &ps
-}
-
-func NewPlanetStateFromSnapshot(pss *PlanetSnapshot) *PlanetState {
-	return &PlanetState{
-		snapshot: pss,
-		Planet:   pss.Planet,
-	}
-}
-
-func NewPlanetStateFromBytes(b []byte) *PlanetState {
-	p, err := newPlanetFromBytes(b)
-	if err != nil {
-		return nil
-	}
-	return &PlanetState{nil, *p}
-}
-
-func (ps *PlanetState) IsDirty() bool {
-	return ps.snapshot == nil
-}
-
-func (ps *PlanetState) setDirty() {
-	ps.snapshot = nil
-}
-
-func (ps *PlanetState) SetOwner(address module.Address) {
-	if !ps.owner.Equal(address) {
-		ps.owner = common.AddressToPtr(address)
-		ps.setDirty()
-	}
-}
-*/
