@@ -1759,16 +1759,18 @@ None
 {
   "data": {
     "method": "setValidatorInfo",
-    "params": [
-      {
-        "key": "name",
-        "value": "ABC Node"
-      },
-      {
-        "key": "url",
-        "value": "https://www.worldbestnode.com/details.json"
-      }
-    ]      
+    "params": {
+      "values": [
+        {
+          "key": "name",
+          "value": "ABC Node"
+        },
+        {
+          "key": "url",
+          "value": "https://www.worldbestnode.com/details.json"
+        }
+      ]
+    }
   }
 }
 ```
