@@ -29,7 +29,7 @@ jobs:
       - name: Set up Go environment
         uses: actions/setup-go@v3.2.0
         with:
-          go-version: 1.17.8
+          go-version: 1.18.7
           
       # Test build
       - name: Build
