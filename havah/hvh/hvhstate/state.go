@@ -1205,7 +1205,7 @@ func (s *State) DisableValidator(owner module.Address) error {
 	return db.Set(ToKey(owner), vs.Bytes())
 }
 
-func (s *State) GetMainValidators(count int) ([]module.Address, error) {
+func (s *State) GetMainValidators(cc hvhmodule.CallContext, count int) ([]module.Address, error) {
 	if count < 0 {
 		return nil, scoreresult.InvalidParameterError.Errorf("InvalidArgument(count=%d)", count)
 	}
@@ -1216,6 +1216,8 @@ func (s *State) GetMainValidators(count int) ([]module.Address, error) {
 	mvDB := s.getArrayDB(hvhmodule.ArrayMainValidators)
 	viDB := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
 
+	bs := cc.GetBTPState()
+	btx := cc.GetBTPContext()
 	size := mvDB.Size()
 	validators := make([]module.Address, 0, size)
 
@@ -1226,7 +1228,14 @@ func (s *State) GetMainValidators(count int) ([]module.Address, error) {
 			return nil, errors.InvalidStateError.Errorf(
 				"MismatchBetweenMainValidatorsAndValidatorInfo(owner=%s)", owner)
 		}
-		validators = append(validators, vi.Address())
+		node := vi.Address()
+
+		// Check if validator has a public key for BTP
+		if err = bs.CheckPublicKey(btx, node); err != nil {
+			continue
+		}
+
+		validators = append(validators, node)
 		if len(validators) == count {
 			break
 		}
@@ -1331,6 +1340,7 @@ func (s *State) OnBlockVote(node module.Address, vote bool) (bool, module.Addres
 }
 
 func (s *State) GetNextActiveValidatorsAndChangeIndex(
+	cc hvhmodule.CallContext,
 	activeValidators state.ValidatorState, count int) ([]module.Address, error) {
 	if count < 0 {
 		return nil, scoreresult.InvalidParameterError.Errorf("InvalidArgument(%d)", count)
@@ -1357,6 +1367,8 @@ func (s *State) GetNextActiveValidatorsAndChangeIndex(
 		svIndex = 0
 	}
 
+	bs := cc.GetBTPState()
+	btx := cc.GetBTPContext()
 	nextActiveValidators := make([]module.Address, 0, count)
 	viDB := s.getDictDB(hvhmodule.DictValidatorInfo, 1)
 	vsDB := s.getDictDB(hvhmodule.DictValidatorStatus, 1)
@@ -1371,7 +1383,10 @@ func (s *State) GetNextActiveValidatorsAndChangeIndex(
 		if activeValidators == nil || activeValidators.IndexOf(node) < 0 {
 			if vs, err = s.getValidatorStatus(vsDB, owner); err == nil {
 				if vs.Enabled() {
-					nextActiveValidators = append(nextActiveValidators, node)
+					// Check if validator has a public key for BTP
+					if err = bs.CheckPublicKey(btx, node); err == nil {
+						nextActiveValidators = append(nextActiveValidators, node)
+					}
 				}
 			}
 		}

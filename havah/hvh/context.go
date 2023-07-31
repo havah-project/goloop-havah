@@ -264,6 +264,15 @@ func (ctx *callContext) ReadOnlyMode() bool {
 	return ctx.CallContext.ReadOnlyMode()
 }
 
+func (ctx *callContext) GetBTPContext() state.BTPContext {
+	store := ctx.GetAccountState(state.SystemID)
+	return state.NewBTPContext(ctx.CallContext, store)
+}
+
+func (ctx *callContext) GetBTPState() hvhmodule.BTPState {
+	return ctx.CallContext.GetBTPState().(hvhmodule.BTPState)
+}
+
 func NewCallContext(cc contract.CallContext, from module.Address) hvhmodule.CallContext {
 	ctx := &callContext{
 		CallContext: cc,

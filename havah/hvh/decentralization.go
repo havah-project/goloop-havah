@@ -16,14 +16,14 @@ func (es *ExtensionStateImpl) initActiveValidatorSet(cc hvhmodule.CallContext) e
 
 	validatorCount := int(es.state.GetActiveValidatorCount())
 	// nodes contains validator node addresses
-	nodes, err := es.state.GetMainValidators(validatorCount)
+	nodes, err := es.state.GetMainValidators(cc, validatorCount)
 	if err != nil {
 		return err
 	}
 
 	// Gets the next active validators from sub validators
 	if count := validatorCount - len(nodes); count > 0 {
-		subValidators, err := es.state.GetNextActiveValidatorsAndChangeIndex(nil, count)
+		subValidators, err := es.state.GetNextActiveValidatorsAndChangeIndex(cc, nil, count)
 		if err != nil {
 			return err
 		}
@@ -155,7 +155,7 @@ func (es *ExtensionStateImpl) replacePenalizedActiveValidators(
 	}
 
 	// Get the new standby validators from sub validators
-	validatorsToAdd, err := es.state.GetNextActiveValidatorsAndChangeIndex(validatorState, len(m))
+	validatorsToAdd, err := es.state.GetNextActiveValidatorsAndChangeIndex(cc, validatorState, len(m))
 	if err != nil {
 		return err
 	}
