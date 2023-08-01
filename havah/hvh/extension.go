@@ -756,8 +756,19 @@ func (es *ExtensionStateImpl) SetNodePublicKey(cc hvhmodule.CallContext, pubKey 
 		}
 	}
 
+	if cc.Revision().Value() >= hvhmodule.RevisionFixMissingBTPPublicKey {
+		err = es.setBTPPublicKey(cc, newNode, hvhmodule.DSASecp256k1, pubKey)
+	}
+
 	es.logger.Debugf("SetNodePublicKey() end: height=%d err=%v", height, err)
 	return err
+}
+
+func (es *ExtensionStateImpl) setBTPPublicKey(
+	cc hvhmodule.CallContext, node module.Address, name string, pubKey []byte) error {
+	btx := cc.GetBTPContext()
+	bs := cc.GetBTPState()
+	return bs.SetPublicKey(btx, node, name, pubKey)
 }
 
 func replaceActiveValidatorAddress(
