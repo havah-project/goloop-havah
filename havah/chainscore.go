@@ -834,6 +834,7 @@ type handleRevFunc func(*chainScore, state.AccountState, int, int) error
 var handleRevFuncs = map[int]handleRevFunc{
 	hvhmodule.Revision0: handleRev1,
 	hvhmodule.RevisionDecentralization: handleRevBTP2,
+	hvhmodule.RevisionBTP2: handleRevFixMissingBTPPublicKey,
 }
 
 func handleRev1(s *chainScore, as state.AccountState, oldRev, newRev int) error {
@@ -853,8 +854,12 @@ func handleRevBTP2(s *chainScore, as state.AccountState, oldRev, newRev int) err
 	if err != nil {
 		return err
 	}
-	btpCtx := s.newBTPContext()
-	return es.InitBTPPublicKeys(btpCtx, bsi)
+	btx := s.newBTPContext()
+	return es.InitBTPPublicKeys(btx, bsi)
+}
+
+func handleRevFixMissingBTPPublicKey(s *chainScore, as state.AccountState, oldRev, newRev int) error {
+	return handleRevBTP2(s, as, oldRev, newRev)
 }
 
 func (s *chainScore) handleRevisionChange(as state.AccountState, oldRev, newRev int) error {
