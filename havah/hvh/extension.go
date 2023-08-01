@@ -764,6 +764,27 @@ func (es *ExtensionStateImpl) SetNodePublicKey(cc hvhmodule.CallContext, pubKey 
 	return err
 }
 
+func (es *ExtensionStateImpl) SetBTPPublicKey(cc hvhmodule.CallContext, name string, pubKey []byte) error {
+	if name == hvhmodule.DSASecp256k1 {
+		return scoreresult.New(hvhmodule.StatusIllegalArgument, "UseSetNodePublicKey()")
+	}
+
+	owner := cc.From()
+	vi, err := es.state.GetValidatorInfo(owner)
+	if err != nil {
+		return err
+	}
+	vs, err := es.state.GetValidatorStatus(owner)
+	if err != nil {
+		return err
+	}
+	if vs.Disqualified() {
+		return scoreresult.Errorf(
+			hvhmodule.StatusIllegalArgument, "DisqualifiedValidator(owner=%s)", owner)
+	}
+	return es.setBTPPublicKey(cc, vi.Address(), name, pubKey)
+}
+
 func (es *ExtensionStateImpl) setBTPPublicKey(
 	cc hvhmodule.CallContext, node module.Address, name string, pubKey []byte) error {
 	btx := cc.GetBTPContext()

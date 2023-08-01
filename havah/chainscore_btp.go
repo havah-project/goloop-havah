@@ -119,7 +119,11 @@ func (s *chainScore) Ex_setBTPPublicKey(name string, pubKey []byte) error {
 	if err := s.tryChargeCall(); err != nil {
 		return err
 	}
-	return s.setBTPPublicKey(name, pubKey)
+	es, ctx, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return err
+	}
+	return es.SetBTPPublicKey(ctx, name, pubKey)
 }
 
 func (s *chainScore) setBTPPublicKey(name string, pubKey []byte) error {
