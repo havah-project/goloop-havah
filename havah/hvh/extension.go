@@ -17,12 +17,12 @@
 package hvh
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
 
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/codec"
-	"github.com/icon-project/goloop/common/crypto"
 	"github.com/icon-project/goloop/common/db"
 	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/log"
@@ -957,13 +957,12 @@ func (es *ExtensionStateImpl) getValidatorInfoAndStatus(
 }
 
 // InitBTPPublicKeys registers existing validators public keys to BTPState
-// Called only once when the revision is set to RevisionBTP2
-func (es *ExtensionStateImpl) InitBTPPublicKeys(btpCtx state.BTPContext, bsi *state.BTPStateImpl) error {
-	height := btpCtx.BlockHeight()
+// Called only once when the revision is set to RevisionBTP2 or RevisionFixMissingPublicKey
+func (es *ExtensionStateImpl) InitBTPPublicKeys(btx state.BTPContext, bsi *state.BTPStateImpl) error {
+	height := btx.BlockHeight()
 	es.logger.Debugf("InitBTPPublicKeys() start: height=%s", height)
 
 	var vi *hvhstate.ValidatorInfo
-	var publicKey *crypto.PublicKey
 	owners, err := es.state.GetValidatorsOf(hvhstate.GradeFilterAll)
 	if err != nil {
 		return err
@@ -974,11 +973,13 @@ func (es *ExtensionStateImpl) InitBTPPublicKeys(btpCtx state.BTPContext, bsi *st
 		if err != nil {
 			return err
 		}
-		publicKey = vi.PublicKey()
-		if err = bsi.SetPublicKey(
-			btpCtx, owner, hvhmodule.DSASecp256k1,
-			publicKey.SerializeCompressed()); err != nil {
-			return err
+
+		pubKey := vi.PublicKey().SerializeCompressed()
+		oldPubKey := btx.GetPublicKey(owner, hvhmodule.DSASecp256k1)
+		if oldPubKey == nil || bytes.Compare(pubKey, oldPubKey) != 0 {
+			if err = bsi.SetPublicKey(btx, owner, hvhmodule.DSASecp256k1, pubKey); err != nil {
+				return err
+			}
 		}
 	}
 
