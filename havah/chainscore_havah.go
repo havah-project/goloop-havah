@@ -393,7 +393,14 @@ func (s *chainScore) Ex_registerValidator(
 	if err != nil {
 		return err
 	}
-	return es.RegisterValidator(ctx, owner, nodePublicKey, grade, name, url)
+	if err = es.RegisterValidator(ctx, owner, nodePublicKey, grade, name, url); err != nil {
+		return err
+	}
+	if ctx.Revision().Value() >= hvhmodule.RevisionFixMissingBTPPublicKey {
+		// CompressedPublicKeyFormat check has already been done in ExtensionImpl.RegisterValidator()
+		return s.setBTPPublicKey(hvhmodule.DSASecp256k1, nodePublicKey)
+	}
+	return nil
 }
 
 func (s *chainScore) Ex_unregisterValidator(owner module.Address) error {
