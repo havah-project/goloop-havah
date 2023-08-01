@@ -612,11 +612,12 @@ func (es *ExtensionStateImpl) GetBlockVoteCheckParameters(cc hvhmodule.CallConte
 func (es *ExtensionStateImpl) RegisterValidator(
 	cc hvhmodule.CallContext,
 	owner module.Address, nodePublicKey []byte, gradeName, name string,
-	urlPtr *string) error {
+	urlPtr *string) (ret error) {
 	height := cc.BlockHeight()
 	es.logger.Debugf(
 		"RegisterValidator() start: height=%d owner=%s nodePublicKey=%x grade=%s name=%s urlPtr=%v",
 		height, owner, nodePublicKey, gradeName, name, urlPtr)
+	defer es.logger.Debugf("RegisterValidator() end: height=%d err=%v", height, ret)
 
 	if err := hvhutils.CheckCompressedPublicKeyFormat(nodePublicKey); err != nil {
 		return err
@@ -633,10 +634,20 @@ func (es *ExtensionStateImpl) RegisterValidator(
 			return err
 		}
 	}
-	err := es.state.RegisterValidator(owner, nodePublicKey, grade, name, urlPtr)
+	if err := es.state.RegisterValidator(owner, nodePublicKey, grade, name, urlPtr); err != nil {
+		return err
+	}
 
-	es.logger.Debugf("RegisterValidator() end: height=%d err=%v", height, err)
-	return err
+	if cc.Revision().Value() >= hvhmodule.RevisionFixMissingBTPPublicKey {
+		vi, err := es.state.GetValidatorInfo(owner)
+		if err != nil {
+			return err
+		}
+		return es.setBTPPublicKey(
+			cc, vi.Address(), hvhmodule.DSASecp256k1, vi.PublicKey().SerializeCompressed())
+	}
+
+	return nil
 }
 
 func (es *ExtensionStateImpl) UnregisterValidator(cc hvhmodule.CallContext, owner module.Address) error {
@@ -756,7 +767,7 @@ func (es *ExtensionStateImpl) SetNodePublicKey(cc hvhmodule.CallContext, pubKey 
 		}
 	}
 
-	if cc.Revision().Value() >= hvhmodule.RevisionFixMissingBTPPublicKey {
+	if cc.Revision().Value() >= hvhmodule.RevisionBTP2 {
 		err = es.setBTPPublicKey(cc, newNode, hvhmodule.DSASecp256k1, pubKey)
 	}
 
