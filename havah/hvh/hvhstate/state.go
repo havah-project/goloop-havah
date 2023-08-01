@@ -1230,8 +1230,8 @@ func (s *State) GetMainValidators(cc hvhmodule.CallContext, count int) ([]module
 		}
 		node := vi.Address()
 
-		// Check if validator has a public key for BTP
-		if err = bs.CheckPublicKey(btx, node); err != nil {
+		// Check if validator has a BTPPublicKey
+		if err = bs.CheckPublicKey(btx, owner); err != nil {
 			continue
 		}
 
@@ -1383,8 +1383,8 @@ func (s *State) GetNextActiveValidatorsAndChangeIndex(
 		if activeValidators == nil || activeValidators.IndexOf(node) < 0 {
 			if vs, err = s.getValidatorStatus(vsDB, owner); err == nil {
 				if vs.Enabled() {
-					// Check if validator has a public key for BTP
-					if err = bs.CheckPublicKey(btx, node); err == nil {
+					// Check if a validator has a BTPPublicKey
+					if err = bs.CheckPublicKey(btx, owner); err == nil {
 						nextActiveValidators = append(nextActiveValidators, node)
 					}
 				}
