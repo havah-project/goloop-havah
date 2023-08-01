@@ -11,17 +11,66 @@ import (
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/crypto"
 	"github.com/icon-project/goloop/common/db"
+	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/havah/hvhmodule"
 	"github.com/icon-project/goloop/havah/hvhutils"
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/state"
 )
 
+type dummyCallContext struct {
+	hvhmodule.CallContext
+	invalidValidators map[string]struct{}
+}
+
+func (cc *dummyCallContext) addInvalidValidator(node module.Address) {
+	if cc.invalidValidators == nil {
+		cc.invalidValidators = make(map[string]struct{})
+	}
+	cc.invalidValidators[string(node.Bytes())] = struct{}{}
+}
+
+func (cc *dummyCallContext) isInvalidValidator(node module.Address) bool {
+	if cc.invalidValidators != nil {
+		_, ok := cc.invalidValidators[string(node.Bytes())]
+		return ok
+	}
+	return false
+}
+
+func (cc *dummyCallContext) GetBTPContext() state.BTPContext {
+	return new(dummyBTPContext)
+}
+
+func (cc *dummyCallContext) GetBTPState() hvhmodule.BTPState {
+	return &dummyBTPState{cc: cc}
+}
+
+type dummyBTPContext struct {
+	state.BTPContext
+}
+
+type dummyBTPState struct {
+	state.BTPState
+	cc *dummyCallContext
+}
+
+func (bs *dummyBTPState) CheckPublicKey(btx state.BTPContext, address module.Address) error {
+	if bs.cc.isInvalidValidator(address) {
+		return errors.New("NoPublicKey")
+	}
+	return nil
+}
+
 func newDummyState() *State {
 	mdb := db.NewMapDB()
 	snapshot := NewSnapshot(mdb, nil)
 	logger := hvhutils.NewLogger(nil)
 	return NewStateFromSnapshot(snapshot, false, logger)
+}
+
+func newDummyCallContext() *dummyCallContext {
+	return new(dummyCallContext)
 }
 
 func newDummyPlanet(isPrivate, isCompany bool, height int64) *Planet {
@@ -1149,6 +1198,7 @@ func TestState_OnBlockVote(t *testing.T) {
 
 func TestState_GetMainValidators(t *testing.T) {
 	var err error
+	cc := newDummyCallContext()
 	s := newDummyState()
 	size := 7
 	owners := make([]module.Address, size)
@@ -1168,7 +1218,7 @@ func TestState_GetMainValidators(t *testing.T) {
 	}
 
 	count := 5
-	validators, err := s.GetMainValidators(count)
+	validators, err := s.GetMainValidators(cc, count)
 	assert.NoError(t, err)
 	assert.Equal(t, count, len(validators))
 
@@ -1181,7 +1231,7 @@ func TestState_GetMainValidators(t *testing.T) {
 	assert.NoError(t, err)
 
 	count = 10
-	validators, err = s.GetMainValidators(count)
+	validators, err = s.GetMainValidators(cc, count)
 	assert.NoError(t, err)
 	assert.Equal(t, size-1, len(validators))
 
@@ -1194,6 +1244,47 @@ func TestState_GetMainValidators(t *testing.T) {
 	for _, ev := range expValidators {
 		_, found := addrMap[ToKey(ev)]
 		assert.True(t, found)
+	}
+}
+
+func TestState_GetMainValidatorsWithInvalidValidators(t *testing.T) {
+	var err error
+	cc := newDummyCallContext()
+	s := newDummyState()
+	size := 7
+	owners := make([]module.Address, size)
+	expValidators := make([]module.Address, size)
+
+	for i := 0; i < size; i++ {
+		name := fmt.Sprintf("name-%02d", i)
+		owner := newDummyAddress(i+1, false)
+		_, pubKey := crypto.GenerateKeyPair()
+		url := fmt.Sprintf("https://www.%s.com/details.json", name)
+
+		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeMain, name, &url)
+		assert.NoError(t, err)
+
+		expValidators[i] = common.NewAccountAddressFromPublicKey(pubKey)
+		owners[i] = owner
+	}
+
+	count := size
+	validators, err := s.GetMainValidators(cc, count)
+	assert.NoError(t, err)
+	assert.Equal(t, count, len(validators))
+
+	for i := 0; i < count; i++ {
+		assert.True(t, validators[i].Equal(expValidators[i]))
+	}
+
+	cc.addInvalidValidator(expValidators[0])
+	cc.addInvalidValidator(expValidators[1])
+	validators, err = s.GetMainValidators(cc, count)
+	expVals := expValidators[2:]
+	assert.NoError(t, err)
+	assert.Equal(t, len(expVals), len(validators))
+	for i, node := range expVals {
+		assert.True(t, node.Equal(validators[i]))
 	}
 }
 
@@ -1238,6 +1329,7 @@ func newDummyValidatorState(validators []module.Address) state.ValidatorState {
 
 func TestState_GetNextActiveValidatorsAndChangeIndex(t *testing.T) {
 	var err error
+	cc := newDummyCallContext()
 	s := newDummyState()
 	size := 7
 	owners := make([]module.Address, size)
@@ -1267,7 +1359,7 @@ func TestState_GetNextActiveValidatorsAndChangeIndex(t *testing.T) {
 		{count: 2, expLen: 2, expSVIndex: 4},
 	}
 
-	validators, err := s.GetNextActiveValidatorsAndChangeIndex(nil, size)
+	validators, err := s.GetNextActiveValidatorsAndChangeIndex(cc, nil, size)
 	assert.NoError(t, err)
 	assert.Equal(t, size, len(validators))
 	for i := 0; i < size; i++ {
@@ -1279,7 +1371,7 @@ func TestState_GetNextActiveValidatorsAndChangeIndex(t *testing.T) {
 	for i, test := range args {
 		name := fmt.Sprintf("no-disabled-%d", i)
 		t.Run(name, func(t *testing.T) {
-			validators, err = s.GetNextActiveValidatorsAndChangeIndex(activeValidators, test.count)
+			validators, err = s.GetNextActiveValidatorsAndChangeIndex(cc, activeValidators, test.count)
 			if test.count >= 0 {
 				assert.NoError(t, err)
 			} else {
@@ -1307,7 +1399,7 @@ func TestState_GetNextActiveValidatorsAndChangeIndex(t *testing.T) {
 	for i, test := range args {
 		name := fmt.Sprintf("one-disabled-%d", i)
 		t.Run(name, func(t *testing.T) {
-			validators, err = s.GetNextActiveValidatorsAndChangeIndex(activeValidators, test.count)
+			validators, err = s.GetNextActiveValidatorsAndChangeIndex(cc, activeValidators, test.count)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expLen, len(validators))
 			assert.Equal(t, test.expSVIndex, int(s.GetSubValidatorsIndex()))
@@ -1331,13 +1423,81 @@ func TestState_GetNextActiveValidatorsAndChangeIndex(t *testing.T) {
 	for i, test := range args {
 		name := fmt.Sprintf("one-unregistered-%d", i)
 		t.Run(name, func(t *testing.T) {
-			validators, err = s.GetNextActiveValidatorsAndChangeIndex(activeValidators, test.count)
+			validators, err = s.GetNextActiveValidatorsAndChangeIndex(cc, activeValidators, test.count)
 			assert.NoError(t, err)
 			assert.Equal(t, test.expLen, len(validators))
 			assert.Equal(t, test.expSVIndex, int(s.GetSubValidatorsIndex()))
 			for _, v := range validators {
 				assert.True(t, activeValidators.IndexOf(v) < 0)
 				owner, _ = s.GetOwnerByNode(v)
+				vs, _ := s.GetValidatorStatus(owner)
+				assert.True(t, vs.Enabled())
+			}
+		})
+	}
+}
+
+func TestState_GetNextActiveValidatorsAndChangeIndexWithInvalidValidators(t *testing.T) {
+	var err error
+	cc := newDummyCallContext()
+	s := newDummyState()
+	size := 7
+	owners := make([]module.Address, size)
+	expValidators := make([]module.Address, size)
+
+	for i := 0; i < size; i++ {
+		name := fmt.Sprintf("name-%02d", i+1)
+		owner := newDummyAddress(i+1, false)
+		_, pubKey := crypto.GenerateKeyPair()
+		url := fmt.Sprintf("https://www.%s.com/details.json", name)
+
+		err = s.RegisterValidator(owner, pubKey.SerializeCompressed(), GradeSub, name, &url)
+		assert.NoError(t, err)
+
+		expValidators[i] = common.NewAccountAddressFromPublicKey(pubKey)
+		owners[i] = owner
+	}
+
+	cc.addInvalidValidator(expValidators[0])
+
+	expVals := expValidators[1:]
+	validators, err := s.GetNextActiveValidatorsAndChangeIndex(cc, nil, size)
+	assert.NoError(t, err)
+	assert.Equal(t, len(expVals), len(validators))
+	for i, node := range expVals {
+		assert.True(t, node.Equal(validators[i]))
+	}
+	assert.Zero(t, s.GetSubValidatorsIndex())
+
+	// ------
+
+	type arg struct {
+		count, expLen, expSVIndex int
+	}
+
+	args := []arg{
+		{count: -1, expLen: 0, expSVIndex: 0},
+		{count: 0, expLen: 0, expSVIndex: 0},
+		{count: 1, expLen: 1, expSVIndex: 4},
+		{count: 2, expLen: 2, expSVIndex: 6},
+		{count: 2, expLen: 2, expSVIndex: 4},
+	}
+
+	activeValidators := newDummyValidatorState(expValidators[1:3])
+	for i, test := range args {
+		name := fmt.Sprintf("one-disabled-%d", i)
+		t.Run(name, func(t *testing.T) {
+			validators, err = s.GetNextActiveValidatorsAndChangeIndex(cc, activeValidators, test.count)
+			if test.count >= 0 {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+			assert.Equal(t, test.expLen, len(validators))
+			assert.Equal(t, test.expSVIndex, int(s.GetSubValidatorsIndex()))
+			for _, v := range validators {
+				assert.True(t, activeValidators.IndexOf(v) < 0)
+				owner, _ := s.GetOwnerByNode(v)
 				vs, _ := s.GetValidatorStatus(owner)
 				assert.True(t, vs.Enabled())
 			}

@@ -8,6 +8,11 @@ import (
 	"github.com/icon-project/goloop/service/trace"
 )
 
+type BTPState interface {
+	state.BTPState
+	CheckPublicKey(btx state.BTPContext, address module.Address) error
+}
+
 type WorldContext interface {
 	Revision() module.Revision
 	BlockHeight() int64
@@ -35,4 +40,6 @@ type CallContext interface {
 	IsBaseTxInvoked() bool
 	SetBaseTxInvoked()
 	ReadOnlyMode() bool
+	GetBTPContext() state.BTPContext
+	GetBTPState() BTPState
 }
