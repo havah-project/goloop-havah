@@ -4,7 +4,6 @@ import (
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/intconv"
-	"github.com/icon-project/goloop/havah/hvhutils"
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/scoreresult"
 	"github.com/icon-project/goloop/service/state"
@@ -119,19 +118,11 @@ func (s *chainScore) Ex_setBTPPublicKey(name string, pubKey []byte) error {
 	if err := s.tryChargeCall(); err != nil {
 		return err
 	}
-	return s.setBTPPublicKey(name, pubKey)
-}
-
-func (s *chainScore) setBTPPublicKey(name string, pubKey []byte) error {
-	from := s.from
-	if err := hvhutils.CheckAddressArgument(from, true); err != nil {
-		return scoreresult.AccessDeniedError.Errorf("NoPermission(from=%s)", from)
-	}
-	bs, err := s.getBTPState()
+	es, ctx, err := s.getExtensionStateAndContext()
 	if err != nil {
 		return err
 	}
-	return bs.SetPublicKey(s.newBTPContext(), from, name, pubKey)
+	return es.SetBTPPublicKey(ctx, name, pubKey)
 }
 
 func (s *chainScore) getBTPState() (*state.BTPStateImpl, error) {

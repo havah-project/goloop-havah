@@ -10,7 +10,8 @@ import (
 
 type BTPState interface {
 	state.BTPState
-	CheckPublicKey(btx state.BTPContext, address module.Address) error
+	CheckPublicKey(btx state.BTPContext, node module.Address) error
+	SetPublicKey(btx state.BTPContext, node module.Address, name string, pubKey []byte) error
 }
 
 type WorldContext interface {

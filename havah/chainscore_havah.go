@@ -451,13 +451,7 @@ func (s *chainScore) Ex_setNodePublicKey(pubKey []byte) error {
 	if err != nil {
 		return err
 	}
-	if err = es.SetNodePublicKey(ctx, pubKey); err != nil {
-		return err
-	}
-	if ctx.Revision().Value() >= hvhmodule.RevisionBTP2 {
-		return s.setBTPPublicKey(hvhmodule.DSASecp256k1, pubKey)
-	}
-	return nil
+	return es.SetNodePublicKey(ctx, pubKey)
 }
 
 func (s *chainScore) Ex_enableValidator(owner module.Address) error {

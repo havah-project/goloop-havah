@@ -17,12 +17,12 @@
 package hvh
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
 
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/codec"
-	"github.com/icon-project/goloop/common/crypto"
 	"github.com/icon-project/goloop/common/db"
 	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/log"
@@ -612,11 +612,12 @@ func (es *ExtensionStateImpl) GetBlockVoteCheckParameters(cc hvhmodule.CallConte
 func (es *ExtensionStateImpl) RegisterValidator(
 	cc hvhmodule.CallContext,
 	owner module.Address, nodePublicKey []byte, gradeName, name string,
-	urlPtr *string) error {
+	urlPtr *string) (ret error) {
 	height := cc.BlockHeight()
 	es.logger.Debugf(
 		"RegisterValidator() start: height=%d owner=%s nodePublicKey=%x grade=%s name=%s urlPtr=%v",
 		height, owner, nodePublicKey, gradeName, name, urlPtr)
+	defer es.logger.Debugf("RegisterValidator() end: height=%d err=%v", height, ret)
 
 	if err := hvhutils.CheckCompressedPublicKeyFormat(nodePublicKey); err != nil {
 		return err
@@ -633,10 +634,20 @@ func (es *ExtensionStateImpl) RegisterValidator(
 			return err
 		}
 	}
-	err := es.state.RegisterValidator(owner, nodePublicKey, grade, name, urlPtr)
+	if err := es.state.RegisterValidator(owner, nodePublicKey, grade, name, urlPtr); err != nil {
+		return err
+	}
 
-	es.logger.Debugf("RegisterValidator() end: height=%d err=%v", height, err)
-	return err
+	if cc.Revision().Value() >= hvhmodule.RevisionFixMissingBTPPublicKey {
+		vi, err := es.state.GetValidatorInfo(owner)
+		if err != nil {
+			return err
+		}
+		return es.setBTPPublicKey(
+			cc, vi.Address(), hvhmodule.DSASecp256k1, vi.PublicKey().SerializeCompressed())
+	}
+
+	return nil
 }
 
 func (es *ExtensionStateImpl) UnregisterValidator(cc hvhmodule.CallContext, owner module.Address) error {
@@ -756,8 +767,40 @@ func (es *ExtensionStateImpl) SetNodePublicKey(cc hvhmodule.CallContext, pubKey 
 		}
 	}
 
+	if cc.Revision().Value() >= hvhmodule.RevisionBTP2 {
+		err = es.setBTPPublicKey(cc, newNode, hvhmodule.DSASecp256k1, pubKey)
+	}
+
 	es.logger.Debugf("SetNodePublicKey() end: height=%d err=%v", height, err)
 	return err
+}
+
+func (es *ExtensionStateImpl) SetBTPPublicKey(cc hvhmodule.CallContext, name string, pubKey []byte) error {
+	if name == hvhmodule.DSASecp256k1 {
+		return scoreresult.New(hvhmodule.StatusIllegalArgument, "UseSetNodePublicKey()")
+	}
+
+	owner := cc.From()
+	vi, err := es.state.GetValidatorInfo(owner)
+	if err != nil {
+		return err
+	}
+	vs, err := es.state.GetValidatorStatus(owner)
+	if err != nil {
+		return err
+	}
+	if vs.Disqualified() {
+		return scoreresult.Errorf(
+			hvhmodule.StatusIllegalArgument, "DisqualifiedValidator(owner=%s)", owner)
+	}
+	return es.setBTPPublicKey(cc, vi.Address(), name, pubKey)
+}
+
+func (es *ExtensionStateImpl) setBTPPublicKey(
+	cc hvhmodule.CallContext, node module.Address, name string, pubKey []byte) error {
+	btx := cc.GetBTPContext()
+	bs := cc.GetBTPState()
+	return bs.SetPublicKey(btx, node, name, pubKey)
 }
 
 func replaceActiveValidatorAddress(
@@ -957,32 +1000,35 @@ func (es *ExtensionStateImpl) getValidatorInfoAndStatus(
 }
 
 // InitBTPPublicKeys registers existing validators public keys to BTPState
-// Called only once when the revision is set to RevisionBTP2
-func (es *ExtensionStateImpl) InitBTPPublicKeys(btpCtx state.BTPContext, bsi *state.BTPStateImpl) error {
-	height := btpCtx.BlockHeight()
+// Called only once when the revision is set to RevisionBTP2 or RevisionFixMissingPublicKey
+func (es *ExtensionStateImpl) InitBTPPublicKeys(cc hvhmodule.CallContext) (ret error) {
+	height := cc.BlockHeight()
 	es.logger.Debugf("InitBTPPublicKeys() start: height=%s", height)
+	defer es.logger.Debugf("InitBTPPublicKeys() end: height=%s err=%v", height, ret)
 
 	var vi *hvhstate.ValidatorInfo
-	var publicKey *crypto.PublicKey
 	owners, err := es.state.GetValidatorsOf(hvhstate.GradeFilterAll)
 	if err != nil {
 		return err
 	}
 
+	btx := cc.GetBTPContext()
+	bsi := cc.GetBTPState()
 	for _, owner := range owners {
 		vi, err = es.state.GetValidatorInfo(owner)
 		if err != nil {
 			return err
 		}
-		publicKey = vi.PublicKey()
-		if err = bsi.SetPublicKey(
-			btpCtx, owner, hvhmodule.DSASecp256k1,
-			publicKey.SerializeCompressed()); err != nil {
-			return err
+
+		node := vi.Address()
+		pubKey := vi.PublicKey().SerializeCompressed()
+		oldPubKey := btx.GetPublicKey(node, hvhmodule.DSASecp256k1)
+		if oldPubKey == nil || !bytes.Equal(pubKey, oldPubKey) {
+			if err = bsi.SetPublicKey(btx, node, hvhmodule.DSASecp256k1, pubKey); err != nil {
+				return err
+			}
 		}
 	}
-
-	es.logger.Debugf("InitBTPPublicKeys() end: height=%s", height)
 	return nil
 }
 

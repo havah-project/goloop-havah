@@ -62,6 +62,10 @@ func (bs *dummyBTPState) CheckPublicKey(btx state.BTPContext, address module.Add
 	return nil
 }
 
+func (bs *dummyBTPState) SetPublicKey(btx state.BTPContext, node module.Address, name string, pubKey []byte) error {
+	return nil
+}
+
 func newDummyState() *State {
 	mdb := db.NewMapDB()
 	snapshot := NewSnapshot(mdb, nil)

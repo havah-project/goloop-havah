@@ -25,6 +25,7 @@ const (
 	Revision3
 	Revision4
 	Revision5
+	Revision6
 	RevisionReserved
 )
 
@@ -45,6 +46,8 @@ const (
 	RevisionDecentralization = Revision4
 
 	RevisionBTP2 = Revision5
+
+	RevisionFixMissingBTPPublicKey = Revision6
 )
 
 var revisionFlags = []module.Revision{
@@ -60,6 +63,8 @@ var revisionFlags = []module.Revision{
 	// Revision 4
 	module.MultipleFeePayers,
 	// Revision 5
+	0,
+	// Revision 6
 	0,
 }
 

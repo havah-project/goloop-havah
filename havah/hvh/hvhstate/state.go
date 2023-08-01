@@ -1128,7 +1128,13 @@ func (s *State) SetNodePublicKey(owner module.Address, pubKey []byte) (module.Ad
 	if err != nil {
 		return nil, nil, err
 	}
-
+	vs, err := s.GetValidatorStatus(owner)
+	if err != nil {
+		return nil, nil, err
+	}
+	if vs.Disqualified() {
+		return nil, nil, scoreresult.New(hvhmodule.StatusIllegalArgument, "DisqualifiedValidator")
+	}
 	oldNode := vi.Address()
 	err = vi.SetPublicKey(pubKey)
 	if err != nil {
