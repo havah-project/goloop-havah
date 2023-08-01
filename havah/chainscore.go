@@ -841,25 +841,26 @@ func handleRev1(s *chainScore, as state.AccountState, oldRev, newRev int) error 
 	return nil
 }
 
+func initBTPPublicKeysFromValidators(s *chainScore) error {
+	es, cc, err := s.getExtensionStateAndContext()
+	if err != nil {
+		return err
+	}
+	return es.InitBTPPublicKeys(cc)
+}
+
 func handleRevBTP2(s *chainScore, as state.AccountState, oldRev, newRev int) error {
 	if newRev != hvhmodule.RevisionBTP2 {
 		return errors.InvalidStateError.Errorf("InvalidRevision(oldRev=%d,newRev=%d)", oldRev, newRev)
 	}
-
-	es, _, err := s.getExtensionStateAndContext()
-	if err != nil {
-		return err
-	}
-	bsi, err := s.getBTPState()
-	if err != nil {
-		return err
-	}
-	btx := s.newBTPContext()
-	return es.InitBTPPublicKeys(btx, bsi)
+	return initBTPPublicKeysFromValidators(s)
 }
 
 func handleRevFixMissingBTPPublicKey(s *chainScore, as state.AccountState, oldRev, newRev int) error {
-	return handleRevBTP2(s, as, oldRev, newRev)
+	if newRev != hvhmodule.RevisionFixMissingBTPPublicKey {
+		return errors.InvalidStateError.Errorf("InvalidRevision(oldRev=%d,newRev=%d)", oldRev, newRev)
+	}
+	return initBTPPublicKeysFromValidators(s)
 }
 
 func (s *chainScore) handleRevisionChange(as state.AccountState, oldRev, newRev int) error {

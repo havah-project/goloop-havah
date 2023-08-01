@@ -1001,9 +1001,10 @@ func (es *ExtensionStateImpl) getValidatorInfoAndStatus(
 
 // InitBTPPublicKeys registers existing validators public keys to BTPState
 // Called only once when the revision is set to RevisionBTP2 or RevisionFixMissingPublicKey
-func (es *ExtensionStateImpl) InitBTPPublicKeys(btx state.BTPContext, bsi *state.BTPStateImpl) error {
-	height := btx.BlockHeight()
+func (es *ExtensionStateImpl) InitBTPPublicKeys(cc hvhmodule.CallContext) (ret error) {
+	height := cc.BlockHeight()
 	es.logger.Debugf("InitBTPPublicKeys() start: height=%s", height)
+	defer es.logger.Debugf("InitBTPPublicKeys() end: height=%s err=%v", height, ret)
 
 	var vi *hvhstate.ValidatorInfo
 	owners, err := es.state.GetValidatorsOf(hvhstate.GradeFilterAll)
@@ -1011,6 +1012,8 @@ func (es *ExtensionStateImpl) InitBTPPublicKeys(btx state.BTPContext, bsi *state
 		return err
 	}
 
+	btx := cc.GetBTPContext()
+	bsi := cc.GetBTPState()
 	for _, owner := range owners {
 		vi, err = es.state.GetValidatorInfo(owner)
 		if err != nil {
@@ -1020,14 +1023,12 @@ func (es *ExtensionStateImpl) InitBTPPublicKeys(btx state.BTPContext, bsi *state
 		node := vi.Address()
 		pubKey := vi.PublicKey().SerializeCompressed()
 		oldPubKey := btx.GetPublicKey(node, hvhmodule.DSASecp256k1)
-		if oldPubKey == nil || bytes.Compare(pubKey, oldPubKey) != 0 {
+		if oldPubKey == nil || !bytes.Equal(pubKey, oldPubKey) {
 			if err = bsi.SetPublicKey(btx, node, hvhmodule.DSASecp256k1, pubKey); err != nil {
 				return err
 			}
 		}
 	}
-
-	es.logger.Debugf("InitBTPPublicKeys() end: height=%s", height)
 	return nil
 }
 
