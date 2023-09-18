@@ -829,16 +829,11 @@ func (s *chainScore) Install(param []byte) error {
 	return err
 }
 
-type handleRevFunc func(*chainScore, state.AccountState, int, int) error
+type handleRevFunc func(*chainScore, state.AccountState) error
 
 var handleRevFuncs = map[int]handleRevFunc{
-	hvhmodule.Revision0: handleRev1,
-	hvhmodule.RevisionDecentralization: handleRevBTP2,
-	hvhmodule.RevisionBTP2: handleRevFixMissingBTPPublicKey,
-}
-
-func handleRev1(s *chainScore, as state.AccountState, oldRev, newRev int) error {
-	return nil
+	hvhmodule.Revision5: handleRev5,
+	hvhmodule.Revision6: handleRev6,
 }
 
 func initBTPPublicKeysFromValidators(s *chainScore) error {
@@ -849,17 +844,25 @@ func initBTPPublicKeysFromValidators(s *chainScore) error {
 	return es.InitBTPPublicKeys(cc)
 }
 
-func handleRevBTP2(s *chainScore, as state.AccountState, oldRev, newRev int) error {
-	if newRev != hvhmodule.RevisionBTP2 {
-		return errors.InvalidStateError.Errorf("InvalidRevision(oldRev=%d,newRev=%d)", oldRev, newRev)
+func handleRev5(s *chainScore, as state.AccountState) error {
+	if err := handleRevBTP2(s, as); err != nil {
+		return err
 	}
+	return nil
+}
+
+func handleRevBTP2(s *chainScore, as state.AccountState) error {
 	return initBTPPublicKeysFromValidators(s)
 }
 
-func handleRevFixMissingBTPPublicKey(s *chainScore, as state.AccountState, oldRev, newRev int) error {
-	if newRev != hvhmodule.RevisionFixMissingBTPPublicKey {
-		return errors.InvalidStateError.Errorf("InvalidRevision(oldRev=%d,newRev=%d)", oldRev, newRev)
+func handleRev6(s *chainScore, as state.AccountState) error {
+	if err := handleRevFixMissingBTPPublicKey(s, as); err != nil {
+		return err
 	}
+	return nil
+}
+
+func handleRevFixMissingBTPPublicKey(s *chainScore, as state.AccountState) error {
 	return initBTPPublicKeysFromValidators(s)
 }
 
@@ -867,9 +870,9 @@ func (s *chainScore) handleRevisionChange(as state.AccountState, oldRev, newRev 
 	if oldRev >= newRev {
 		return nil
 	}
-	for rev := oldRev; rev < newRev; rev++ {
+	for rev := oldRev + 1; rev <= newRev; rev++ {
 		if fn, ok := handleRevFuncs[rev]; ok {
-			if err := fn(s, as, oldRev, newRev); err != nil {
+			if err := fn(s, as); err != nil {
 				return err
 			}
 		}
