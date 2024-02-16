@@ -38,10 +38,10 @@ import (
 type ValidatorDataType int
 
 const (
-	VDataTypeNone ValidatorDataType = 0
-	VDataTypeInfo ValidatorDataType = 1
+	VDataTypeNone   ValidatorDataType = 0
+	VDataTypeInfo   ValidatorDataType = 1
 	VDataTypeStatus ValidatorDataType = 2
-	VDataTypeAll = VDataTypeInfo | VDataTypeStatus
+	VDataTypeAll                      = VDataTypeInfo | VDataTypeStatus
 )
 
 func StringToValidatorDataType(value string) ValidatorDataType {
@@ -747,7 +747,7 @@ func (es *ExtensionStateImpl) SetNodePublicKey(cc hvhmodule.CallContext, pubKey 
 	height := cc.BlockHeight()
 	es.logger.Debugf("SetNodePublicKey() start: height=%d from=%s pubKey=%x", height, from, pubKey)
 
-	if err :=  hvhutils.CheckAddressArgument(from, true); err != nil {
+	if err := hvhutils.CheckAddressArgument(from, true); err != nil {
 		return err
 	}
 	if err := hvhutils.CheckCompressedPublicKeyFormat(pubKey); err != nil {
@@ -970,7 +970,7 @@ func (es *ExtensionStateImpl) getValidatorInfoAndStatus(
 	var vs *hvhstate.ValidatorStatus
 	var jso map[string]interface{}
 
-	if vDataType & VDataTypeInfo != 0 {
+	if vDataType&VDataTypeInfo != 0 {
 		vi, err = es.state.GetValidatorInfo(owner)
 		if err != nil {
 			return nil, err
@@ -980,7 +980,7 @@ func (es *ExtensionStateImpl) getValidatorInfoAndStatus(
 		jso = nil
 	}
 
-	if vDataType & VDataTypeStatus != 0 {
+	if vDataType&VDataTypeStatus != 0 {
 		vs, err = es.state.GetValidatorStatus(owner)
 		if err != nil {
 			return nil, err
@@ -1003,8 +1003,10 @@ func (es *ExtensionStateImpl) getValidatorInfoAndStatus(
 // Called only once when the revision is set to RevisionBTP2 or RevisionFixMissingPublicKey
 func (es *ExtensionStateImpl) InitBTPPublicKeys(cc hvhmodule.CallContext) (ret error) {
 	height := cc.BlockHeight()
-	es.logger.Debugf("InitBTPPublicKeys() start: height=%s", height)
-	defer es.logger.Debugf("InitBTPPublicKeys() end: height=%s err=%v", height, ret)
+	es.logger.Debugf("InitBTPPublicKeys() start: height=%d", height)
+	defer func() {
+		es.logger.Debugf("InitBTPPublicKeys() end: height=%d err=%v", height, ret)
+	}()
 
 	var vi *hvhstate.ValidatorInfo
 	owners, err := es.state.GetValidatorsOf(hvhstate.GradeFilterAll)
@@ -1029,7 +1031,7 @@ func (es *ExtensionStateImpl) InitBTPPublicKeys(cc hvhmodule.CallContext) (ret e
 			}
 		}
 	}
-	return nil
+	return
 }
 
 func GetExtensionStateFromWorldContext(wc state.WorldContext, logger log.Logger) *ExtensionStateImpl {
