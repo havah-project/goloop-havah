@@ -65,12 +65,9 @@ func (s *chainScore) Ex_setRevision(code *common.HexInt) error {
 	}
 
 	cid := s.cc.ChainID()
-	s.log.Infof("cid=%#x", cid)
-	if cid == CIDForVegaNet {
-		if int(code.Int64()) == hvhmodule.Revision6 {
-			// Replay a bug in handleRevisionChange() on VegaNet
-			return nil
-		}
+	if cid == CIDForVegaNet && int(code.Int64()) == hvhmodule.Revision6 {
+		// Replay a bug in handleRevisionChange() on VegaNet
+		return nil
 	}
 
 	if err := s.handleRevisionChange(int(r), int(code.Int64())); err != nil {
