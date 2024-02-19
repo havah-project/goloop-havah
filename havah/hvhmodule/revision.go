@@ -26,6 +26,7 @@ const (
 	Revision4
 	Revision5
 	Revision6
+	Revision7
 	RevisionReserved
 )
 
@@ -48,6 +49,9 @@ const (
 	RevisionBTP2 = Revision5
 
 	RevisionFixMissingBTPPublicKey = Revision6
+
+	// Do not use Revision7 for the reason that the revision is reserved for VegaNet problem replay
+	RevisionFixVegaNetProblem = Revision7
 )
 
 var revisionFlags = []module.Revision{
@@ -65,6 +69,8 @@ var revisionFlags = []module.Revision{
 	// Revision 5
 	0,
 	// Revision 6
+	0,
+	// Revision 7
 	0,
 }
 

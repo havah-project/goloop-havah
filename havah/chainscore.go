@@ -824,60 +824,9 @@ func (s *chainScore) Install(param []byte) error {
 		return err
 	}
 
-	err := s.handleRevisionChange(as, hvhmodule.Revision0, revision)
+	err := s.handleRevisionChange(hvhmodule.Revision0, revision)
 	s.log.Debugf("chainScore end")
 	return err
-}
-
-type handleRevFunc func(*chainScore, state.AccountState) error
-
-var handleRevFuncs = map[int]handleRevFunc{
-	hvhmodule.Revision5: handleRev5,
-	hvhmodule.Revision6: handleRev6,
-}
-
-func initBTPPublicKeysFromValidators(s *chainScore) error {
-	es, cc, err := s.getExtensionStateAndContext()
-	if err != nil {
-		return err
-	}
-	return es.InitBTPPublicKeys(cc)
-}
-
-func handleRev5(s *chainScore, as state.AccountState) error {
-	if err := handleRevBTP2(s, as); err != nil {
-		return err
-	}
-	return nil
-}
-
-func handleRevBTP2(s *chainScore, as state.AccountState) error {
-	return initBTPPublicKeysFromValidators(s)
-}
-
-func handleRev6(s *chainScore, as state.AccountState) error {
-	if err := handleRevFixMissingBTPPublicKey(s, as); err != nil {
-		return err
-	}
-	return nil
-}
-
-func handleRevFixMissingBTPPublicKey(s *chainScore, as state.AccountState) error {
-	return initBTPPublicKeysFromValidators(s)
-}
-
-func (s *chainScore) handleRevisionChange(as state.AccountState, oldRev, newRev int) error {
-	if oldRev >= newRev {
-		return nil
-	}
-	for rev := oldRev + 1; rev <= newRev; rev++ {
-		if fn, ok := handleRevFuncs[rev]; ok {
-			if err := fn(s, as); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 func (s *chainScore) Update(param []byte) error {
