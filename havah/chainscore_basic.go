@@ -28,6 +28,10 @@ import (
 	"github.com/icon-project/goloop/service/state"
 )
 
+const (
+	CIDForVegaNet = 0x630a4
+)
+
 func (s *chainScore) tryChargeCall() error {
 	if s.gov {
 		return nil
@@ -59,10 +63,20 @@ func (s *chainScore) Ex_setRevision(code *common.HexInt) error {
 	if err := scoredb.NewVarDB(as, state.VarRevision).Set(code); err != nil {
 		return err
 	}
-	if err := s.handleRevisionChange(as, int(r), int(code.Int64())); err != nil {
+
+	cid := s.cc.ChainID()
+	if cid == CIDForVegaNet && int(code.Int64()) == hvhmodule.Revision6 {
+		// Replay a bug in handleRevisionChange() on VegaNet
 		return nil
 	}
-	as.MigrateForRevision(s.cc.ToRevision(int(code.Int64())))
+
+	if err := s.handleRevisionChange(int(r), int(code.Int64())); err != nil {
+		return err
+	}
+
+	if err := as.MigrateForRevision(s.cc.ToRevision(int(code.Int64()))); err != nil {
+		return err
+	}
 	as.SetAPIInfo(s.GetAPI())
 	return nil
 }
