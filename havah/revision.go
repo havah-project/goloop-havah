@@ -38,7 +38,7 @@ func (s *chainScore) handleRevisionChange(oldRev, newRev int) error {
 		if items, ok := revHandlerMap[rev]; ok {
 			for _, item := range items {
 				if err := item.fn(s); err != nil {
-					s.log.Infof("call handleRevFunc for %d", rev)
+					s.log.Errorf("handleRevFunc() error: rev=%d err=%v", rev, err)
 					return err
 				}
 			}
