@@ -19,7 +19,6 @@ package test
 import (
 	"bytes"
 	"fmt"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 
@@ -40,7 +39,7 @@ type Fixture struct {
 	Height     int64
 }
 
-func NewFixture(t *testing.T, o ...FixtureOption) *Fixture {
+func NewFixture(t T, o ...FixtureOption) *Fixture {
 	cf := NewFixtureConfig(t, o...)
 	f := &Fixture{
 		BaseConfig: cf,
@@ -141,7 +140,7 @@ func (f *Fixture) newPrecommitsAndPCM(blk module.BlockData, round int32, ntsVote
 			blk,
 			round,
 			consensus.VoteTypePrecommit,
-			bpsID.WithAppData(uint16(ntsVoteCount)),
+			bpsID.WithAppData(uint64(ntsVoteCount)),
 			blk.Timestamp()+1,
 			f.Chain.NID(),
 			pcm,

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"strconv"
@@ -27,13 +26,13 @@ import (
 
 func ReadFile(name string) ([]byte, error) {
 	if name == "-" {
-		if bs, err := ioutil.ReadAll(os.Stdin); err != nil {
+		if bs, err := io.ReadAll(os.Stdin); err != nil {
 			return nil, errors.Wrap(err, "Fail to read stdin")
 		} else {
 			return bs, nil
 		}
 	} else {
-		if bs, err := ioutil.ReadFile(name); err != nil {
+		if bs, err := os.ReadFile(name); err != nil {
 			return nil, errors.Wrapf(err, "Fail to read file=%s", name)
 		} else {
 			return bs, nil
@@ -426,7 +425,7 @@ func NewChainCmd(parentCmd *cobra.Command, parentVc *viper.Viper) (*cobra.Comman
 			if len(args) == 2 {
 				fileName = args[1]
 			}
-			err = ioutil.WriteFile(fileName, b, 0644)
+			err = os.WriteFile(fileName, b, 0644)
 			if err != nil {
 				return fmt.Errorf("fail to write file err:%+v", err)
 			}
@@ -480,16 +479,22 @@ func NewChainCmd(parentCmd *cobra.Command, parentVc *viper.Viper) (*cobra.Comman
 	configFlags.String("value", "", "use if value starts with '-'.\n"+
 		"(if the third arg is used, this flag will be ignored)")
 
-	rootCmd.Use = "chain TASK CID PARAM"
-	rootCmd.Args = ArgsWithDefaultErrorFunc(cobra.ExactArgs(3))
+	rootCmd.Use = "chain TASK CID [PARAM]"
+	rootCmd.Args = ArgsWithDefaultErrorFunc(cobra.RangeArgs(2, 3))
 	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
 		reqUrl := node.UrlChain + "/" + args[1] + "/" + args[0]
-		bs, err := ReadParam(args[2])
-		if err != nil {
-			return err
+		var param json.RawMessage
+		if len(args) == 3 {
+			if bs, err := ReadParam(args[2]); err != nil {
+				return err
+			} else {
+				param = bs
+			}
+		} else {
+			param = []byte("{}")
 		}
 		var v string
-		_, err = adminClient.PostWithJson(reqUrl, json.RawMessage(bs), &v)
+		_, err := adminClient.PostWithJson(reqUrl, param, &v)
 		if err != nil {
 			return err
 		}

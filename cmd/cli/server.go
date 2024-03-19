@@ -3,7 +3,6 @@ package cli
 import (
 	"encoding/hex"
 	"encoding/json"
-	"io/ioutil"
 	stdlog "log"
 	"os"
 
@@ -260,6 +259,13 @@ func NewServerCmd(parentCmd *cobra.Command, parentVc *viper.Viper, version, buil
 				}
 			}
 
+			if blockProfile := vc.GetString("blockprofile"); blockProfile != "" {
+				rate := vc.GetInt("blockprofilerate")
+				if err := StartBlockProfile(blockProfile, rate); err != nil {
+					log.Fatalf(err.Error())
+				}
+			}
+
 			for _, l := range logoLines {
 				log.Println(l)
 			}
@@ -276,6 +282,8 @@ func NewServerCmd(parentCmd *cobra.Command, parentVc *viper.Viper, version, buil
 	startFlags.StringToString("mod_level", nil, "Set console log level for specific module ('mod'='level',...)")
 	startFlags.String("cpuprofile", "", "CPU Profiling data file")
 	startFlags.String("memprofile", "", "Memory Profiling data file")
+	startFlags.String("blockprofile", "", "Block Profiling data file")
+	startFlags.Int("blockprofilerate", 1, "Block Profiling rate in ns")
 	startFlags.Bool("auth_skip_if_empty_users", false, "Skip admin API authentication if empty users")
 	startFlags.Bool("nid_for_p2p", false, "Use NID instead of CID for p2p network")
 	startFlags.MarkHidden("mod_level")
@@ -399,7 +407,7 @@ func MergeWithViper(vc *viper.Viper, cfg *ServerConfig) error {
 	//overwrite read(env.KeyStoreSecret)
 	//overwrite read(flag.KeyStoreSecret)
 	if keyStoreSecret := vc.GetString("key_secret"); keyStoreSecret != "" {
-		if ksp, err := ioutil.ReadFile(keyStoreSecret); err != nil {
+		if ksp, err := os.ReadFile(keyStoreSecret); err != nil {
 			return errors.Errorf("fail to open KeySecret file=%s err=%+v", keyStoreSecret, err)
 		} else {
 			cfg.KeyStorePass = string(ksp)

@@ -25,7 +25,7 @@ type Engine interface {
 	// pvMask.Get(i) == 0 and a set of precommits pc(i) where
 	// pcMask.Get(i) == 0. For example, if the all bits for mask is 1,
 	// no votes are returned.
-	GetVotes(r int32, pvMask *bitArray, pcMask *bitArray) *VoteList
+	GetVotes(r int32, pvMask *BitArray, pcMask *BitArray) *VoteList
 	GetRoundState() *peerRoundState
 
 	Height() int64
@@ -35,6 +35,8 @@ type Engine interface {
 	ReceiveBlockPartMessage(msg *BlockPartMessage, unicast bool) (int, error)
 	ReceiveVoteListMessage(msg *VoteListMessage, unicast bool) error
 	ReceiveBlock(br fastsync.BlockResult)
+
+	verifyContext
 }
 
 type Syncer interface {
@@ -110,7 +112,7 @@ func (p *peer) doSync() (module.ProtocolInfo, Message) {
 			if partSet == nil {
 				return 0, nil
 			}
-			p.BlockPartsMask = newBitArray(partSet.Parts())
+			p.BlockPartsMask = NewBitArray(partSet.Parts())
 			p.log.Tracef("PC for commit %v\n", p.Height)
 			return ProtoVoteList, msg
 		}
@@ -315,7 +317,7 @@ func (s *syncer) OnReceive(sp module.ProtocolInfo, bs []byte,
 		return false, err
 	}
 	s.log.Debugf("OnReceive %v From:%v\n", msg, common.HexPre(id.Bytes()))
-	if err := msg.Verify(); err != nil {
+	if err := msg.Verify(s.engine); err != nil {
 		return false, err
 	}
 	var idx int

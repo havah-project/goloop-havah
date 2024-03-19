@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"time"
+	"unsafe"
 
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/codec"
@@ -47,8 +48,13 @@ func UnmarshalMessage(sp uint16, bs []byte) (Message, error) {
 	return nil, errors.New("Unknown protocol")
 }
 
+type verifyContext interface {
+	ValidNID(nid uint32) bool
+	NID() int
+}
+
 type Message interface {
-	Verify() error
+	Verify(ctx verifyContext) error
 	subprotocol() uint16
 }
 
@@ -75,10 +81,49 @@ func (hr *_HR) verify() error {
 	return nil
 }
 
-type proposal struct {
+type proposalV1 struct {
 	_HR
 	BlockPartSetID *PartSetID
 	POLRound       int32
+}
+
+func (p *proposalV1) bytes() []byte {
+	bs, err := msgCodec.MarshalToBytes(p)
+	if err != nil {
+		panic(err)
+	}
+	return bs
+}
+
+type proposalV2 struct {
+	_HR
+	BlockPartSetID *PartSetID
+	POLRound       int32
+	NID            uint32
+}
+
+type proposal = proposalV2
+
+func (p *proposal) RLPEncodeSelf(e codec.Encoder) error {
+	if p.NID == 0 {
+		return e.EncodeListOf(&p.Height, &p.Round, &p.BlockPartSetID, &p.POLRound)
+	}
+	return e.EncodeListOf(&p.Height, &p.Round, &p.BlockPartSetID, &p.POLRound, &p.NID)
+}
+
+func (p *proposal) RLPDecodeSelf(d codec.Decoder) error {
+	d2, err := d.DecodeList()
+	if err != nil {
+		return err
+	}
+	cnt, err := d2.DecodeMulti(
+		&p.Height, &p.Round, &p.BlockPartSetID, &p.POLRound, &p.NID,
+	)
+	if cnt == 4 && err == io.EOF {
+		p.NID = 0
+		return nil
+	}
+	return err
 }
 
 func (p *proposal) bytes() []byte {
@@ -87,6 +132,17 @@ func (p *proposal) bytes() []byte {
 		panic(err)
 	}
 	return bs
+}
+
+type ProposalMessageV1 struct {
+	signedBase
+	proposalV1
+}
+
+func NewProposalMessageV1() *ProposalMessageV1 {
+	msg := &ProposalMessageV1{}
+	msg.signedBase._byteser = msg
+	return msg
 }
 
 type ProposalMessage struct {
@@ -100,12 +156,48 @@ func NewProposalMessage() *ProposalMessage {
 	return msg
 }
 
-func (msg *ProposalMessage) Verify() error {
+func (msg *ProposalMessage) Cost() int {
+	return int(unsafe.Sizeof(ProposalMessage{})) + 256 + 40
+}
+
+func (msg *ProposalMessage) RLPEncodeSelf(e codec.Encoder) error {
+	if msg.NID == 0 {
+		return e.EncodeListOf(
+			&msg.Signature,
+			&msg.Height, &msg.Round, &msg.BlockPartSetID, &msg.POLRound,
+		)
+	}
+	return e.EncodeListOf(
+		&msg.Signature,
+		&msg.Height, &msg.Round, &msg.BlockPartSetID, &msg.POLRound, &msg.NID,
+	)
+}
+
+func (msg *ProposalMessage) RLPDecodeSelf(d codec.Decoder) error {
+	d2, err := d.DecodeList()
+	if err != nil {
+		return err
+	}
+	cnt, err := d2.DecodeMulti(
+		&msg.Signature,
+		&msg.Height, &msg.Round, &msg.BlockPartSetID, &msg.POLRound, &msg.NID,
+	)
+	if cnt == 5 && err == io.EOF {
+		msg.NID = 0
+		return nil
+	}
+	return err
+}
+
+func (msg *ProposalMessage) Verify(ctx verifyContext) error {
 	if err := msg._HR.verify(); err != nil {
 		return err
 	}
 	if msg.BlockPartSetID == nil || msg.BlockPartSetID.Count <= 0 || msg.POLRound < -1 || msg.POLRound >= msg.Round {
 		return errors.New("bad field value")
+	}
+	if !ctx.ValidNID(msg.NID) {
+		return errors.Errorf("invalid nid chain.NID=%d observed=%d", ctx.NID(), msg.NID)
 	}
 	return msg.signedBase.verify()
 }
@@ -115,7 +207,12 @@ func (msg *ProposalMessage) subprotocol() uint16 {
 }
 
 func (msg *ProposalMessage) String() string {
-	return fmt.Sprintf("ProposalMessage{H:%d R:%d BPSID:%v Addr:%v}", msg.Height, msg.Round, msg.BlockPartSetID, common.HexPre(msg.address().ID()))
+	var id []byte
+	addr := msg.address()
+	if addr != nil {
+		id = addr.ID()
+	}
+	return fmt.Sprintf("ProposalMessage{H:%d R:%d BPSID:%v Addr:%v}", msg.Height, msg.Round, msg.BlockPartSetID, common.HexPre(id))
 }
 
 type BlockPartMessage struct {
@@ -134,11 +231,21 @@ func newBlockPartMessage() *BlockPartMessage {
 	return &BlockPartMessage{}
 }
 
-func (msg *BlockPartMessage) Verify() error {
+func (msg *BlockPartMessage) Verify(verifyContext) error {
 	if msg.Height <= 0 {
 		return errors.Errorf("bad height %v", msg.Height)
 	}
-	return nil
+	if len(msg.BlockPart) > ConfigBlockPartSize*2 {
+		return errors.Errorf("bad height %v", msg.Height)
+	}
+	_, err := NewPart(msg.BlockPart)
+	return err
+}
+
+const bpmHeaderLen = int(unsafe.Sizeof(BlockPartMessage{}))
+
+func (msg *BlockPartMessage) Cost() int {
+	return bpmHeaderLen + len(msg.BlockPart)
 }
 
 func (msg *BlockPartMessage) subprotocol() uint16 {
@@ -169,6 +276,15 @@ type VoteMessage struct {
 	voteBase
 	Timestamp      int64
 	NTSDProofParts [][]byte
+}
+
+func (msg *VoteMessage) Cost() int {
+	l := int(unsafe.Sizeof(VoteMessage{})) + 256 +
+		len(msg.voteBase.NTSVoteBases)*40
+	for i := range msg.NTSDProofParts {
+		l += len(msg.NTSDProofParts[i])
+	}
+	return l
 }
 
 func newVoteMessage() *VoteMessage {
@@ -249,7 +365,8 @@ func NewVoteMessage(
 	vm.Round = round
 	vm.Type = voteType
 	vm.BlockID = id
-	vm.BlockPartSetIDAndNTSVoteCount = partSetID.WithAppData(uint16(ntsVoteCount))
+	appData := psidAppData(0, uint16(ntsVoteCount))
+	vm.BlockPartSetIDAndNTSVoteCount = partSetID.WithAppData(appData)
 	vm.Timestamp = ts
 	_ = vm.Sign(w)
 	for _, ntsHashEntry := range ntsHashEntries {
@@ -263,11 +380,11 @@ func (msg *VoteMessage) EqualExceptSigs(msg2 *VoteMessage) bool {
 	return msg.voteBase.Equal(&msg2.voteBase) && msg.Timestamp == msg2.Timestamp
 }
 
-func (msg *VoteMessage) Verify() error {
+func (msg *VoteMessage) Verify(ctx verifyContext) error {
 	if err := msg._HR.verify(); err != nil {
 		return err
 	}
-	if msg.Type < VoteTypePrevote || msg.Type > numberOfVoteTypes {
+	if msg.Type != VoteTypePrevote && msg.Type != VoteTypePrecommit {
 		return errors.New("bad field value")
 	}
 	if msg.Type == VoteTypePrevote && len(msg.NTSVoteBases) > 0 {
@@ -279,8 +396,18 @@ func (msg *VoteMessage) Verify() error {
 		return errors.Errorf("NTS loop len mismatch NTSVoteBasesLen=%d NTSDProofPartsLen=%d", len(msg.NTSVoteBases), len(msg.NTSDProofParts))
 	}
 	verifyProofCount := msg.Type == VoteTypePrecommit && msg.BlockPartSetIDAndNTSVoteCount != nil
-	if verifyProofCount && int(msg.BlockPartSetIDAndNTSVoteCount.AppData()) != len(msg.NTSDProofParts) {
-		return errors.Errorf("NTS loop len mismatch appData=%d NTSDProofPartsLen=%d", msg.BlockPartSetIDAndNTSVoteCount.AppData(), len(msg.NTSDProofParts))
+	nid, err := msg.NID()
+	if err != nil {
+		return errors.Wrap(err, "fail to verify")
+	}
+	if !ctx.ValidNID(nid) {
+		return errors.Errorf("invalid nid chain.NID=%d observed=%d", ctx.NID(), nid)
+	}
+	if verifyProofCount {
+		_, ntsVoteCount := destructPSIDAppData(msg.BlockPartSetIDAndNTSVoteCount.AppData())
+		if int(ntsVoteCount) != len(msg.NTSDProofParts) {
+			return errors.Errorf("NTS loop len mismatch appData=%d NTSDProofPartsLen=%d", msg.BlockPartSetIDAndNTSVoteCount.AppData(), len(msg.NTSDProofParts))
+		}
 	}
 	return msg.signedBase.verify()
 }
@@ -319,7 +446,12 @@ func (msg *VoteMessage) subprotocol() uint16 {
 }
 
 func (msg *VoteMessage) String() string {
-	return fmt.Sprintf("VoteMessage{%s,H:%d,R:%d,BlockID:%v,Addr:%v}", msg.Type, msg.Height, msg.Round, common.HexPre(msg.BlockID), common.HexPre(msg.address().ID()))
+	var id []byte
+	addr := msg.address()
+	if addr != nil {
+		id = addr.ID()
+	}
+	return fmt.Sprintf("VoteMessage{%s,H:%d,R:%d,BlockID:%v,Addr:%v}", msg.Type, msg.Height, msg.Round, common.HexPre(msg.BlockID), common.HexPre(id))
 }
 
 func (msg *VoteMessage) RLPEncodeSelf(e codec.Encoder) error {
@@ -394,9 +526,9 @@ func (msg *VoteMessage) RLPDecodeSelf(d codec.Decoder) error {
 
 type peerRoundState struct {
 	_HR
-	PrevotesMask   *bitArray
-	PrecommitsMask *bitArray
-	BlockPartsMask *bitArray
+	PrevotesMask   *BitArray
+	PrecommitsMask *BitArray
+	BlockPartsMask *BitArray
 	Sync           bool
 }
 
@@ -420,9 +552,23 @@ func newRoundStateMessage() *RoundStateMessage {
 	}
 }
 
-func (msg *RoundStateMessage) Verify() error {
+func (msg *RoundStateMessage) Verify(verifyContext) error {
 	if err := msg.peerRoundState._HR.verify(); err != nil {
 		return err
+	}
+	if msg.PrevotesMask == nil || msg.PrecommitsMask == nil {
+		return errors.Errorf("invalid RoundStateMessage PrevotesMask=%v PRecommitMask=%v", msg.PrevotesMask, msg.PrecommitsMask)
+	}
+	if err := msg.PrevotesMask.Verify(); err != nil {
+		return err
+	}
+	if err := msg.PrecommitsMask.Verify(); err != nil {
+		return err
+	}
+	if msg.BlockPartsMask != nil {
+		if err := msg.BlockPartsMask.Verify(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -439,11 +585,11 @@ func newVoteListMessage() *VoteListMessage {
 	return &VoteListMessage{}
 }
 
-func (msg *VoteListMessage) Verify() error {
+func (msg *VoteListMessage) Verify(ctx verifyContext) error {
 	if msg.VoteList == nil {
 		return errors.Errorf("nil VoteList")
 	}
-	return nil
+	return msg.VoteList.Verify(ctx)
 }
 
 func (msg VoteListMessage) String() string {

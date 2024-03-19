@@ -5,6 +5,7 @@ import (
 
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/codec"
+	"github.com/icon-project/goloop/common/errors"
 	"github.com/icon-project/goloop/common/intconv"
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/service/scoredb"
@@ -39,6 +40,8 @@ const (
 	VarNextBlockVersion   = "next_block_version"
 	VarEnabledEETypes     = "enabled_ee_types"
 	VarSystemDepositUsage = "system_deposit_usage"
+
+	VarDSRContextHistory = "dsr_context_history"
 )
 
 const (
@@ -118,6 +121,10 @@ type WorldContext interface {
 
 	EnableSkipTransaction()
 	SkipTransactionEnabled() bool
+
+	DecodeDoubleSignContext(t string, d[]byte) (module.DoubleSignContext, error)
+	DecodeDoubleSignData(t string, d[]byte) (module.DoubleSignData, error)
+	GetDoubleSignContextRoot() (module.DoubleSignContextRoot, error)
 }
 
 type TransactionInfo struct {
@@ -154,6 +161,8 @@ type worldContext struct {
 	nextTxSalt *big.Int
 
 	platform Platform
+
+	dsDecoder module.DoubleSignDataDecoder
 }
 
 func (c *worldContext) WorldVirtualState() WorldVirtualState {
@@ -362,6 +371,8 @@ func (c *worldContext) WorldStateChanged(ws WorldState) WorldContext {
 		governance:   c.governance,
 		systemInfo:   c.systemInfo,
 		blockInfo:    c.blockInfo,
+		csInfo:       c.csInfo,
+		platform:     c.platform,
 	}
 	return wc
 }
@@ -456,9 +467,39 @@ func (c *worldContext) UpdateSystemInfo() {
 	}
 }
 
+func (c *worldContext) DecodeDoubleSignData(t string, d []byte) (module.DoubleSignData, error) {
+	if c.dsDecoder == nil {
+		return nil, errors.UnsupportedError.New("NoDoubleSignDataDecoder")
+	}
+	return c.dsDecoder(t, d)
+}
+
 type Platform interface {
 	ToRevision(value int) module.Revision
 }
+
+type PlatformWithDoubleSignDataDecoder interface {
+	Platform
+	DoubleSignDataDecoder() module.DoubleSignDataDecoder
+}
+
+func getDoubleSignDataDecoder(plt Platform) module.DoubleSignDataDecoder {
+	if p, ok := plt.(PlatformWithDoubleSignDataDecoder) ; ok {
+		return p.DoubleSignDataDecoder()
+	} else {
+		return nil
+	}
+}
+
+func (c *worldContext) DecodeDoubleSignContext(t string, d []byte) (module.DoubleSignContext, error) {
+	return decodeDoubleSignContext(t, d)
+}
+
+func (c *worldContext) GetDoubleSignContextRoot() (module.DoubleSignContextRoot, error) {
+	c.UpdateSystemInfo()
+	return getDoubleSignContextRootOf(c, c.Revision())
+}
+
 
 func NewWorldContext(ws WorldState, bi module.BlockInfo, csi module.ConsensusInfo, plt Platform) WorldContext {
 	var governance, treasury module.Address
@@ -482,6 +523,7 @@ func NewWorldContext(ws WorldState, bi module.BlockInfo, csi module.ConsensusInf
 		blockInfo:    bi,
 		csInfo:       csi,
 		platform:     plt,
+		dsDecoder: 	  getDoubleSignDataDecoder(plt),
 	}
 	ws.EnableAccountNodeCache(SystemID)
 	wc.UpdateSystemInfo()

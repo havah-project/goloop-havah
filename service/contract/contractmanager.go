@@ -6,7 +6,6 @@ import (
 	"container/list"
 	"encoding/hex"
 	"io"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"path"
@@ -42,6 +41,7 @@ type (
 		GetCallHandler(from, to module.Address, value *big.Int, ctype int, paramObj *codec.TypedObj) (ContractHandler, error)
 		PrepareContractStore(ws state.WorldState, contract state.ContractState) (ContractStore, error)
 		GetSystemScore(contentID string, cc CallContext, from module.Address, value *big.Int) (SystemScore, error)
+		Logger() log.Logger
 	}
 
 	ContractStore interface {
@@ -79,6 +79,7 @@ const (
 	DataTypeDeploy  = "deploy"
 	DataTypeDeposit = "deposit"
 	DataTypePatch   = "patch"
+	DataTypeDSR     = "dsr"		// for double sign report(DSR)
 )
 
 func IsCallableDataType(dt *string) bool {
@@ -317,6 +318,10 @@ func (cm *contractManager) GenesisTo() module.Address {
 	return state.SystemAddress
 }
 
+func (cm *contractManager) Logger() log.Logger {
+	return cm.log
+}
+
 func NewContractManager(db db.Database, contractDir string, log log.Logger) (ContractManager, error) {
 	/*
 		contractManager has root path of each service manager's contract file
@@ -355,7 +360,7 @@ const (
 
 func storePython(dst string, code []byte, log log.Logger) (ret error) {
 	basePath := filepath.Dir(dst)
-	tmpPath, err := ioutil.TempDir(basePath, tmpPattern)
+	tmpPath, err := os.MkdirTemp(basePath, tmpPattern)
 	if err != nil {
 		return errors.WithCode(err, errors.CriticalIOError)
 	}
@@ -436,7 +441,7 @@ func storeJava(path string, code []byte, log log.Logger) error {
 		}
 	}
 	sPath := filepath.Join(path, javaCode)
-	if err := ioutil.WriteFile(sPath, code, 0600); err != nil {
+	if err := os.WriteFile(sPath, code, 0755); err != nil {
 		_ = os.RemoveAll(sPath)
 		return errors.WithCode(err, errors.CriticalIOError)
 	}

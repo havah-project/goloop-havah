@@ -27,7 +27,7 @@ type PartSet interface {
 	IsComplete() bool
 	NewReader() io.Reader
 	AddPart(Part) error
-	GetMask() *bitArray
+	GetMask() *BitArray
 }
 
 type PartSetBuffer interface {
@@ -41,9 +41,9 @@ const (
 )
 
 type PartSetIDAndAppData struct {
-	// CountWord: MSB AppData(16) Count(16)
+	// CountWord: MSB AppData(48) Count(16)
 	// Use bitfield not to break existing message protocol
-	CountWord uint32
+	CountWord uint64
 	Hash      []byte
 }
 
@@ -57,11 +57,11 @@ func (ida *PartSetIDAndAppData) ID() *PartSetID {
 	}
 }
 
-func (ida *PartSetIDAndAppData) AppData() uint16 {
+func (ida *PartSetIDAndAppData) AppData() uint64 {
 	if ida == nil {
 		return 0
 	}
-	return uint16(ida.CountWord >> countWidth)
+	return uint64(ida.CountWord >> countWidth)
 }
 
 type PartSetID struct {
@@ -69,12 +69,12 @@ type PartSetID struct {
 	Hash  []byte
 }
 
-func (id *PartSetID) WithAppData(appData uint16) *PartSetIDAndAppData {
+func (id *PartSetID) WithAppData(appData uint64) *PartSetIDAndAppData {
 	if id == nil {
 		return nil
 	}
 	return &PartSetIDAndAppData{
-		CountWord: uint32(appData)<<countWidth | uint32(id.Count),
+		CountWord: appData<<countWidth | uint64(id.Count),
 		Hash:      id.Hash,
 	}
 }
@@ -98,7 +98,7 @@ type partSet struct {
 	added int
 	parts []*part
 	tree  trie.Immutable
-	ba    *bitArray
+	ba    *BitArray
 }
 
 func (ps *partSet) ID() *PartSetID {
@@ -135,9 +135,9 @@ func (ps *partSet) IsComplete() bool {
 	return ps.added == len(ps.parts)
 }
 
-func (ps *partSet) GetMask() *bitArray {
+func (ps *partSet) GetMask() *BitArray {
 	if ps == nil {
-		return &bitArray{0, nil}
+		return &BitArray{0, nil}
 	}
 	return ps.ba
 }
@@ -246,7 +246,7 @@ func (b *partSetBuffer) PartSet() PartSet {
 		}
 		b.ps.tree = ss
 	}
-	b.ps.ba = newBitArray(b.ps.added)
+	b.ps.ba = NewBitArray(b.ps.added)
 	b.ps.ba.Flip()
 	return b.ps
 }
@@ -259,7 +259,7 @@ func NewPartSetFromID(h *PartSetID) PartSet {
 	return &partSet{
 		parts: make([]*part, h.Count),
 		tree:  trie_manager.NewImmutable(db.NewNullDB(), h.Hash),
-		ba:    newBitArray(int(h.Count)),
+		ba:    NewBitArray(int(h.Count)),
 	}
 }
 

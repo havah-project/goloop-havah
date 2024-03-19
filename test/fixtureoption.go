@@ -17,6 +17,8 @@
 package test
 
 import (
+	"time"
+
 	"github.com/icon-project/goloop/common/db"
 	"github.com/icon-project/goloop/consensus"
 	"github.com/icon-project/goloop/module"
@@ -73,4 +75,12 @@ func AddDefaultNode(v bool) FixtureOption {
 
 func UseBMFactory(f func(ctx *NodeContext) module.BlockManager) FixtureOption {
 	return UseConfig(&FixtureConfig{NewBM: f})
+}
+
+func SetTimeoutPropose(to time.Duration) FixtureOption {
+	return UseConfig(&FixtureConfig{TimeoutPropose: to})
+}
+
+func UseSMFactory(f func(ctx *NodeContext) module.ServiceManager) FixtureOption {
+	return UseConfig(&FixtureConfig{NewSM: f})
 }

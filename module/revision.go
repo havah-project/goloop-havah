@@ -36,7 +36,12 @@ const (
 	PurgeEnumCache
 	ContractSetEvent
 	FixMapValues
+	ReportDoubleSign
+	FixJCLSteps
+	ReportConfigureEvents
 	LastRevisionBit
+
+	UseNIDInConsensusMessage = ReportDoubleSign
 )
 
 const (

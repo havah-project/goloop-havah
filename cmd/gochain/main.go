@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	stdlog "log"
 	"os"
 	"path"
@@ -41,6 +40,7 @@ type GoChainConfig struct {
 	RPCDump       bool   `json:"rpc_dump"`
 	RPCDebug      bool   `json:"rpc_debug"`
 	RPCRosetta    bool   `json:"rpc_rosetta"`
+	DisableRPC    bool   `json:"disable_rpc"`
 	RPCBatchLimit int    `json:"rpc_batch_limit,omitempty"`
 	EEInstances   int    `json:"ee_instances"`
 	Engines       string `json:"engines"`
@@ -67,7 +67,7 @@ func (config *GoChainConfig) Type() string {
 
 func (config *GoChainConfig) Set(name string) error {
 	config.FilePath, _ = filepath.Abs(name)
-	if bs, e := ioutil.ReadFile(name); e == nil {
+	if bs, e := os.ReadFile(name); e == nil {
 		if err := json.Unmarshal(bs, config); err != nil {
 			return err
 		}
@@ -89,7 +89,7 @@ var genesisStorage, genesisPath string
 var keyStoreFile, keyStoreSecret string
 var saveFile, saveKeyStore string
 var cfg GoChainConfig
-var cpuProfile, memProfile string
+var cpuProfile, memProfile, blockProfile string
 var chainDir string
 var eeSocket string
 var modLevels map[string]string
@@ -117,6 +117,7 @@ func main() {
 	flag.BoolVar(&cfg.RPCDump, "rpc_dump", false, "JSON-RPC Request, Response Dump flag")
 	flag.BoolVar(&cfg.RPCDebug, "rpc_debug", false, "JSON-RPC Debug enable")
 	flag.BoolVar(&cfg.RPCRosetta, "rpc_rosetta", false, "JSON-RPC Rosetta enable")
+	flag.BoolVar(&cfg.DisableRPC, "disable_rpc", false, "disable JSON-RPC API")
 	flag.IntVar(&cfg.RPCBatchLimit, "rpc_batch_limit", 10, "JSON-RPC batch limit")
 	flag.StringVar(&cfg.SeedAddr, "seed", "", "Ip-port of Seed")
 	flag.StringVar(&genesisStorage, "genesis_storage", "", "Genesis storage path")
@@ -130,6 +131,7 @@ func main() {
 	flag.StringVar(&cfg.KeyStorePass, "key_password", "", "Password for the KeyStore file")
 	flag.StringVar(&cpuProfile, "cpuprofile", "", "CPU Profiling data file")
 	flag.StringVar(&memProfile, "memprofile", "", "Memory Profiling data file")
+	flag.StringVar(&blockProfile, "blockprofile", "", "Memory Profiling data file")
 	flag.StringVar(&chainDir, "chain_dir", "", "Chain data directory (default: .chain/<address>/<nid>)")
 	flag.IntVar(&cfg.EEInstances, "ee_instances", 1, "Number of execution engines")
 	flag.IntVar(&cfg.ConcurrencyLevel, "concurrency", 1, "Maximum number of executors to be used for concurrency")
@@ -180,7 +182,7 @@ func main() {
 func Execute(cmd *cobra.Command, args []string) {
 
 	if len(keyStoreFile) > 0 {
-		if ks, err := ioutil.ReadFile(keyStoreFile); err != nil {
+		if ks, err := os.ReadFile(keyStoreFile); err != nil {
 			log.Panicf("Fail to open KeyStore file=%s err=%+v", keyStoreFile, err)
 		} else {
 			cfg.KeyStoreData = ks
@@ -190,7 +192,7 @@ func Execute(cmd *cobra.Command, args []string) {
 
 	keyStorePass := []byte(cfg.KeyStorePass)
 	if len(keyStoreSecret) > 0 {
-		if ks, err := ioutil.ReadFile(keyStoreSecret); err != nil {
+		if ks, err := os.ReadFile(keyStoreSecret); err != nil {
 			log.Panicf("Fail to open KeySecret file=%s err=%+v", keyStoreSecret, err)
 		} else {
 			keyStorePass = ks
@@ -236,7 +238,7 @@ func Execute(cmd *cobra.Command, args []string) {
 	wallet, _ := wallet.NewFromPrivateKey(priK)
 
 	if len(genesisStorage) > 0 {
-		storage, err := ioutil.ReadFile(genesisStorage)
+		storage, err := os.ReadFile(genesisStorage)
 		if err != nil {
 			log.Panicf("Fail to open genesisStorage=%s err=%+v\n", genesisStorage, err)
 		}
@@ -300,7 +302,7 @@ func Execute(cmd *cobra.Command, args []string) {
 		if err := json.Indent(ks, cfg.KeyStoreData, "", "  "); err != nil {
 			log.Panicf("Fail to indenting key data err=%+v", err)
 		}
-		if err := ioutil.WriteFile(saveKeyStore, ks.Bytes(), 0600); err != nil {
+		if err := os.WriteFile(saveKeyStore, ks.Bytes(), 0600); err != nil {
 			log.Panicf("Fail to save key store to the file=%s err=%+v", saveKeyStore, err)
 		}
 	}
@@ -432,8 +434,7 @@ func Execute(cmd *cobra.Command, args []string) {
 	}
 
 	if cfg.EESocket == "" {
-		cfg.EESocket = cfg.ResolveRelative(path.Join(".chain",
-			wallet.Address().String(), "ee.sock"))
+		cfg.EESocket = path.Join(cfg.BaseDir, "ee.sock")
 	}
 
 	if cpuProfile != "" {
@@ -445,6 +446,12 @@ func Execute(cmd *cobra.Command, args []string) {
 	if memProfile != "" {
 		if err := cli.StartMemoryProfile(memProfile); err != nil {
 			log.Panicf("Fail to start memory profiling err=%+v", err)
+		}
+	}
+
+	if blockProfile != "" {
+		if err := cli.StartBlockProfile(blockProfile, 0); err != nil {
+			log.Panicf("Fail to start block profiling err=%+v", err)
 		}
 	}
 
@@ -491,6 +498,7 @@ func Execute(cmd *cobra.Command, args []string) {
 		JSONRPCIncludeDebug: cfg.RPCDebug,
 		JSONRPCRosetta:      cfg.RPCRosetta,
 		JSONRPCBatchLimit:   cfg.RPCBatchLimit,
+		DisableRPC:          cfg.DisableRPC,
 		WSMaxSession:        cfg.WSMaxSession,
 	}
 	srv := server.NewManager(config, wallet, logger)

@@ -21,7 +21,7 @@ const (
 const (
 	DefaultTransportNet         = "tcp4"
 	DefaultDialTimeout          = 5 * time.Second
-	DefaultReceiveQueueSize     = 1000
+	DefaultReceiveQueueSize     = 4096
 	DefaultPacketBufferSize     = 4096 //bufio.defaultBufSize=4096
 	DefaultPacketPayloadMax     = 1024 * 1024
 	DefaultPacketPoolNumBucket  = 20
@@ -1311,7 +1311,7 @@ func (p2p *PeerToPeer) discoverFriends() {
 
 	roots := p2p.findPeers(func(p *Peer) bool {
 		return p.ConnType() != p2pConnTypeFriend && p.HasRole(p2pRoleRoot)
-	}, joinPeerConnectionTypes...)
+	})
 	for _, p := range roots {
 		if p2p.tryTransitPeerConnection(p, p2pConnTypeFriend) {
 			p2p.logger.Debugln("discoverFriends", "try p2pConnTypeFriend", p.ID(), p.ConnType())

@@ -42,15 +42,15 @@ public class Validator {
         throw new ValidationException(String.format(fmt, args));
     }
 
-    private static ValidationException fail(Exception cause, String fmt, Object... args) throws
+    private static ValidationException fail(Throwable cause, String fmt, Object... args) throws
             ValidationException {
         throw new ValidationException(String.format(fmt, args), cause);
     }
 
     /**
-     * Returns false if code is invalid.
+     * Validate the given classes bytecodes and return their external APIs
      *
-     * @return false if code is invalid
+     * @return the external APIs
      * @throws ZipException        for zip file error
      * @throws ValidationException for validation error
      */
@@ -58,6 +58,7 @@ public class Validator {
         byte[] apisBytes;
         LoadedJar jar;
         try {
+            JarBuilder.checkManifest(codeBytes);
             apisBytes = JarBuilder.getAPIsBytesFromJAR(codeBytes);
             if (apisBytes == null) {
                 throw fail("Cannot get APIS");
@@ -69,15 +70,22 @@ public class Validator {
             throw fail(e, "Cannot get APIS");
         }
         var classMap = jar.classBytesByQualifiedNames;
-        var structDB = new StructDB(classMap);
+        StructDB structDB;
         Method[] eeMethods;
         try {
+            structDB = new StructDB(classMap);
             eeMethods = MethodUnpacker.readFrom(apisBytes);
         } catch (IOException e) {
-            throw fail ("bad APIS format");
+            throw fail("bad APIS format");
+        } catch (Throwable e) {
+            throw fail(e, "malformed class file");
         }
         String cur = jar.mainClassName;
+        if (cur == null) {
+            throw fail("No main class name");
+        }
         Map<Member, MemberDecl> mmap = new HashMap<>();
+        Set<String> visited = new HashSet<>();
         while (cur != null) {
             var classBytes = classMap.get(cur);
             if (classBytes==null) {
@@ -87,7 +95,14 @@ public class Validator {
             for (var m : cv.getMethodDecls()) {
                 mmap.putIfAbsent(m.getMember(), m);
             }
+            visited.add(cur);
+            if (cv.getSuperName() == null) {
+                throw fail("No super class");
+            }
             cur = Utilities.internalNameToFullyQualifiedName(cv.getSuperName());
+            if (visited.contains(cur)) {
+                fail("cyclic inheritance in main class " + jar.mainClassName);
+            }
         }
         Set<String> eeMethodNames = new HashSet<>();
         for (var eem : eeMethods) {

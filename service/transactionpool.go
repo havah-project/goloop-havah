@@ -158,7 +158,7 @@ func (tp *TransactionPool) Candidate(wc state.WorldContext, maxBytes int, maxCou
 			}
 			continue
 		}
-		if has, err := tp.tim.HasRecent(tx.ID()); err != nil {
+		if has, err := tp.tim.HasRecent(tx.Group(), tx.ID(), tx.Timestamp()); err != nil {
 			continue
 		} else if has {
 			e.err = errors.InvalidStateError.New("AlreadyProcessed")
@@ -338,7 +338,6 @@ func (tp *TransactionPool) dropTransactions(txs []*txElement) {
 
 func (tp *TransactionPool) FilterTransactions(bloom *TxBloom, max int) []module.Transaction {
 	txs := make([]module.Transaction, 0, max)
-	var invalids []*txElement
 
 	lock := common.Lock(&tp.mutex)
 	defer lock.Unlock()
@@ -359,14 +358,11 @@ func (tp *TransactionPool) FilterTransactions(bloom *TxBloom, max int) []module.
 		tx := e.Value()
 		id := tx.ID()
 		if !bloom.Contains(id) {
-			if has, err := tp.tim.HasRecent(id); err == nil && has {
-				e.err = errors.InvalidStateError.New("Already processed")
-				invalids = append(invalids, e)
+			if has, err := tp.tim.HasRecent(tx.Group(), id, tx.Timestamp()); err == nil && has {
 				continue
 			}
 			txs = append(txs, tx)
 		}
 	}
-	go tp.dropTransactions(invalids)
 	return txs
 }

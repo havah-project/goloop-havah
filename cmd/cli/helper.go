@@ -7,13 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
 	"path"
 	"reflect"
 	"regexp"
+	"runtime"
 	"runtime/pprof"
 	"strconv"
 	"strings"
@@ -254,7 +254,7 @@ func ViperDecodeOptJson(c *mapstructure.DecoderConfig) {
 				if inputValType.Kind() == reflect.Map && inputValType.Key().Kind() == reflect.String {
 					return json.Marshal(input)
 				} else if inputValType.Kind() == reflect.String && input != "" {
-					return ioutil.ReadFile(input.(string))
+					return os.ReadFile(input.(string))
 				}
 			} else if inputValType.Kind() == reflect.String && outValType.Kind() == reflect.Map {
 				m, err := stringToStringConv(input.(string))
@@ -482,7 +482,7 @@ func FlagToMarkdown(buf *bytes.Buffer, vcs ...*viper.Viper) func(f *pflag.Flag) 
 
 func addDirectoryToZip(zipWriter *zip.Writer, base, uri string, excludes []*regexp.Regexp) error {
 	p := path.Join(base, uri)
-	entries, err := ioutil.ReadDir(p)
+	entries, err := os.ReadDir(p)
 	if err != nil {
 		return errors.WithStack(err)
 	}
@@ -502,7 +502,7 @@ Loop:
 			}
 		} else {
 			filePath := path.Join(p, name)
-			if entry.Mode()&os.ModeSymlink != 0 {
+			if entry.Type()&os.ModeSymlink != 0 {
 				filePath, err = os.Readlink(filePath)
 				if err != nil {
 					return errors.WithStack(err)
@@ -523,17 +523,27 @@ Loop:
 			if err != nil {
 				return errors.WithStack(err)
 			}
-
-			hdr, err := zip.FileInfoHeader(entry)
+			info, err := entry.Info()
 			if err != nil {
-				fd.Close()
+				return errors.WithStack(err)
+			}
+			hdr, err := zip.FileInfoHeader(info)
+			if err != nil {
+				_ = fd.Close()
 				return errors.WithStack(err)
 			}
 			hdr.Name = path.Join(uri, name)
 			hdr.Method = zip.Deflate
 			writer, err := zipWriter.CreateHeader(hdr)
-			_, err = io.Copy(writer, fd)
-			fd.Close()
+			if err != nil {
+				return errors.WithStack(err)
+			}
+			if _, err := io.Copy(writer, fd); err != nil {
+				return errors.WithStack(err)
+			}
+			if err = fd.Close(); err != nil {
+				return errors.WithStack(err)
+			}
 		}
 	}
 	return nil
@@ -601,7 +611,7 @@ func StartCPUProfile(filename string) error {
 			return err
 		}
 		c := make(chan os.Signal, 1)
-		signal.Notify(c, syscall.SIGUSR2)
+		signal.Notify(c, syscall.SIGUSR1)
 		go func(c chan os.Signal) {
 			for {
 				<-c
@@ -631,6 +641,7 @@ func StartMemoryProfile(filename string) error {
 				cnt := atomic.AddInt32(&memProfileCnt, 1)
 				fileName := fmt.Sprintf("%s.%03d", filename, cnt)
 				if f, err := os.Create(fileName); err == nil {
+					runtime.GC()
 					pprof.WriteHeapProfile(f)
 					f.Close()
 				}
@@ -639,6 +650,32 @@ func StartMemoryProfile(filename string) error {
 	} else {
 		return errors.Errorf("filename cannot be empty string")
 	}
+	return nil
+}
+
+func StartBlockProfile(filename string, rate int) error {
+	if filename == "" {
+		return errors.Errorf("filename cannot be empty string")
+	}
+	runtime.SetBlockProfileRate(rate)
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGUSR1)
+	go func(c chan os.Signal) {
+		var profileCnt int32 = 0
+		for {
+			<-c
+			cnt := atomic.AddInt32(&profileCnt, 1)
+			fileName := fmt.Sprintf("%s.%03d", filename, cnt)
+			if f, err := os.Create(fileName); err == nil {
+				if err := pprof.Lookup("block").WriteTo(f, 0); err != nil {
+					_ = f.Close()
+					_ = os.Remove(fileName)
+				} else {
+					_ = f.Close()
+				}
+			}
+		}
+	}(c)
 	return nil
 }
 
@@ -653,7 +690,7 @@ func JsonPrettyPrintln(w io.Writer, v interface{}) error {
 
 func JsonPrettyCopyAndClose(w io.Writer, r io.ReadCloser) error {
 	defer r.Close()
-	bs, err := ioutil.ReadAll(r)
+	bs, err := io.ReadAll(r)
 	if err != nil {
 		return err
 	}
@@ -673,7 +710,7 @@ func JsonPrettySaveFile(filename string, perm os.FileMode, v interface{}) error 
 	if err := os.MkdirAll(path.Dir(filename), 0700); err != nil {
 		return errors.Errorf("fail to create directory %s err=%+v", filename, err)
 	}
-	if err := ioutil.WriteFile(filename, b, perm); err != nil {
+	if err := os.WriteFile(filename, b, perm); err != nil {
 		return errors.Errorf("fail to save to the file=%s err=%+v", filename, err)
 	}
 	return err
@@ -689,7 +726,7 @@ func HttpResponsePrettyPrintln(w io.Writer, resp *http.Response) error {
 	if _, err := fmt.Fprintln(w, "Response"); err != nil {
 		return err
 	}
-	respB, err := ioutil.ReadAll(resp.Body)
+	respB, err := io.ReadAll(resp.Body)
 	defer resp.Body.Close()
 	if err != nil {
 		return fmt.Errorf("failed read err=%+v", err)

@@ -166,11 +166,6 @@ func (m *TransactionManager) WaitResult(id []byte) (<-chan interface{}, error) {
 		m.addWaiterInLock(id, rc)
 		return rc, nil
 	}
-	if has, err := m.tim.HasRecent(id); err != nil {
-		return nil, err
-	} else if has {
-		return nil, ErrCommittedTransaction
-	}
 	if has, err := m.tim.HasLocator(id); err != nil {
 		return nil, err
 	} else if has {
@@ -197,6 +192,9 @@ func (m *TransactionManager) VerifyTx(tx transaction.Transaction) error {
 	if !tx.ValidateNetwork(m.nid) {
 		return errors.InvalidNetworkError.Errorf(
 			"ValidateNetwork(nid=%#x) fail", m.nid)
+	}
+	if tx.Version() < transaction.Version3 {
+		return InvalidTransactionError.New("IllegalTransactionVersion")
 	}
 	if err := tx.Verify(); err != nil {
 		return InvalidTransactionError.Wrap(err,

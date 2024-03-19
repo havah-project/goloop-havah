@@ -15,7 +15,6 @@ import (
 	"github.com/icon-project/goloop/common"
 	"github.com/icon-project/goloop/common/crypto"
 	"github.com/icon-project/goloop/common/errors"
-	"github.com/icon-project/goloop/common/intconv"
 	"github.com/icon-project/goloop/module"
 	"github.com/icon-project/goloop/server"
 	"github.com/icon-project/goloop/server/jsonrpc"
@@ -50,6 +49,14 @@ func guessDebugEndpoint(endpoint string) string {
 		}
 	}
 	return ""
+}
+
+func TimestampFromTime(tm time.Time) jsonrpc.HexInt {
+	return jsonrpc.HexIntFromInt64(tm.UnixNano() / int64(time.Microsecond))
+}
+
+func TimestampNow() jsonrpc.HexInt {
+	return TimestampFromTime(time.Now())
 }
 
 func NewClientV3(endpoint string) *ClientV3 {
@@ -109,6 +116,22 @@ type TransactionResult struct {
 	TxIndex            jsonrpc.HexInt   `json:"txIndex" validate:"required,t_int"`
 	TxHash             jsonrpc.HexBytes `json:"txHash" validate:"required,t_int"`
 	StepDetails        interface{}      `json:"stepUsedDetails,omitempty"`
+}
+
+type EventNotification struct {
+	Hash   jsonrpc.HexBytes `json:"hash"`
+	Height jsonrpc.HexInt   `json:"height"`
+	Index  jsonrpc.HexInt   `json:"index"`
+	Events []jsonrpc.HexInt `json:"events"`
+	Logs   []EventLog       `json:"logs,omitempty"`
+}
+
+type BlockNotification struct {
+	Hash    jsonrpc.HexBytes     `json:"hash"`
+	Height  jsonrpc.HexInt       `json:"height"`
+	Indexes [][]jsonrpc.HexInt   `json:"indexes,omitempty"`
+	Events  [][][]jsonrpc.HexInt `json:"events,omitempty"`
+	Logs    [][][]EventLog       `json:"logs,omitempty"`
 }
 
 //refer service/txresult/receipt.go:29 eventLogJSON
@@ -268,34 +291,43 @@ func (c *ClientV3) GetTransactionByHash(param *v3.TransactionHashParam) (*Transa
 
 var txSerializeExcludes = map[string]bool{"signature": true}
 
-func (c *ClientV3) SendTransaction(w module.Wallet, param *v3.TransactionParam) (*jsonrpc.HexBytes, error) {
-	param.Timestamp = jsonrpc.HexInt(intconv.FormatInt(time.Now().UnixNano() / int64(time.Microsecond)))
+func SignTransaction(w module.Wallet, param *v3.TransactionParam) error {
 	js, err := json.Marshal(param)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
 	bs, err := transaction.SerializeJSON(js, nil, txSerializeExcludes)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	bs = append([]byte("icx_sendTransaction."), bs...)
 	sig, err := w.Sign(crypto.SHA3Sum256(bs))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	param.Signature = base64.StdEncoding.EncodeToString(sig)
+	return nil
+}
 
+func (c *ClientV3) SendSignedTransaction(param *v3.TransactionParam) (*jsonrpc.HexBytes, error) {
 	var result jsonrpc.HexBytes
-	if _, err = c.Do("icx_sendTransaction", param, &result); err != nil {
+	if _, err := c.Do("icx_sendTransaction", param, &result); err != nil {
 		return nil, err
 	}
 	return &result, nil
 }
 
+func (c *ClientV3) SendTransaction(w module.Wallet, param *v3.TransactionParam) (*jsonrpc.HexBytes, error) {
+	param.Timestamp = TimestampNow()
+	if err := SignTransaction(w, param); err != nil {
+		return  nil, err
+	}
+	return c.SendSignedTransaction(param)
+}
+
 func (c *ClientV3) SendRawTransaction(w module.Wallet, param map[string]interface{}) (*jsonrpc.HexBytes, error) {
-	param["timestamp"] = intconv.FormatInt(time.Now().UnixNano() / int64(time.Microsecond))
+	param["timestamp"] = TimestampNow()
 	bs, err := transaction.SerializeMap(param, nil, txSerializeExcludes)
 	if err != nil {
 		return nil, err
@@ -431,19 +463,19 @@ func (c *ClientV3) GetNetworkInfo() (*NetworkInfo, error) {
 	return result, nil
 }
 
-func (c *ClientV3) MonitorBlock(param *server.BlockRequest, cb func(v *server.BlockNotification), cancelCh <-chan bool) error {
-	resp := &server.BlockNotification{}
+func (c *ClientV3) MonitorBlock(param *server.BlockRequest, cb func(v *BlockNotification), cancelCh <-chan bool) error {
+	resp := &BlockNotification{}
 	return c.Monitor("/block", param, resp, func(v interface{}) {
-		if bn, ok := v.(*server.BlockNotification); ok {
+		if bn, ok := v.(*BlockNotification); ok {
 			cb(bn)
 		}
 	}, cancelCh)
 }
 
-func (c *ClientV3) MonitorEvent(param *server.EventRequest, cb func(v *server.EventNotification), cancelCh <-chan bool) error {
-	resp := &server.EventNotification{}
+func (c *ClientV3) MonitorEvent(param *server.EventRequest, cb func(v *EventNotification), cancelCh <-chan bool) error {
+	resp := &EventNotification{}
 	return c.Monitor("/event", param, resp, func(v interface{}) {
-		if en, ok := v.(*server.EventNotification); ok {
+		if en, ok := v.(*EventNotification); ok {
 			cb(en)
 		}
 	}, cancelCh)
@@ -486,11 +518,19 @@ func (c *ClientV3) Monitor(reqUrl string, reqPtr, respPtr interface{},
 			}()
 			c.wsReadJSONLoop(conn, respPtr, cb)
 		}()
+		return nil
 	} else {
 		defer c.wsClose(conn)
-		c.wsReadJSONLoop(conn, respPtr, cb)
+		var ret error
+		c.wsReadJSONLoop(conn, respPtr, func(v interface{}) {
+			if err, ok := v.(error) ; ok {
+				ret = err
+			} else {
+				cb(v)
+			}
+		})
+		return ret;
 	}
-	return nil
 }
 
 func (c *ClientV3) Cleanup() {
@@ -565,7 +605,7 @@ func (c *ClientV3) EstimateStep(param *v3.TransactionParamForEstimate) (*common.
 	if len(c.DebugEndPoint) == 0 {
 		return nil, errors.InvalidStateError.New("UnavailableDebugEndPoint")
 	}
-	param.Timestamp = jsonrpc.HexInt(intconv.FormatInt(time.Now().UnixNano() / int64(time.Microsecond)))
+	param.Timestamp = TimestampNow()
 	var result common.HexInt
 	if _, err := c.DoURL(c.DebugEndPoint,
 		"debug_estimateStep", param, &result); err != nil {
